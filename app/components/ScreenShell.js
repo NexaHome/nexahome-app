@@ -1,8 +1,10 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { transformChildren, transformStyle, useTheme } from "../theme";
 
 const ScreenShell = ({ children, style }) => {
+  const { mode, theme } = useTheme();
   const fade = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(18)).current;
 
@@ -23,15 +25,17 @@ const ScreenShell = ({ children, style }) => {
   }, [fade, translateY]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: theme.background }]}
+    >
       <Animated.View
         style={[
-          styles.content,
-          style,
+          transformStyle(styles.content, theme, mode),
+          transformStyle(style, theme, mode),
           { opacity: fade, transform: [{ translateY }] },
         ]}
       >
-        {children}
+        {transformChildren(children, theme, mode)}
       </Animated.View>
     </SafeAreaView>
   );
@@ -40,7 +44,6 @@ const ScreenShell = ({ children, style }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F6F7F3",
   },
   content: {
     flex: 1,

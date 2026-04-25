@@ -1,7 +1,9 @@
 import React, { useRef } from "react";
 import { Animated, Pressable } from "react-native";
+import { transformChildren, transformStyle, useTheme } from "../theme";
 
 const AnimatedPressable = ({ children, style, onPress, disabled, ...props }) => {
+  const { mode, theme } = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
 
   const animateTo = (value) => {
@@ -21,11 +23,13 @@ const AnimatedPressable = ({ children, style, onPress, disabled, ...props }) => 
       onPressOut={() => animateTo(1)}
       {...props}
     >
-      <Animated.View style={[style, { transform: [{ scale }] }]}>
-        {children}
+      <Animated.View style={[transformStyle(style, theme, mode), { transform: [{ scale }] }]}>
+        {transformChildren(children, theme, mode)}
       </Animated.View>
     </Pressable>
   );
 };
+
+AnimatedPressable.skipThemeTransform = true;
 
 export default AnimatedPressable;

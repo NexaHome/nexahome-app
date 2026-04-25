@@ -25,7 +25,7 @@ const DeviceControl = ({ route, navigation }) => {
 
   const heroColor = heroAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ["#E8E9E4", "#DFF4E3"],
+    outputRange: ["#EEF2F7", "#DFF4E3"],
   });
 
   const knobX = heroAnim.interpolate({
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     paddingRight: 16,
   },
   backText: {
-    color: "#3478F6",
+    color: "#7B61FF",
     fontSize: 15,
     fontWeight: "800",
   },
@@ -158,10 +158,10 @@ const styles = StyleSheet.create({
     borderRadius: 64,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#DADDD4",
+    borderColor: "#D8DEE9",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#111",
+    shadowColor: "#0A0F2C",
     shadowOpacity: 0.08,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: "#48B75A",
+    backgroundColor: "#00D4FF",
   },
   sheet: {
     marginTop: -26,
@@ -181,14 +181,14 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 28,
     borderTopWidth: 1,
-    borderColor: "#E1E3DD",
+    borderColor: "#D8DEE9",
   },
   handle: {
     alignSelf: "center",
     width: 58,
     height: 5,
     borderRadius: 5,
-    backgroundColor: "#DADDD4",
+    backgroundColor: "#D8DEE9",
     marginBottom: 18,
   },
   titleRow: {
@@ -200,11 +200,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "900",
-    color: "#20211E",
+    color: "#0A0F2C",
     letterSpacing: 0,
   },
   subtitle: {
-    color: "#8A8D86",
+    color: "#64748B",
     fontSize: 14,
     marginTop: 3,
   },
@@ -213,11 +213,11 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#83D28E",
-    backgroundColor: "#F0FFF2",
+    borderColor: "#00D4FF",
+    backgroundColor: "#E6FAFF",
   },
   onlineText: {
-    color: "#278039",
+    color: "#036B82",
     fontSize: 12,
     fontWeight: "800",
   },
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   controlLabel: {
-    color: "#3E403A",
+    color: "#0A0F2C",
     fontSize: 15,
     fontWeight: "700",
     marginBottom: 10,
@@ -238,11 +238,11 @@ const styles = StyleSheet.create({
     width: 54,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#D1D4CC",
+    backgroundColor: "#D8DEE9",
     padding: 3,
   },
   switchOn: {
-    backgroundColor: "#48B75A",
+    backgroundColor: "#00D4FF",
   },
   knob: {
     width: 26,
@@ -253,12 +253,12 @@ const styles = StyleSheet.create({
   sliderTrack: {
     height: 10,
     borderRadius: 8,
-    backgroundColor: "#E8EAE4",
+    backgroundColor: "#EEF2F7",
     overflow: "hidden",
   },
   sliderFill: {
     height: "100%",
-    backgroundColor: "#2E2F2B",
+    backgroundColor: "#0A0F2C",
     borderRadius: 8,
   },
   stepperRow: {
@@ -274,15 +274,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#DADDD4",
+    borderColor: "#D8DEE9",
     backgroundColor: "#FFFFFF",
   },
   stepButtonActive: {
-    backgroundColor: "#2E2F2B",
-    borderColor: "#2E2F2B",
+    backgroundColor: "#0A0F2C",
+    borderColor: "#0A0F2C",
   },
   stepText: {
-    color: "#5D6059",
+    color: "#64748B",
     fontSize: 12,
     fontWeight: "800",
   },
@@ -298,12 +298,12 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 9,
     borderWidth: 1,
-    borderColor: "#DADDD4",
+    borderColor: "#D8DEE9",
     alignItems: "center",
     justifyContent: "center",
   },
   secondaryText: {
-    color: "#42443E",
+    color: "#0A0F2C",
     fontSize: 13,
     fontWeight: "700",
   },
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 9,
     borderWidth: 1,
-    borderColor: "#DADDD4",
+    borderColor: "#D8DEE9",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 10,
@@ -320,13 +320,13 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 9,
     borderWidth: 1,
-    borderColor: "#FF6B6B",
+    borderColor: "#FF5C7A",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 10,
   },
   removeText: {
-    color: "#FF5C5C",
+    color: "#FF5C7A",
     fontSize: 13,
     fontWeight: "800",
   },

@@ -6,10 +6,10 @@ import ScreenShell from "../components/ScreenShell";
 import { alerts } from "../data/homeData";
 
 const toneStyle = {
-  Critical: { card: "#FFE6E8", border: "#FF7777", text: "#D93636" },
-  Warning: { card: "#FFF5D9", border: "#F1BD47", text: "#B27700" },
-  Info: { card: "#FFFFFF", border: "#DADDD4", text: "#70736C" },
-  Read: { card: "#F6F7F3", border: "#E2E4DE", text: "#A0A39B" },
+  Critical: { card: "#FFF0F3", border: "#FF5C7A", text: "#FF5C7A" },
+  Warning: { card: "#F0ECFF", border: "#7B61FF", text: "#6D4DFF" },
+  Info: { card: "#FFFFFF", border: "#D8DEE9", text: "#64748B" },
+  Read: { card: "#F8FAFC", border: "#D8DEE9", text: "#94A3B8" },
 };
 
 const Alerts = ({ navigation }) => {
@@ -78,22 +78,22 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 14,
   },
-  title: { fontSize: 25, fontWeight: "900", color: "#20211E", letterSpacing: 0 },
+  title: { fontSize: 25, fontWeight: "900", color: "#0A0F2C", letterSpacing: 0 },
   markButton: { paddingVertical: 8, paddingLeft: 12 },
-  markText: { color: "#8B8E87", fontSize: 12, fontWeight: "800" },
+  markText: { color: "#64748B", fontSize: 12, fontWeight: "800" },
   filters: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
   filter: {
     width: "31%",
     height: 38,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#DADDD4",
+    borderColor: "#D8DEE9",
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
-  filterActive: { backgroundColor: "#2E2F2B", borderColor: "#2E2F2B" },
-  filterText: { color: "#70736C", fontSize: 12, fontWeight: "800" },
+  filterActive: { backgroundColor: "#0A0F2C", borderColor: "#0A0F2C" },
+  filterText: { color: "#64748B", fontSize: 12, fontWeight: "800" },
   filterTextActive: { color: "#FFFFFF" },
   card: {
     minHeight: 100,
@@ -117,28 +117,28 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   cardTitle: {
     flex: 1,
-    color: "#252621",
+    color: "#0A0F2C",
     fontSize: 14,
     fontWeight: "900",
     paddingRight: 8,
   },
   level: { borderWidth: 1, borderRadius: 5, paddingHorizontal: 8, paddingVertical: 3 },
   levelText: { fontSize: 10, fontWeight: "900" },
-  detail: { color: "#8B8E87", fontSize: 12, marginTop: 5 },
+  detail: { color: "#64748B", fontSize: 12, marginTop: 5 },
   actionRow: { flexDirection: "row", marginTop: 12 },
   actionButton: {
     height: 30,
     minWidth: 82,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#DADDD4",
+    borderColor: "#D8DEE9",
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 8,
   },
-  actionText: { color: "#70736C", fontSize: 11, fontWeight: "800" },
-  linkText: { color: "#3478F6", fontSize: 11, fontWeight: "800" },
+  actionText: { color: "#64748B", fontSize: 11, fontWeight: "800" },
+  linkText: { color: "#7B61FF", fontSize: 11, fontWeight: "800" },
 });
 
 export default Alerts;

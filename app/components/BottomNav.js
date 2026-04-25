@@ -1,6 +1,7 @@
 import React from "react";
 import { Text, View, StyleSheet } from "react-native";
 import AnimatedPressable from "./AnimatedPressable";
+import { transformStyle, useTheme } from "../theme";
 
 const tabs = [
   { key: "home", label: "Home", route: "Dashboard" },
@@ -11,8 +12,10 @@ const tabs = [
 ];
 
 const BottomNav = ({ active = "home", navigation }) => {
+  const { mode, theme } = useTheme();
+
   return (
-    <View style={styles.nav}>
+    <View style={transformStyle(styles.nav, theme, mode)}>
       {tabs.map((tab) => {
         const isActive = active === tab.key;
         return (
@@ -21,10 +24,19 @@ const BottomNav = ({ active = "home", navigation }) => {
             style={styles.tab}
             onPress={() => tab.route && navigation.navigate(tab.route)}
           >
-            <Text style={[styles.label, isActive && styles.activeLabel]}>
+            <Text
+              style={[
+                styles.label,
+                mode === "dark" && styles.labelDark,
+                isActive && styles.activeLabel,
+                mode === "dark" && isActive && styles.activeLabelDark,
+              ]}
+            >
               {tab.label}
             </Text>
-            <View style={[styles.indicator, isActive && styles.activeIndicator]} />
+            <View
+              style={[styles.indicator, isActive && styles.activeIndicator]}
+            />
           </AnimatedPressable>
         );
       })}
@@ -38,8 +50,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingTop: 9,
     borderTopWidth: 1,
-    borderTopColor: "#E3E4DF",
-    backgroundColor: "#FCFCFA",
+    borderTopColor: "#D8DEE9",
+    backgroundColor: "#FFFFFF",
     flexDirection: "row",
     justifyContent: "space-between",
   },
@@ -49,11 +61,17 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 11.5,
-    color: "#9A9D96",
+    color: "#94A3B8",
     fontWeight: "600",
   },
+  labelDark: {
+    color: "#B7C0D1",
+  },
   activeLabel: {
-    color: "#22231F",
+    color: "#0A0F2C",
+  },
+  activeLabelDark: {
+    color: "#FFFFFF",
   },
   indicator: {
     width: 22,
@@ -63,7 +81,7 @@ const styles = StyleSheet.create({
     marginTop: 7,
   },
   activeIndicator: {
-    backgroundColor: "#22231F",
+    backgroundColor: "#0A0F2C",
   },
 });
 
