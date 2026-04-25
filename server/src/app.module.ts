@@ -7,6 +7,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { HomesModule } from './modules/homes';
 import { formatGraphQLError } from './common/errors/graphql-error.formatter';
 
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
@@ -20,6 +21,7 @@ import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin
       driver: ApolloDriver,
       autoSchemaFile: true,
       playground: false,
+      context: ({ req }) => ({ req }),
       plugins: [ApolloServerPluginLandingPageLocalDefault()],
       formatError: formatGraphQLError,
     }),
@@ -34,6 +36,7 @@ import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin
     }),
     UsersModule,
     AuthModule,
+    HomesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

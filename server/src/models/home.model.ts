@@ -1,11 +1,19 @@
 import { Model } from 'mongoloquent';
+import { ObjectType, Field, ID } from '@nestjs/graphql';
 
+@ObjectType()
 export class Home extends Model {
   static collectionName = 'homes';
 
-  name: string;
+  @Field(() => ID)
+  _id?: string;
 
-  owner_id: string; // references users.id
+  @Field()
+  name!: string;
 
-  createdAt: Date;
+  @Field()
+  owner_id!: string; // references users.id
+
+  @Field()
+  createdAt!: Date;
 }
