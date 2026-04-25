@@ -1,0 +1,217 @@
+import React, {
+  createContext,
+  isValidElement,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
+import { StyleSheet } from "react-native";
+
+export const palette = {
+  primary: "#0A0F2C",
+  secondary: "#7B61FF",
+  accent: "#00D4FF",
+  softWhite: "#F8FAFC",
+  surface: "#FFFFFF",
+  darkGray: "#64748B",
+};
+
+export const lightColors = {
+  primary: palette.primary,
+  secondary: palette.secondary,
+  accent: palette.accent,
+  background: palette.softWhite,
+  surface: palette.surface,
+  surfaceMuted: "#EEF2F7",
+  border: "#D8DEE9",
+  text: palette.primary,
+  textMuted: palette.darkGray,
+  textSoft: "#94A3B8",
+  successText: "#036B82",
+  accentSoft: "#E6FAFF",
+  secondarySoft: "#F0ECFF",
+  danger: "#FF5C7A",
+  dangerSoft: "#FFF0F3",
+};
+
+export const darkColors = {
+  primary: palette.primary,
+  secondary: "#9A86FF",
+  accent: palette.accent,
+  background: "#060A1F",
+  surface: "#0A0F2C",
+  surfaceMuted: "#111936",
+  border: "#263154",
+  text: palette.softWhite,
+  textMuted: "#B7C0D1",
+  textSoft: "#7F8AA3",
+  successText: palette.accent,
+  accentSoft: "#072F46",
+  secondarySoft: "#1B1742",
+  danger: "#FF6F8A",
+  dangerSoft: "#351422",
+};
+
+export const fonts = {
+  heading: "Roboto",
+  body: "Roboto",
+  fallback: "Roboto",
+};
+
+const ThemeContext = createContext({
+  mode: "light",
+  theme: lightColors,
+  toggleMode: () => {},
+});
+
+export const ThemeProvider = ({ children }) => {
+  const [mode, setMode] = useState("light");
+  const value = useMemo(
+    () => ({
+      mode,
+      theme: mode === "dark" ? darkColors : lightColors,
+      toggleMode: () =>
+        setMode((current) => (current === "dark" ? "light" : "dark")),
+    }),
+    [mode],
+  );
+
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
+};
+
+export const useTheme = () => useContext(ThemeContext);
+
+const colorRoles = {
+  "#F8FAFC": "background",
+  "#FFFFFF": "surface",
+  "#EEF2F7": "surfaceMuted",
+  "#D8DEE9": "border",
+  "#0A0F2C": "text",
+  "#64748B": "textMuted",
+  "#94A3B8": "textSoft",
+  "#7B61FF": "secondary",
+  "#9A86FF": "secondary",
+  "#00D4FF": "accent",
+  "#036B82": "successText",
+  "#E6FAFF": "accentSoft",
+  "#F0ECFF": "secondarySoft",
+  "#FF5C7A": "danger",
+  "#FF6F8A": "danger",
+  "#FFF0F3": "dangerSoft",
+};
+
+const textProps = new Set(["color", "textDecorationColor"]);
+const surfaceProps = new Set([
+  "backgroundColor",
+  "borderColor",
+  "borderTopColor",
+  "borderBottomColor",
+  "borderLeftColor",
+  "borderRightColor",
+  "shadowColor",
+]);
+
+const isPlainObject = (value) => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+};
+
+const mapColor = (value, propName, theme, mode) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  if (value === "transparent") {
+    return value;
+  }
+
+  const role = colorRoles[value.toUpperCase()];
+  if (!role) {
+    return value;
+  }
+
+  if (propName === "shadowColor") {
+    return mode === "dark" ? "#000000" : theme.primary;
+  }
+
+  if (textProps.has(propName)) {
+    if (role === "surface") return mode === "dark" ? theme.text : theme.surface;
+    if (role === "primary") return theme.text;
+    return theme[role] || value;
+  }
+
+  if (surfaceProps.has(propName)) {
+    if (role === "text")
+      return mode === "dark" ? theme.secondary : theme.primary;
+    return theme[role] || value;
+  }
+
+  return theme[role] || value;
+};
+
+const transformObject = (style, theme, mode) => {
+  if (!style || typeof style !== "object") {
+    return style;
+  }
+
+  const next = {};
+  Object.keys(style).forEach((key) => {
+    const value = style[key];
+    if (Array.isArray(value)) {
+      next[key] = value.map((item) =>
+        isPlainObject(item) ? transformObject(item, theme, mode) : item,
+      );
+    } else if (isPlainObject(value) && key !== "fontVariant") {
+      next[key] = transformObject(value, theme, mode);
+    } else {
+      next[key] = mapColor(value, key, theme, mode);
+    }
+  });
+  return next;
+};
+
+export const transformStyle = (style, theme, mode) => {
+  if (!style) {
+    return style;
+  }
+
+  if (Array.isArray(style)) {
+    return style.map((item) => transformStyle(item, theme, mode));
+  }
+
+  return transformObject(StyleSheet.flatten(style), theme, mode);
+};
+
+export const transformChildren = (children, theme, mode) =>
+  React.Children.map(children, (child) => {
+    if (!isValidElement(child)) {
+      return child;
+    }
+
+    if (child.type?.skipThemeTransform) {
+      return child;
+    }
+
+    const nextProps = {};
+    if (child.props.style) {
+      nextProps.style = transformStyle(child.props.style, theme, mode);
+    }
+    if (child.props.contentContainerStyle) {
+      nextProps.contentContainerStyle = transformStyle(
+        child.props.contentContainerStyle,
+        theme,
+        mode,
+      );
+    }
+    if (child.props.children) {
+      nextProps.children = transformChildren(child.props.children, theme, mode);
+    }
+
+    return React.cloneElement(child, nextProps);
+  });
