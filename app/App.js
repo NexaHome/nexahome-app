@@ -3,6 +3,9 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { StatusBar } from "expo-status-bar";
 import { Text, TextInput } from "react-native";
+import StartedScreen from "./screens/StartedScreen";
+import LoginScreen from "./screens/LoginScreen";
+import RegisterScreen from "./screens/RegisterScreen";
 import Dashboard from "./screens/Dashboard";
 import DeviceControl from "./screens/DeviceControl";
 import Alerts from "./screens/Alerts";
@@ -39,7 +42,7 @@ const AppNavigator = () => {
     <NavigationContainer>
       <StatusBar style={theme.background === "#060A1F" ? "light" : "dark"} />
       <Stack.Navigator
-        initialRouteName="Dashboard"
+        initialRouteName="Started"
         detachInactiveScreens={false}
         screenOptions={{
           headerShown: false,
@@ -59,6 +62,9 @@ const AppNavigator = () => {
           }),
         }}
       >
+        <Stack.Screen name="Started" component={StartedScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Dashboard" component={Dashboard} />
         <Stack.Screen name="RoomDetail" component={RoomDetail} />
         <Stack.Screen name="DeviceControl" component={DeviceControl} />
