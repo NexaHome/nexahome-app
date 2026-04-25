@@ -39,6 +39,24 @@ export class UserNotFoundException extends AppException {
   }
 }
 
+export class HomeNotFoundException extends AppException {
+  constructor() {
+    super('Home not found', HttpStatus.NOT_FOUND, 'HOME_NOT_FOUND');
+  }
+}
+
+export class HomeAccessDeniedException extends AppException {
+  constructor() {
+    super('You do not have access to this home', HttpStatus.FORBIDDEN, 'HOME_ACCESS_DENIED');
+  }
+}
+
+export class HomeMemberAlreadyExistsException extends AppException {
+  constructor() {
+    super('User is already a member of this home', HttpStatus.CONFLICT, 'HOME_MEMBER_ALREADY_EXISTS');
+  }
+}
+
 // ── Validation Errors ────────────────────────────────────
 export class ValidationException extends AppException {
   constructor(message: string) {
