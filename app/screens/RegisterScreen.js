@@ -9,7 +9,7 @@ import {
   ScrollView,
 } from "react-native";
 
-export default function RegisterScreen({ goToLogin, goToHome }) {
+export default function RegisterScreen({ navigation }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -19,7 +19,7 @@ export default function RegisterScreen({ goToLogin, goToHome }) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <TouchableOpacity onPress={goToLogin}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.back}>{"< Back"}</Text>
         </TouchableOpacity>
 
@@ -68,13 +68,13 @@ export default function RegisterScreen({ goToLogin, goToHome }) {
           onChangeText={setConfirmPassword}
         />
 
-        <TouchableOpacity style={styles.createButton} onPress={goToHome}>
+        <TouchableOpacity style={styles.createButton} onPress={() => navigation.navigate("Dashboard")}>
           <Text style={styles.createButtonText}>Create account</Text>
         </TouchableOpacity>
 
         <View style={styles.bottomRow}>
           <Text style={styles.bottomText}>Already have an account? </Text>
-          <TouchableOpacity onPress={goToLogin}>
+          <TouchableOpacity onPress={() => navigation.navigate("Login")}>
             <Text style={styles.linkText}>Login here</Text>
           </TouchableOpacity>
         </View>

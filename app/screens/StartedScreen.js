@@ -7,7 +7,7 @@ import {
   SafeAreaView,
 } from "react-native";
 
-export default function StartedScreen({ goToLogin, goToHome }) {
+export default function StartedScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.logoBox}>
@@ -19,11 +19,11 @@ export default function StartedScreen({ goToLogin, goToHome }) {
         <Text style={styles.title}>NexaHome</Text>
         <Text style={styles.subtitle}>Control your home, anywhere</Text>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={goToLogin}>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate("Login")}>
           <Text style={styles.primaryButtonText}>Get Started</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.secondaryButton} onPress={goToLogin}>
+        <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate("Login")}>
           <Text style={styles.secondaryButtonText}>Login</Text>
         </TouchableOpacity>
       </View>

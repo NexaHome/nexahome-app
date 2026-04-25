@@ -8,7 +8,7 @@ import {
   SafeAreaView,
 } from "react-native";
 
-export default function LoginScreen({ goToRegister, goToHome }) {
+export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -39,7 +39,7 @@ export default function LoginScreen({ goToRegister, goToHome }) {
           <Text style={styles.forgot}>Forgot password?</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.loginButton} onPress={goToHome}>
+        <TouchableOpacity style={styles.loginButton} onPress={() => navigation.navigate("Dashboard")}>
           <Text style={styles.loginButtonText}>Login</Text>
         </TouchableOpacity>
 
@@ -56,7 +56,7 @@ export default function LoginScreen({ goToRegister, goToHome }) {
 
       <View style={styles.bottomRow}>
         <Text style={styles.bottomText}>Don't have an account? </Text>
-        <TouchableOpacity onPress={goToRegister}>
+        <TouchableOpacity onPress={() => navigation.navigate("Register")}>
           <Text style={styles.linkText}>Register here</Text>
         </TouchableOpacity>
       </View>
