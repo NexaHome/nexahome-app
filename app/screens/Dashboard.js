@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dimensions,
   FlatList,
@@ -10,7 +10,8 @@ import {
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-import { rooms, sensors } from "../data/homeData";
+import { rooms as dummyRooms, sensors } from "../data/homeData";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../theme";
 
 const { width } = Dimensions.get("window");
@@ -20,7 +21,107 @@ const CARD_WIDTH = (width - PAGE_PADDING * 2 - CARD_GAP) / 2;
 
 const Dashboard = ({ navigation }) => {
   const { mode, toggleMode } = useTheme();
-  const roomItems = [...rooms, { id: "add", name: "+ Add room", isAdd: true }];
+  const [roomItems, setRoomItems] = useState([]);
+  const [summary, setSummary] = useState({
+    roomsCount: 0,
+    activeDevicesCount: 0,
+    homeStatus: "-",
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        let token = await AsyncStorage.getItem("token");
+        console.log("Token from AsyncStorage:", token ? "EXISTS" : "NOT FOUND");
+
+        // HARDCODED FOR TESTING - Remove when login is implemented by team
+        if (!token) {
+          token =
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0IiwiaWF0IjoxNjU3NjI2MDAwfQ.test";
+          console.log(
+            "Using test token for development - REMOVE when login ready",
+          );
+        }
+        // Connect to GraphQL server - use Mac IP for real device
+        const url = "http://10.153.217.133:3000/graphql";
+        const query = `query { roomsByHome { roomId name subtitle activeDevices totalDevices } dashboardHome { roomsCount activeDevicesCount homeStatus } }`;
+        console.log("Fetching from:", url);
+        let res;
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          res = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ query }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+        } catch (fetchErr) {
+          console.log("Fetch error name:", fetchErr.name);
+          console.log("Fetch error message:", fetchErr.message);
+          if (fetchErr.name === "AbortError") {
+            throw new Error("Fetch timeout - server not responding");
+          }
+          throw new Error(`Network error: ${fetchErr.message}`);
+        }
+        console.log("Response status:", res.status);
+        let jsonResponse;
+        try {
+          jsonResponse = await res.json();
+        } catch (parseErr) {
+          console.log("JSON parse error:", parseErr.message);
+          throw new Error("Invalid JSON from server");
+        }
+        console.log("Response body:", JSON.stringify(jsonResponse, null, 2));
+        if (!res.ok) {
+          throw new Error(
+            `HTTP ${res.status}: ${JSON.stringify(jsonResponse)}`,
+          );
+        }
+        console.log("Response:", JSON.stringify(jsonResponse, null, 2));
+        const { data, errors } = jsonResponse;
+        if (errors) {
+          throw new Error(errors[0]?.message || "GraphQL error");
+        }
+        if (data && data.roomsByHome) {
+          setRoomItems([
+            ...data.roomsByHome,
+            { roomId: "add", name: "+ Add room", isAdd: true },
+          ]);
+          setSummary(
+            data.dashboardHome || {
+              roomsCount: 0,
+              activeDevicesCount: 0,
+              homeStatus: "-",
+            },
+          );
+        } else {
+          throw new Error("No data in response");
+        }
+      } catch (e) {
+        console.log("Error:", e.message);
+        setError(e.message);
+        setRoomItems([
+          ...dummyRooms,
+          { id: "add", name: "+ Add room", isAdd: true },
+        ]);
+        setSummary({
+          roomsCount: dummyRooms.length,
+          activeDevicesCount: 0,
+          homeStatus: "Offline",
+        });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   return (
     <ScreenShell>
@@ -52,64 +153,77 @@ const Dashboard = ({ navigation }) => {
         <View style={styles.homeCard}>
           <View style={styles.homeCopy}>
             <Text style={styles.homeTitle}>Rumah Utama</Text>
-            <Text style={styles.muted}>3 rooms - 6 devices active</Text>
+            <Text style={styles.muted}>
+              {summary.roomsCount} rooms - {summary.activeDevicesCount} devices
+              active
+            </Text>
           </View>
           <View style={styles.onlinePill}>
-            <Text style={styles.onlineText}>Online</Text>
+            <Text style={styles.onlineText}>{summary.homeStatus}</Text>
           </View>
         </View>
 
         <Text style={styles.sectionTitle}>Rooms</Text>
-        <FlatList
-          data={roomItems}
-          scrollEnabled={false}
-          numColumns={2}
-          columnWrapperStyle={styles.cardRow}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
-            if (item.isAdd) {
+        {loading ? (
+          <Text style={styles.loadingText}>Loading rooms from server...</Text>
+        ) : error ? (
+          <Text style={styles.errorText}>Error: {error}</Text>
+        ) : (
+          <FlatList
+            data={roomItems}
+            scrollEnabled={false}
+            numColumns={2}
+            columnWrapperStyle={styles.cardRow}
+            keyExtractor={(item) => item.roomId || item.id}
+            renderItem={({ item }) => {
+              if (item.isAdd) {
+                return (
+                  <AnimatedPressable
+                    style={[styles.roomCard, styles.addRoomCard]}
+                    onPress={() => navigation.navigate("AddRoom")}
+                  >
+                    <Text style={styles.addRoomText}>+ Add room</Text>
+                  </AnimatedPressable>
+                );
+              }
+
               return (
                 <AnimatedPressable
-                  style={[styles.roomCard, styles.addRoomCard]}
-                  onPress={() => navigation.navigate("AddRoom")}
+                  style={styles.roomCard}
+                  onPress={() =>
+                    (item.roomId || item.id) === "add"
+                      ? navigation.navigate("AddRoom")
+                      : (item.roomId || item.id) === "terrace"
+                        ? navigation.navigate("LaundryStatus", {
+                            weather: "rainy",
+                          })
+                        : navigation.navigate("RoomDetail", {
+                            roomId: item.roomId || item.id,
+                            roomName: item.name,
+                          })
+                  }
                 >
-                  <Text style={styles.addRoomText}>+ Add room</Text>
+                  <View>
+                    <Text style={styles.roomName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.muted} numberOfLines={1}>
+                      {item.subtitle}
+                    </Text>
+                  </View>
+                  <View style={styles.roomMeta}>
+                    <Text style={styles.roomCount}>
+                      {item.activeDevices ?? 0}/{item.totalDevices ?? 0}
+                    </Text>
+                    <View style={styles.openButton}>
+                      <Text style={styles.openButtonText}>Open</Text>
+                    </View>
+                  </View>
                 </AnimatedPressable>
               );
-            }
-
-            return (
-              <AnimatedPressable
-                style={styles.roomCard}
-                onPress={() =>
-                  item.id === "terrace"
-                    ? navigation.navigate("LaundryStatus", { weather: "rainy" })
-                    : navigation.navigate("RoomDetail", {
-                        roomId: item.id,
-                        roomName: item.name,
-                      })
-                }
-              >
-                <View>
-                  <Text style={styles.roomName} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  <Text style={styles.muted} numberOfLines={1}>
-                    {item.summary}
-                  </Text>
-                </View>
-                <View style={styles.roomMeta}>
-                  <Text style={styles.roomCount}>
-                    {item.devicesActive}/{item.totalDevices}
-                  </Text>
-                  <View style={styles.openButton}>
-                    <Text style={styles.openButtonText}>Open</Text>
-                  </View>
-                </View>
-              </AnimatedPressable>
-            );
-          }}
-        />
+            }}
+          />
+        )}
 
         <Text style={styles.sectionTitle}>Quick actions</Text>
         <View style={styles.actions}>
@@ -188,6 +302,17 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 11,
     fontWeight: "900",
+  },
+  loadingText: {
+    textAlign: "center",
+    marginVertical: 30,
+  },
+  errorText: {
+    color: "#FF5C7A",
+    fontSize: 14,
+    fontWeight: "600",
+    paddingVertical: 12,
+    textAlign: "center",
   },
   header: {
     flexDirection: "row",
