@@ -1,25 +1,90 @@
 import React, { useState } from "react";
 import {
-  View,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
+  View,
+  Alert,
 } from "react-native";
+import { BASE_URL } from "../utils/api";
 
 export default function RegisterScreen({ navigation }) {
-  const [fullName, setFullName] = useState("");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleRegister = async () => {
+    if (!name || !email || !password || !confirmPassword) {
+      Alert.alert("Error", "Semua field wajib diisi");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Password dan confirm password tidak sama");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await fetch(BASE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: `
+            mutation Register($name: String!, $email: String!, $password: String!) {
+              register(createUserInput: {
+                name: $name,
+                email: $email,
+                password: $password
+              }) {
+                userId
+                email
+                name
+                message
+              }
+            }
+          `,
+          variables: {
+            name,
+            email,
+            password,
+          },
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.errors) {
+        Alert.alert(
+          "Register gagal",
+          result.errors[0]?.message || "Terjadi kesalahan",
+        );
+        return;
+      }
+
+      Alert.alert("Sukses", "Akun berhasil dibuat, silakan login");
+      navigation.navigate("Login");
+    } catch (error) {
+      Alert.alert("Error", "Gagal terhubung ke server");
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.navigate("Login")}>
           <Text style={styles.back}>{"< Back"}</Text>
         </TouchableOpacity>
 
@@ -30,8 +95,8 @@ export default function RegisterScreen({ navigation }) {
         <TextInput
           style={styles.input}
           placeholder="Your name"
-          value={fullName}
-          onChangeText={setFullName}
+          value={name}
+          onChangeText={setName}
         />
 
         <Text style={styles.label}>Email</Text>
@@ -40,6 +105,7 @@ export default function RegisterScreen({ navigation }) {
           placeholder="email@example.com"
           value={email}
           onChangeText={setEmail}
+          autoCapitalize="none"
         />
 
         <Text style={styles.label}>Phone number</Text>
@@ -68,8 +134,14 @@ export default function RegisterScreen({ navigation }) {
           onChangeText={setConfirmPassword}
         />
 
-        <TouchableOpacity style={styles.createButton} onPress={() => navigation.navigate("Dashboard")}>
-          <Text style={styles.createButtonText}>Create account</Text>
+        <TouchableOpacity
+          style={styles.createButton}
+          onPress={handleRegister}
+          disabled={loading}
+        >
+          <Text style={styles.createButtonText}>
+            {loading ? "Loading..." : "Create account"}
+          </Text>
         </TouchableOpacity>
 
         <View style={styles.bottomRow}>
