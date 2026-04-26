@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { StatusBar } from "expo-status-bar";
 import { Text, TextInput } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import StartedScreen from "./screens/StartedScreen";
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
@@ -75,7 +76,10 @@ const AppNavigator = () => {
         <Stack.Screen name="Members" component={Members} />
         <Stack.Screen name="LaundryStatus" component={LaundryStatus} />
         <Stack.Screen name="LaundryControl" component={LaundryControl} />
-        <Stack.Screen name="LaundryAutomationRule" component={LaundryAutomationRule} />
+        <Stack.Screen
+          name="LaundryAutomationRule"
+          component={LaundryAutomationRule}
+        />
         <Stack.Screen name="AddRoom" component={AddRoom} />
         <Stack.Screen name="AddFeature" component={AddFeature} />
       </Stack.Navigator>
@@ -85,8 +89,10 @@ const AppNavigator = () => {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppNavigator />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AppNavigator />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

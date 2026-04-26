@@ -5,11 +5,11 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   Alert,
   ScrollView,
 } from "react-native";
-import { BASE_URL } from "../utils/api";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { postGraphQL } from "../utils/api";
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
@@ -25,13 +25,8 @@ export default function LoginScreen({ navigation }) {
     try {
       setLoading(true);
 
-      const response = await fetch(BASE_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query: `
+      const response = await postGraphQL({
+        query: `
             mutation Login($email: String!, $password: String!) {
               login(loginInput: {
                 email: $email,
@@ -44,11 +39,10 @@ export default function LoginScreen({ navigation }) {
               }
             }
           `,
-          variables: {
-            email,
-            password,
-          },
-        }),
+        variables: {
+          email,
+          password,
+        },
       });
 
       const result = await response.json();

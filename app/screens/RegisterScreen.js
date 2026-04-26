@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,7 +8,8 @@ import {
   View,
   Alert,
 } from "react-native";
-import { BASE_URL } from "../utils/api";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { postGraphQL } from "../utils/api";
 
 export default function RegisterScreen({ navigation }) {
   const [name, setName] = useState("");
@@ -33,13 +33,8 @@ export default function RegisterScreen({ navigation }) {
     try {
       setLoading(true);
 
-      const response = await fetch(BASE_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query: `
+      const response = await postGraphQL({
+        query: `
             mutation Register($name: String!, $email: String!, $password: String!) {
               register(createUserInput: {
                 name: $name,
@@ -53,12 +48,11 @@ export default function RegisterScreen({ navigation }) {
               }
             }
           `,
-          variables: {
-            name,
-            email,
-            password,
-          },
-        }),
+        variables: {
+          name,
+          email,
+          password,
+        },
       });
 
       const result = await response.json();
