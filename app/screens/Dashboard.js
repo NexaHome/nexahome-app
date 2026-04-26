@@ -35,20 +35,15 @@ const Dashboard = ({ navigation }) => {
       setLoading(true);
       try {
         let token = await AsyncStorage.getItem("token");
-        console.log("Token from AsyncStorage:", token ? "EXISTS" : "NOT FOUND");
 
         // HARDCODED FOR TESTING - Remove when login is implemented by team
         if (!token) {
           token =
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0IiwiaWF0IjoxNjU3NjI2MDAwfQ.test";
-          console.log(
-            "Using test token for development - REMOVE when login ready",
-          );
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJuYW1lIjoiVGVzdCBVc2VyIiwiaWF0IjoxNzc3MTg1ODU4LCJleHAiOjE3Nzc3OTA2NTh9.M04XPNOGIQJatnadTmHe2QZbf69GA__7lk2jZDafdwQ";
         }
         // Connect to GraphQL server - use Mac IP for real device
         const url = "http://10.153.217.133:3000/graphql";
         const query = `query { roomsByHome { roomId name subtitle activeDevices totalDevices } dashboardHome { roomsCount activeDevicesCount homeStatus } }`;
-        console.log("Fetching from:", url);
         let res;
         try {
           const controller = new AbortController();
@@ -64,28 +59,22 @@ const Dashboard = ({ navigation }) => {
           });
           clearTimeout(timeoutId);
         } catch (fetchErr) {
-          console.log("Fetch error name:", fetchErr.name);
-          console.log("Fetch error message:", fetchErr.message);
           if (fetchErr.name === "AbortError") {
             throw new Error("Fetch timeout - server not responding");
           }
           throw new Error(`Network error: ${fetchErr.message}`);
         }
-        console.log("Response status:", res.status);
         let jsonResponse;
         try {
           jsonResponse = await res.json();
         } catch (parseErr) {
-          console.log("JSON parse error:", parseErr.message);
           throw new Error("Invalid JSON from server");
         }
-        console.log("Response body:", JSON.stringify(jsonResponse, null, 2));
         if (!res.ok) {
           throw new Error(
             `HTTP ${res.status}: ${JSON.stringify(jsonResponse)}`,
           );
         }
-        console.log("Response:", JSON.stringify(jsonResponse, null, 2));
         const { data, errors } = jsonResponse;
         if (errors) {
           throw new Error(errors[0]?.message || "GraphQL error");
@@ -106,7 +95,6 @@ const Dashboard = ({ navigation }) => {
           throw new Error("No data in response");
         }
       } catch (e) {
-        console.log("Error:", e.message);
         setError(e.message);
         setRoomItems([
           ...dummyRooms,

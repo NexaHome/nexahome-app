@@ -5,16 +5,73 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
+  Alert,
+  ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { postGraphQL } from "../utils/api";
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Email dan password wajib diisi");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await postGraphQL({
+        query: `
+            mutation Login($email: String!, $password: String!) {
+              login(loginInput: {
+                email: $email,
+                password: $password
+              }) {
+                accessToken
+                userId
+                email
+                name
+              }
+            }
+          `,
+        variables: {
+          email,
+          password,
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.errors) {
+        Alert.alert(
+          "Login gagal",
+          result.errors[0]?.message || "Email atau password salah",
+        );
+        return;
+      }
+
+      const loginData = result.data?.login;
+      Alert.alert("Sukses", `Selamat datang, ${loginData.name}`);
+      navigation.navigate("Dashboard");
+    } catch (error) {
+      Alert.alert("Error", "Gagal terhubung ke server");
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>Login to your account</Text>
 
@@ -24,6 +81,7 @@ export default function LoginScreen({ navigation }) {
           placeholder="email@example.com"
           value={email}
           onChangeText={setEmail}
+          autoCapitalize="none"
         />
 
         <Text style={styles.label}>Password</Text>
@@ -39,8 +97,14 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.forgot}>Forgot password?</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.loginButton} onPress={() => navigation.navigate("Dashboard")}>
-          <Text style={styles.loginButtonText}>Login</Text>
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          <Text style={styles.loginButtonText}>
+            {loading ? "Loading..." : "Login"}
+          </Text>
         </TouchableOpacity>
 
         <View style={styles.orRow}>
@@ -52,14 +116,14 @@ export default function LoginScreen({ navigation }) {
         <TouchableOpacity style={styles.googleButton}>
           <Text style={styles.googleButtonText}>Continue with Google</Text>
         </TouchableOpacity>
-      </View>
 
-      <View style={styles.bottomRow}>
-        <Text style={styles.bottomText}>Don't have an account? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-          <Text style={styles.linkText}>Register here</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.bottomRow}>
+          <Text style={styles.bottomText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate("Register")}>
+            <Text style={styles.linkText}>Register here</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -68,10 +132,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F6F7FB",
+  },
+  content: {
     paddingHorizontal: 24,
     paddingTop: 40,
-    paddingBottom: 24,
-    justifyContent: "space-between",
+    paddingBottom: 32,
   },
   title: {
     fontSize: 34,
@@ -147,6 +212,8 @@ const styles = StyleSheet.create({
   bottomRow: {
     flexDirection: "row",
     justifyContent: "center",
+    alignItems: "center",
+    marginTop: 28,
   },
   bottomText: {
     color: "#6B7280",

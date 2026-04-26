@@ -1,9 +1,17 @@
-import React from "react";
-import { Dimensions, FlatList, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  Dimensions,
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-import { activities, devices } from "../data/homeData";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { postGraphQL } from "../utils/api";
 
 const { width } = Dimensions.get("window");
 const PAGE_PADDING = 20;
@@ -11,9 +19,80 @@ const CARD_GAP = 12;
 const CARD_WIDTH = (width - PAGE_PADDING * 2 - CARD_GAP) / 2;
 
 const RoomDetail = ({ route, navigation }) => {
-  const { roomName = "Ruang Tamu", roomId = "living" } = route.params || {};
-  const roomDevices = devices.filter((device) => device.roomId === roomId);
-  const activeDevices = roomDevices.filter((device) => device.power).length;
+  const { roomName: initialRoomName = "Room", roomId } = route.params || {};
+  const [roomName, setRoomName] = useState(initialRoomName);
+  const [roomDevices, setRoomDevices] = useState([]);
+  const [activeDevices, setActiveDevices] = useState(0);
+  const [roomSubtitle, setRoomSubtitle] = useState("-");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchRoomDetail = async () => {
+      if (!roomId) {
+        setError("Room ID tidak ditemukan.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError("");
+
+        const token = await AsyncStorage.getItem("token");
+        if (!token) {
+          throw new Error("Token tidak ditemukan, silakan login ulang.");
+        }
+
+        const query = `
+          query RoomSummaries {
+            roomsByHome {
+              roomId
+              name
+              subtitle
+              activeDevices
+              totalDevices
+            }
+          }
+        `;
+
+        const response = await postGraphQL(
+          {
+            query,
+          },
+          {
+            Authorization: `Bearer ${token}`,
+          },
+        );
+        const result = await response.json();
+
+        if (!response.ok || result.errors) {
+          throw new Error(
+            result.errors?.[0]?.message || "Gagal mengambil detail room",
+          );
+        }
+
+        const rooms = result.data?.roomsByHome || [];
+        const selectedRoom = rooms.find((item) => item.roomId === roomId);
+
+        if (!selectedRoom) {
+          throw new Error("Room tidak ditemukan di server");
+        }
+
+        setRoomName(selectedRoom.name || initialRoomName);
+        setActiveDevices(selectedRoom.activeDevices || 0);
+        setRoomSubtitle(selectedRoom.subtitle || "-");
+        setRoomDevices([]);
+      } catch (fetchError) {
+        setError(fetchError.message || "Terjadi kesalahan");
+        setRoomDevices([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRoomDetail();
+  }, [roomId, initialRoomName]);
 
   return (
     <ScreenShell>
@@ -23,70 +102,56 @@ const RoomDetail = ({ route, navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.topBar}>
-          <AnimatedPressable style={styles.backButton} onPress={() => navigation.goBack()}>
+          <AnimatedPressable
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
             <Text style={styles.backText}>Back</Text>
           </AnimatedPressable>
           <View style={styles.topActions}>
             <AnimatedPressable
               style={styles.editButton}
-              onPress={() => navigation.navigate("AddRoom", { mode: "edit", roomName, roomId })}
+              onPress={() =>
+                navigation.navigate("AddRoom", {
+                  mode: "edit",
+                  roomName,
+                  roomId,
+                })
+              }
             >
               <Text style={styles.editText}>Edit</Text>
             </AnimatedPressable>
             <AnimatedPressable
               style={styles.addButton}
-              onPress={() => navigation.navigate("AddFeature", { roomName, roomId })}
+              onPress={() =>
+                navigation.navigate("AddFeature", { roomName, roomId })
+              }
             >
               <Text style={styles.addText}>+ Add</Text>
             </AnimatedPressable>
           </View>
         </View>
 
-        <Text style={styles.title} numberOfLines={1}>{roomName}</Text>
-        <Text style={styles.subtitle}>
-          {roomDevices.length} devices - {activeDevices} active
+        <Text style={styles.title} numberOfLines={1}>
+          {roomName}
         </Text>
+        <Text style={styles.subtitle}>{roomSubtitle}</Text>
 
-        <FlatList
-          data={roomDevices}
-          scrollEnabled={false}
-          numColumns={2}
-          columnWrapperStyle={styles.cardRow}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <AnimatedPressable
-              style={styles.deviceCard}
-              onPress={() =>
-                item.id === "clothesline"
-                  ? navigation.navigate("LaundryStatus", { weather: "rainy" })
-                  : navigation.navigate("DeviceControl", { deviceId: item.id })
-              }
-            >
-              <View>
-                <Text style={styles.deviceName} numberOfLines={2}>{item.name}</Text>
-                <Text style={styles.deviceDetail} numberOfLines={1}>{item.detail}</Text>
-              </View>
-              <View>
-                <View style={[styles.statePill, !item.power && styles.statePillOff]}>
-                  <Text style={[styles.stateText, !item.power && styles.stateTextOff]} numberOfLines={1}>
-                    {item.status}
-                  </Text>
-                </View>
-                <Text style={styles.controlText}>Control</Text>
-              </View>
-            </AnimatedPressable>
-          )}
-        />
+        {loading && <Text style={styles.infoText}>Loading room data...</Text>}
+        {!loading && !!error && <Text style={styles.errorText}>{error}</Text>}
+
+        <View style={styles.deviceCardSingle}>
+          <Text style={styles.deviceName}>Active devices</Text>
+          <Text style={styles.deviceDetail}>{activeDevices} device aktif</Text>
+          <Text style={styles.infoText}>
+            Detail perangkat belum tersedia dari endpoint server saat ini.
+          </Text>
+        </View>
 
         <Text style={styles.sectionTitle}>Recent activity</Text>
-        <View style={styles.activityList}>
-          {activities.map((item) => (
-            <View key={item.id} style={styles.activityItem}>
-              <Text style={styles.activityTitle} numberOfLines={1}>{item.title}</Text>
-              <Text style={styles.activityTime}>{item.time}</Text>
-            </View>
-          ))}
-        </View>
+        <Text style={styles.infoText}>
+          Recent activity belum tersedia dari endpoint server saat ini.
+        </Text>
         <AnimatedPressable style={styles.logButton}>
           <Text style={styles.logText}>View all logs</Text>
         </AnimatedPressable>
@@ -160,9 +225,30 @@ const styles = StyleSheet.create({
     marginTop: 5,
     marginBottom: 20,
   },
+  infoText: {
+    color: "#64748B",
+    fontSize: 14,
+    marginBottom: 14,
+  },
+  errorText: {
+    color: "#B91C1C",
+    fontSize: 14,
+    marginBottom: 14,
+  },
   cardRow: {
     justifyContent: "space-between",
     marginBottom: CARD_GAP,
+  },
+  deviceCardSingle: {
+    width: "100%",
+    minHeight: 130,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#D8DEE9",
+    borderRadius: 14,
+    padding: 14,
+    justifyContent: "space-between",
+    marginBottom: 12,
   },
   deviceCard: {
     width: CARD_WIDTH,

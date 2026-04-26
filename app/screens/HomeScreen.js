@@ -1,54 +1,131 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
 } from "react-native";
-
-const rooms = [
-  { name: "Ruang Tamu", status: "2 devices on" },
-  { name: "Dapur", status: "1 device on" },
-  { name: "Kamar Tidur", status: "All off" },
-];
-
-const sensors = [
-  { label: "Fire", value: "23 °C", tag: "Normal" },
-  { label: "Gas", value: "12 ppm", tag: "Normal" },
-  { label: "Water", value: "Dry", tag: "Normal" },
-  { label: "Light", value: "340 lx", tag: "Bright" },
-];
+import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { postGraphQL } from "../utils/api";
 
 export default function HomeScreen() {
+  const [userName, setUserName] = useState("-");
+  const [rooms, setRooms] = useState([]);
+  const [summary, setSummary] = useState({
+    homeName: "-",
+    homeStatus: "-",
+    roomsCount: 0,
+    activeDevicesCount: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchHomeData = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const token = await AsyncStorage.getItem("token");
+        if (!token) {
+          setError("Token tidak ditemukan, silakan login ulang.");
+          setRooms([]);
+          return;
+        }
+
+        const query = `
+          query HomeOverview {
+            me {
+              name
+            }
+            roomsByHome {
+              roomId
+              name
+              subtitle
+            }
+            dashboardHome {
+              homeName
+              homeStatus
+              roomsCount
+              activeDevicesCount
+            }
+          }
+        `;
+
+        const response = await postGraphQL(
+          { query },
+          { Authorization: `Bearer ${token}` },
+        );
+        const result = await response.json();
+
+        if (!response.ok || result.errors) {
+          throw new Error(
+            result.errors?.[0]?.message || "Gagal mengambil data home",
+          );
+        }
+
+        setUserName(result.data?.me?.name || "-");
+        setRooms(result.data?.roomsByHome || []);
+        setSummary(
+          result.data?.dashboardHome || {
+            homeName: "-",
+            homeStatus: "-",
+            roomsCount: 0,
+            activeDevicesCount: 0,
+          },
+        );
+      } catch (fetchError) {
+        setError(fetchError.message || "Terjadi kesalahan");
+        setRooms([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHomeData();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <Text style={styles.greeting}>Good morning,</Text>
-        <Text style={styles.name}>Budi Santoso</Text>
+        <Text style={styles.name}>{userName}</Text>
 
         <View style={styles.homeCard}>
           <View>
-            <Text style={styles.homeTitle}>Rumah Utama</Text>
-            <Text style={styles.homeSub}>3 rooms · 6 devices active</Text>
+            <Text style={styles.homeTitle}>{summary.homeName}</Text>
+            <Text style={styles.homeSub}>
+              {summary.roomsCount} rooms · {summary.activeDevicesCount} devices
+              active
+            </Text>
           </View>
           <View style={styles.onlineBadge}>
-            <Text style={styles.onlineText}>Online</Text>
+            <Text style={styles.onlineText}>{summary.homeStatus}</Text>
           </View>
         </View>
 
         <Text style={styles.sectionTitle}>Rooms</Text>
         <View style={styles.roomGrid}>
-          {rooms.map((room, index) => (
-            <View key={index} style={styles.roomCard}>
-              <Text style={styles.roomName}>{room.name}</Text>
-              <Text style={styles.roomStatus}>{room.status}</Text>
-              <TouchableOpacity style={styles.openButton}>
-                <Text style={styles.openButtonText}>Open</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+          {loading && <Text style={styles.infoText}>Loading rooms...</Text>}
+          {!loading && !!error && <Text style={styles.errorText}>{error}</Text>}
+
+          {!loading && !error && rooms.length === 0 && (
+            <Text style={styles.infoText}>Belum ada room di home ini.</Text>
+          )}
+
+          {!loading &&
+            !error &&
+            rooms.map((room) => (
+              <View key={room.roomId} style={styles.roomCard}>
+                <Text style={styles.roomName}>{room.name}</Text>
+                <Text style={styles.roomStatus}>{room.subtitle}</Text>
+                <TouchableOpacity style={styles.openButton}>
+                  <Text style={styles.openButtonText}>Open</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
 
           <TouchableOpacity style={styles.addRoomCard}>
             <Text style={styles.addRoomText}>+ Add room</Text>
@@ -70,27 +147,9 @@ export default function HomeScreen() {
 
         <Text style={styles.sectionTitle}>Sensor status</Text>
         <View style={styles.sensorBox}>
-          {sensors.map((sensor, index) => (
-            <View key={index} style={styles.sensorItem}>
-              <Text style={styles.sensorLabel}>{sensor.label}</Text>
-              <Text style={styles.sensorValue}>{sensor.value}</Text>
-              <View
-                style={[
-                  styles.sensorTag,
-                  sensor.tag === "Bright" && styles.brightTag,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.sensorTagText,
-                    sensor.tag === "Bright" && styles.brightTagText,
-                  ]}
-                >
-                  {sensor.tag}
-                </Text>
-              </View>
-            </View>
-          ))}
+          <Text style={styles.infoText}>
+            Data sensor belum tersedia dari server.
+          </Text>
         </View>
       </ScrollView>
 
@@ -164,6 +223,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 24,
   },
+  infoText: {
+    width: "100%",
+    color: "#6B7280",
+    marginBottom: 10,
+  },
+  errorText: {
+    width: "100%",
+    color: "#B91C1C",
+    marginBottom: 10,
+  },
   roomCard: {
     width: "48%",
     backgroundColor: "#FFFFFF",
@@ -232,8 +301,6 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    flexDirection: "row",
-    justifyContent: "space-between",
     marginBottom: 90,
   },
   sensorItem: {
