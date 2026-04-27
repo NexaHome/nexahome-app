@@ -16,7 +16,7 @@ export class UsersService {
   }
 
   async findByEmail(email: string) {
-    return await this.userModel.where('email', email).first();
+    return await this.userModel.with('homes').where('email', email).first();
   }
 
   async create(createUserInput: CreateUserInput) {
@@ -29,4 +29,3 @@ export class UsersService {
     return user;
   }
 }
-
