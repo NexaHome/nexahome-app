@@ -19,6 +19,7 @@ import { QuickActionResult } from './dto/quick-action-result.type';
 import { RoomSummary } from './dto/room-summary.type';
 import { AddHomeMemberInput } from './dto/add-home-member.input';
 import { HomeMember } from './dto/home-member.type';
+import { toIdString, toObjectId, toObjectIds } from '../../common/utils/object-id.util';
 
 @Injectable()
 export class HomesService {
@@ -33,14 +34,14 @@ export class HomesService {
   async create(userId: string, createHomeInput: CreateHomeInput) {
     const home = new this.homeModel();
     home.name = createHomeInput.name;
-    home.owner_id = userId;
+    home.owner_id = toObjectId(userId);
     home.createdAt = new Date();
     await home.save();
 
     const homeId = this.toIdString(home._id);
     await this.homeUserModel.create({
-      home_id: homeId,
-      user_id: userId,
+      home_id: toObjectId(homeId),
+      user_id: toObjectId(userId),
       createdAt: new Date(),
     });
 
@@ -48,7 +49,7 @@ export class HomesService {
   }
 
   async findAllByMember(userId: string) {
-    const memberships = await this.homeUserModel.where('user_id', userId).get();
+    const memberships = await this.homeUserModel.where('user_id', toObjectId(userId)).get();
     const homeIds = memberships
       .map((membership) => this.toIdString(membership.home_id))
       .filter((id) => id.length > 0);
@@ -91,7 +92,7 @@ export class HomesService {
     await this.assertHomeOwner(id, userId);
 
     const deletedCount = await this.homeModel.destroy(id);
-    await this.homeUserModel.where('home_id', id).delete();
+    await this.homeUserModel.where('home_id', toObjectId(id)).delete();
     return deletedCount > 0;
   }
 
@@ -106,8 +107,8 @@ export class HomesService {
     const targetUserId = this.toIdString(user._id);
 
     const existingMembership = await this.homeUserModel
-      .where('home_id', homeId)
-      .where('user_id', targetUserId)
+      .where('home_id', toObjectId(homeId))
+      .where('user_id', toObjectId(targetUserId))
       .first();
 
     if (existingMembership) {
@@ -115,8 +116,8 @@ export class HomesService {
     }
 
     return this.homeUserModel.create({
-      home_id: homeId,
-      user_id: targetUserId,
+      home_id: toObjectId(homeId),
+      user_id: toObjectId(targetUserId),
       createdAt: new Date(),
     });
   }
@@ -124,7 +125,7 @@ export class HomesService {
   async getMembers(homeId: string, userId: string): Promise<HomeMember[]> {
     await this.assertMemberAccess(homeId, userId);
 
-    const memberships = await this.homeUserModel.where('home_id', homeId).get();
+    const memberships = await this.homeUserModel.where('home_id', toObjectId(homeId)).get();
     if (memberships.length === 0) {
       return [];
     }
@@ -155,11 +156,11 @@ export class HomesService {
     const home = await this.resolveTargetHome(userId, homeId);
     const selectedHomeId = this.toIdString(home._id);
 
-    const rooms = await this.roomModel.where('home_id', selectedHomeId).get();
+    const rooms = await this.roomModel.where('home_id', toObjectId(selectedHomeId)).get();
     const roomIds = rooms.map((room) => this.toIdString(room._id)).filter((id) => id.length > 0);
 
     const devices =
-      roomIds.length > 0 ? await this.deviceModel.whereIn('room_id', roomIds).get() : [];
+      roomIds.length > 0 ? await this.deviceModel.whereIn('room_id', toObjectIds(roomIds)).get() : [];
     const activeDevicesCount = devices.filter((device) => this.isActiveStatus(device.status)).length;
 
     return {
@@ -174,14 +175,14 @@ export class HomesService {
   async getRoomSummaries(userId: string, homeId?: string): Promise<RoomSummary[]> {
     const home = await this.resolveTargetHome(userId, homeId);
     const selectedHomeId = this.toIdString(home._id);
-    const rooms = await this.roomModel.where('home_id', selectedHomeId).get();
+    const rooms = await this.roomModel.where('home_id', toObjectId(selectedHomeId)).get();
 
     if (rooms.length === 0) {
       return [];
     }
 
     const roomIds = rooms.map((room) => this.toIdString(room._id)).filter((id) => id.length > 0);
-    const devices = await this.deviceModel.whereIn('room_id', roomIds).get();
+    const devices = await this.deviceModel.whereIn('room_id', toObjectIds(roomIds)).get();
 
     return rooms.map((room) => {
       const roomId = this.toIdString(room._id);
@@ -227,7 +228,7 @@ export class HomesService {
     message: string,
   ): Promise<QuickActionResult> {
     await this.findOneByMember(homeId, userId);
-    const rooms = await this.roomModel.where('home_id', homeId).get();
+    const rooms = await this.roomModel.where('home_id', toObjectId(homeId)).get();
 
     if (rooms.length === 0) {
       return {
@@ -238,7 +239,7 @@ export class HomesService {
     }
 
     const roomIds = rooms.map((room) => this.toIdString(room._id)).filter((id) => id.length > 0);
-    const affectedDevices = await this.deviceModel.whereIn('room_id', roomIds).updateMany({ status });
+    const affectedDevices = await this.deviceModel.whereIn('room_id', toObjectIds(roomIds)).updateMany({ status });
 
     return {
       success: true,
@@ -262,8 +263,8 @@ export class HomesService {
 
   private async assertMemberAccess(homeId: string, userId: string) {
     const membership = await this.homeUserModel
-      .where('home_id', homeId)
-      .where('user_id', userId)
+      .where('home_id', toObjectId(homeId))
+      .where('user_id', toObjectId(userId))
       .first();
 
     if (!membership) {
@@ -329,18 +330,6 @@ export class HomesService {
   }
 
   private toIdString(value: unknown) {
-    if (!value) {
-      return '';
-    }
-
-    if (typeof value === 'string') {
-      return value;
-    }
-
-    if (typeof value === 'object' && value !== null && 'toString' in value) {
-      return String(value);
-    }
-
-    return '';
+    return toIdString(value);
   }
 }

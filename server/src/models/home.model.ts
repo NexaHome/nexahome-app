@@ -1,5 +1,6 @@
 import { Model } from 'mongoloquent';
 import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { ObjectId } from 'mongodb';
 import { User } from './user.model';
 import { HomeUser } from './home-user.model';
 import { Room } from './room.model';
@@ -14,8 +15,8 @@ export class Home extends Model {
   @Field()
   name!: string;
 
-  @Field()
-  owner_id!: string; // references users.id
+  @Field(() => ID)
+  owner_id!: ObjectId; // references users.id
 
   @Field()
   createdAt!: Date;

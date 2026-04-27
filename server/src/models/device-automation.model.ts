@@ -1,5 +1,6 @@
 import { Model } from 'mongoloquent';
 import { Field, ID, ObjectType } from '@nestjs/graphql';
+import { ObjectId } from 'mongodb';
 import { Device } from './device.model';
 import { Automation } from './automation.model';
 
@@ -10,11 +11,11 @@ export class DeviceAutomation extends Model {
   @Field(() => ID)
   _id?: string;
 
-  @Field()
-  device_id!: string; // references devices.id
+  @Field(() => ID)
+  device_id!: ObjectId; // references devices.id
 
-  @Field()
-  automation_id!: string; // references automations.id
+  @Field(() => ID)
+  automation_id!: ObjectId; // references automations.id
 
   @Field()
   createdAt!: Date;
