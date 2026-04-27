@@ -8,7 +8,7 @@ const tabs = [
   { key: "sensors", label: "Sensors", route: "SensorMonitor" },
   { key: "schedule", label: "Schedule", route: "Schedule" },
   { key: "alerts", label: "Alerts", route: "Alerts" },
-  { key: "members", label: "Members", route: "Members" },
+  { key: "profile", label: "Profile", route: "Profile" },
 ];
 
 const BottomNav = ({ active = "home", navigation }) => {

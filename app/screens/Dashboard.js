@@ -7,13 +7,13 @@ import {
   Text,
   View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-import { rooms as dummyRooms, sensors } from "../data/homeData";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { sensors } from "../data/homeData";
 import { useTheme } from "../theme";
-import { BASE_URL } from "../utils/api";
+import { postGraphQL } from "../utils/api";
 
 const { width } = Dimensions.get("window");
 const PAGE_PADDING = 20;
@@ -22,95 +22,192 @@ const CARD_WIDTH = (width - PAGE_PADDING * 2 - CARD_GAP) / 2;
 
 const Dashboard = ({ navigation }) => {
   const { mode, toggleMode } = useTheme();
-  const [roomItems, setRoomItems] = useState([]);
+  const [user, setUser] = useState({ name: "User", email: "" });
+  const [roomItems, setRoomItems] = useState([
+    { roomId: "add", name: "+ Add room", isAdd: true },
+  ]);
   const [summary, setSummary] = useState({
     roomsCount: 0,
     activeDevicesCount: 0,
-    homeStatus: "-",
+    homeStatus: "No Home",
   });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loadingRooms, setLoadingRooms] = useState(true);
+  const [roomError, setRoomError] = useState("");
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        let token = await AsyncStorage.getItem("token");
-
-        if (!token) {
-          navigation.replace("Login");
-          return;
-        }
-        // Connect to GraphQL server
-        const url = BASE_URL;
-        const query = `query { roomsByHome { roomId name subtitle activeDevices totalDevices } dashboardHome { roomsCount activeDevicesCount homeStatus } }`;
-        let res;
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
-          res = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ query }),
-            signal: controller.signal,
-          });
-          clearTimeout(timeoutId);
-        } catch (fetchErr) {
-          if (fetchErr.name === "AbortError") {
-            throw new Error("Fetch timeout - server not responding");
-          }
-          throw new Error(`Network error: ${fetchErr.message}`);
-        }
-        let jsonResponse;
-        try {
-          jsonResponse = await res.json();
-        } catch (parseErr) {
-          throw new Error("Invalid JSON from server");
-        }
-        if (!res.ok) {
-          throw new Error(
-            `HTTP ${res.status}: ${JSON.stringify(jsonResponse)}`,
-          );
-        }
-        const { data, errors } = jsonResponse;
-        if (errors) {
-          throw new Error(errors[0]?.message || "GraphQL error");
-        }
-        if (data && data.roomsByHome) {
-          setRoomItems([
-            ...data.roomsByHome,
-            { roomId: "add", name: "+ Add room", isAdd: true },
-          ]);
-          
-          if (data.dashboardHome) {
-            setSummary(data.dashboardHome);
-            // Persist the active home ID for other screens (like SensorMonitor)
-            if (data.dashboardHome.homeId) {
-              await AsyncStorage.setItem("activeHomeId", data.dashboardHome.homeId);
-            }
-          }
-        } else {
-          throw new Error("No data in response");
-        }
-      } catch (e) {
-        setError(e.message);
-        setRoomItems([
-          ...dummyRooms,
-          { id: "add", name: "+ Add room", isAdd: true },
-        ]);
-        setSummary({
-          roomsCount: dummyRooms.length,
-          activeDevicesCount: 0,
-          homeStatus: "Offline",
-        });
-      } finally {
-        setLoading(false);
-      }
-    })();
+    loadDashboard();
   }, []);
+
+  const loadDashboard = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+
+      if (!token) {
+        navigation.replace("Login");
+        return;
+      }
+
+      const meResponse = await postGraphQL(
+        {
+          query: `
+            query {
+              me {
+                name
+                email
+              }
+            }
+          `,
+        },
+        {
+          Authorization: `Bearer ${token}`,
+        },
+      );
+
+      const meResult = await meResponse.json();
+
+      if (meResult?.data?.me) {
+        setUser({
+          name: meResult.data.me.name || "User",
+          email: meResult.data.me.email || "",
+        });
+      }
+
+      setLoadingRooms(true);
+      setRoomError("");
+
+      const homesResponse = await postGraphQL(
+        {
+          query: `
+            query {
+              homes {
+                _id
+                name
+              }
+            }
+          `,
+        },
+        {
+          Authorization: `Bearer ${token}`,
+        },
+      );
+
+      const homesResult = await homesResponse.json();
+
+      if (homesResult?.errors?.length) {
+        const homesMessage =
+          homesResult.errors[0]?.message || "Gagal memuat daftar home";
+        throw new Error(homesMessage);
+      }
+
+      const homes = homesResult?.data?.homes || [];
+      const savedHomeId = await AsyncStorage.getItem("activeHomeId");
+      const savedHomeExists = homes.some((home) => home._id === savedHomeId);
+      const selectedHomeId =
+        (savedHomeExists && savedHomeId) || homes[0]?._id || null;
+
+      if (!selectedHomeId) {
+        setRoomItems([{ roomId: "add", name: "+ Add room", isAdd: true }]);
+        setSummary({
+          roomsCount: 0,
+          activeDevicesCount: 0,
+          homeStatus: "No Home",
+        });
+        setRoomError("Belum ada home untuk akun ini");
+        return;
+      }
+
+      await AsyncStorage.setItem("activeHomeId", selectedHomeId);
+
+      const homeResponse = await postGraphQL(
+        {
+          query: `
+            query DashboardByHome($homeId: String) {
+              roomsByHome(homeId: $homeId) {
+                roomId
+                name
+                subtitle
+                activeDevices
+                totalDevices
+              }
+              dashboardHome(homeId: $homeId) {
+                homeId
+                homeName
+                homeStatus
+                roomsCount
+                activeDevicesCount
+              }
+            }
+          `,
+          variables: {
+            homeId: selectedHomeId,
+          },
+        },
+        {
+          Authorization: `Bearer ${token}`,
+        },
+      );
+
+      const homeResult = await homeResponse.json();
+
+      if (homeResult?.errors?.length) {
+        const message =
+          homeResult.errors[0]?.message || "Gagal memuat data dashboard";
+        setRoomError(
+          message.toLowerCase().includes("home not found")
+            ? "Belum ada home untuk akun ini"
+            : message,
+        );
+      }
+
+      if (homeResult?.data?.roomsByHome?.length) {
+        setRoomItems([
+          ...homeResult.data.roomsByHome,
+          { roomId: "add", name: "+ Add room", isAdd: true },
+        ]);
+      } else {
+        setRoomItems([{ roomId: "add", name: "+ Add room", isAdd: true }]);
+      }
+
+      if (homeResult?.data?.dashboardHome) {
+        setSummary({
+          roomsCount: homeResult.data.dashboardHome.roomsCount ?? 0,
+          activeDevicesCount:
+            homeResult.data.dashboardHome.activeDevicesCount ?? 0,
+          homeStatus: homeResult.data.dashboardHome.homeStatus ?? "No Home",
+        });
+      } else {
+        setSummary({
+          roomsCount: 0,
+          activeDevicesCount: 0,
+          homeStatus: "No Home",
+        });
+      }
+    } catch (error) {
+      console.log("DASHBOARD ERROR:", error);
+      setRoomError(
+        error?.message?.toLowerCase().includes("home")
+          ? "Belum ada home untuk akun ini"
+          : "Gagal memuat data dashboard",
+      );
+      setRoomItems([{ roomId: "add", name: "+ Add room", isAdd: true }]);
+      setSummary({
+        roomsCount: 0,
+        activeDevicesCount: 0,
+        homeStatus: "No Home",
+      });
+    } finally {
+      setLoadingRooms(false);
+    }
+  };
+
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((word) => word[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "NH";
 
   return (
     <ScreenShell>
@@ -131,11 +228,11 @@ const Dashboard = ({ navigation }) => {
           <View style={styles.headerCopy}>
             <Text style={styles.greeting}>Good morning,</Text>
             <Text style={styles.name} numberOfLines={1}>
-              Budi Santoso
+              {user.name}
             </Text>
           </View>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>BS</Text>
+            <Text style={styles.avatarText}>{initials}</Text>
           </View>
         </View>
 
@@ -153,65 +250,62 @@ const Dashboard = ({ navigation }) => {
         </View>
 
         <Text style={styles.sectionTitle}>Rooms</Text>
-        {loading ? (
+
+        {loadingRooms ? (
           <Text style={styles.loadingText}>Loading rooms from server...</Text>
-        ) : error ? (
-          <Text style={styles.errorText}>Error: {error}</Text>
         ) : (
-          <FlatList
-            data={roomItems}
-            scrollEnabled={false}
-            numColumns={2}
-            columnWrapperStyle={styles.cardRow}
-            keyExtractor={(item) => item.roomId || item.id}
-            renderItem={({ item }) => {
-              if (item.isAdd) {
+          <>
+            {!!roomError && <Text style={styles.errorText}>{roomError}</Text>}
+
+            <FlatList
+              data={roomItems}
+              scrollEnabled={false}
+              numColumns={2}
+              columnWrapperStyle={styles.cardRow}
+              keyExtractor={(item) => item.roomId || item.id}
+              renderItem={({ item }) => {
+                if (item.isAdd) {
+                  return (
+                    <AnimatedPressable
+                      style={[styles.roomCard, styles.addRoomCard]}
+                      onPress={() => navigation.navigate("AddRoom")}
+                    >
+                      <Text style={styles.addRoomText}>+ Add room</Text>
+                    </AnimatedPressable>
+                  );
+                }
+
                 return (
                   <AnimatedPressable
-                    style={[styles.roomCard, styles.addRoomCard]}
-                    onPress={() => navigation.navigate("AddRoom")}
+                    style={styles.roomCard}
+                    onPress={() =>
+                      navigation.navigate("RoomDetail", {
+                        roomId: item.roomId || item.id,
+                        roomName: item.name,
+                      })
+                    }
                   >
-                    <Text style={styles.addRoomText}>+ Add room</Text>
+                    <View>
+                      <Text style={styles.roomName} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <Text style={styles.muted} numberOfLines={1}>
+                        {item.subtitle || "No description"}
+                      </Text>
+                    </View>
+                    <View style={styles.roomMeta}>
+                      <Text style={styles.roomCount}>
+                        {item.activeDevices ?? 0}/{item.totalDevices ?? 0}
+                      </Text>
+                      <View style={styles.openButton}>
+                        <Text style={styles.openButtonText}>Open</Text>
+                      </View>
+                    </View>
                   </AnimatedPressable>
                 );
-              }
-
-              return (
-                <AnimatedPressable
-                  style={styles.roomCard}
-                  onPress={() =>
-                    (item.roomId || item.id) === "add"
-                      ? navigation.navigate("AddRoom")
-                      : (item.roomId || item.id) === "terrace"
-                        ? navigation.navigate("LaundryStatus", {
-                            weather: "rainy",
-                          })
-                        : navigation.navigate("RoomDetail", {
-                            roomId: item.roomId || item.id,
-                            roomName: item.name,
-                          })
-                  }
-                >
-                  <View>
-                    <Text style={styles.roomName} numberOfLines={1}>
-                      {item.name}
-                    </Text>
-                    <Text style={styles.muted} numberOfLines={1}>
-                      {item.subtitle}
-                    </Text>
-                  </View>
-                  <View style={styles.roomMeta}>
-                    <Text style={styles.roomCount}>
-                      {item.activeDevices ?? 0}/{item.totalDevices ?? 0}
-                    </Text>
-                    <View style={styles.openButton}>
-                      <Text style={styles.openButtonText}>Open</Text>
-                    </View>
-                  </View>
-                </AnimatedPressable>
-              );
-            }}
-          />
+              }}
+            />
+          </>
         )}
 
         <Text style={styles.sectionTitle}>Quick actions</Text>
@@ -255,19 +349,15 @@ const Dashboard = ({ navigation }) => {
           ))}
         </View>
       </ScrollView>
+
       <BottomNav active="home" navigation={navigation} />
     </ScreenShell>
   );
 };
 
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: PAGE_PADDING,
-    paddingBottom: 26,
-  },
+  scroll: { flex: 1 },
+  content: { padding: PAGE_PADDING, paddingBottom: 26 },
   modeRow: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -281,11 +371,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 12,
-    shadowColor: "#0A0F2C",
-    shadowOpacity: 0.16,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
   },
   modeText: {
     color: "#FFFFFF",
@@ -294,7 +379,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     textAlign: "center",
-    marginVertical: 30,
+    marginVertical: 24,
+    color: "#64748B",
   },
   errorText: {
     color: "#FF5C7A",
@@ -321,7 +407,6 @@ const styles = StyleSheet.create({
     color: "#0A0F2C",
     fontSize: 25,
     fontWeight: "900",
-    letterSpacing: 0,
     marginTop: 3,
   },
   avatar: {
@@ -348,11 +433,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    shadowColor: "#0A0F2C",
-    shadowOpacity: 0.08,
-    shadowRadius: 9,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
   },
   homeCopy: {
     flex: 1,
