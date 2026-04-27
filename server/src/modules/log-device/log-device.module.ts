@@ -10,5 +10,6 @@ import { LogDeviceService } from './log-device.service';
 @Module({
   imports: [MongoloquentModule.forFeature([LogDevice, Device, Room]), HomesModule],
   providers: [LogDeviceResolver, LogDeviceService],
+  exports: [LogDeviceService],
 })
 export class LogDeviceModule {}

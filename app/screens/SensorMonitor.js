@@ -1,13 +1,74 @@
-import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useState, useEffect } from "react";
+import { ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-import { sensors } from "../data/homeData";
-
-const chartBars = [34, 52, 41, 72, 58, 86, 62, 46, 68, 78];
+import { sensors as mockSensors } from "../data/homeData";
+import { getAntaresData, getAntaresLogs } from "../utils/antares";
 
 const SensorMonitor = ({ navigation }) => {
+  const [sensors, setSensors] = useState(mockSensors);
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchAntaresData = async () => {
+    try {
+      const liveData = await getAntaresData(); 
+      if (liveData && liveData.sensors) {
+        const updatedSensors = mockSensors.map(s => {
+          const antares = liveData.sensors[s.id];
+          if (antares) {
+            let unit = "";
+            if (s.id === "fire") unit = " units";
+            if (s.id === "gas") unit = " ppm";
+            if (s.id === "water") unit = " units";
+            if (s.id === "light") unit = " lux";
+
+            return { 
+              ...s, 
+              value: `${antares.value}${unit}`,
+              state: antares.status.charAt(0).toUpperCase() + antares.status.slice(1),
+              tone: antares.status === "normal" ? "green" : "amber"
+            };
+          }
+          return s;
+        });
+        setSensors(updatedSensors);
+      }
+
+      // Only fetch logs if we have activeHomeId
+      const activeHomeId = await AsyncStorage.getItem("activeHomeId");
+      if (activeHomeId) {
+        const historyLogs = await getAntaresLogs();
+        if (historyLogs) {
+          setLogs(historyLogs);
+        }
+      }
+    } catch (error) {
+      if (error.message !== "Home not found") {
+        console.log("Antares fetch failed:", error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAntaresData();
+    const interval = setInterval(fetchAntaresData, 10000); // Refresh every 10s
+    return () => clearInterval(interval);
+  }, []);
+
+  // Map logs to chart bars (example: fire sensor values)
+  const chartData = logs.slice(-10).map(log => {
+    const fireVal = log.value?.sensors?.fire?.value || 0;
+    // Scale fireVal (0-4095) to chart height (0-100)
+    return Math.min(100, Math.floor((fireVal / 4095) * 100));
+  });
+
+  const displayBars = chartData.length > 0 ? chartData : [34, 52, 41, 72, 58, 86, 62, 46, 68, 78];
+
   return (
     <ScreenShell>
       <ScrollView
@@ -15,8 +76,13 @@ const SensorMonitor = ({ navigation }) => {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Sensor Monitor</Text>
-        <Text style={styles.subtitle}>Rumah Utama - live data</Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.title}>Sensor Monitor</Text>
+            <Text style={styles.subtitle}>Rumah Utama - live data</Text>
+          </View>
+          {loading && <ActivityIndicator color="#7B61FF" />}
+        </View>
 
         <View style={styles.sensorGrid}>
           {sensors.map((sensor) => {
@@ -46,9 +112,9 @@ const SensorMonitor = ({ navigation }) => {
         </View>
         <View style={styles.chartCard}>
           <View style={styles.chart}>
-            {chartBars.map((height, index) => (
+            {displayBars.map((height, index) => (
               <View key={`${height}-${index}`} style={styles.barWrap}>
-                <View style={[styles.bar, { height }]} />
+                <View style={[styles.bar, { height: `${height}%` }]} />
               </View>
             ))}
           </View>
@@ -81,6 +147,12 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     paddingBottom: 28,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
   },
   title: {
     fontSize: 25,
