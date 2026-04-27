@@ -121,15 +121,15 @@ const Dashboard = ({ navigation }) => {
       const homeResponse = await postGraphQL(
         {
           query: `
-            query DashboardByHome($homeId: String) {
-              roomsByHome(homeId: $homeId) {
+            query {
+              roomsByHome {
                 roomId
                 name
                 subtitle
                 activeDevices
                 totalDevices
               }
-              dashboardHome(homeId: $homeId) {
+              dashboardHome {
                 homeId
                 homeName
                 homeStatus
@@ -138,12 +138,10 @@ const Dashboard = ({ navigation }) => {
               }
             }
           `,
-          variables: {
-            homeId: selectedHomeId,
-          },
         },
         {
           Authorization: `Bearer ${token}`,
+          "x-home-id": selectedHomeId,
         },
       );
 
