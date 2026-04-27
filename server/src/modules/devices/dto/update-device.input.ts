@@ -10,4 +10,13 @@ export class UpdateDeviceInput {
 
   @Field({ nullable: true })
   status?: string;
+
+  @Field(() => Boolean, { nullable: true })
+  is_active?: boolean;
+
+  @Field({ nullable: true })
+  category?: string;
+
+  @Field({ nullable: true })
+  antares_device_name?: string;
 }

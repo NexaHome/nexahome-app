@@ -30,6 +30,73 @@ export class LogDeviceService {
     return log;
   }
 
+  async createFromWebhook(deviceId: string, value: any) {
+    if (!deviceId || !this.isValidObjectId(deviceId)) {
+      throw new DeviceNotFoundException();
+    }
+    const device = await this.deviceModel.find(deviceId);
+    if (!device) {
+      throw new DeviceNotFoundException();
+    }
+
+    // Auto-update device status if the payload contains a status field
+    if (value && typeof value === 'object') {
+      if (typeof value.status === 'string') {
+        // Capitalize the first letter for consistency (e.g., 'danger' -> 'Danger', 'on' -> 'On')
+        const statusValue = value.status;
+        device.status = statusValue.charAt(0).toUpperCase() + statusValue.slice(1).toLowerCase();
+      }
+
+      // Format the numeric value based on the device category
+      if (value.value !== undefined && !isNaN(Number(value.value))) {
+        const rawValue = Number(value.value);
+        let formattedValue = '';
+        let unit = '';
+
+        switch (device.category) {
+          case 'light':
+            unit = 'Lux';
+            // Mockup lux calculation (0-4095 scaled to 0-1000 Lux)
+            formattedValue = `${Math.round((rawValue / 4095) * 1000)} Lux`;
+            break;
+          case 'gas':
+            unit = 'ppm';
+            // Mockup PPM calculation (0-4095 scaled to 0-10000 ppm)
+            formattedValue = `${Math.round((rawValue / 4095) * 10000)} ppm`;
+            break;
+          case 'water':
+            unit = 'cm';
+            // Mockup water level (0-4095 scaled to 0-100 cm)
+            formattedValue = `${Math.round((rawValue / 4095) * 100)} cm`;
+            break;
+          case 'fire':
+          case 'rain':
+            unit = '%';
+            // Convert to simple percentage 0-100%
+            formattedValue = `${Math.round((rawValue / 4095) * 100)} %`;
+            break;
+          default:
+            formattedValue = String(rawValue);
+        }
+
+        value.formatted = formattedValue;
+        value.unit = unit;
+      }
+    }
+    
+    device.last_value = value;
+    
+    await device.save();
+
+    const log = new this.logModel();
+    log.device_id = toObjectId(this.toIdString(device._id));
+    log.value = value;
+    log.createdAt = new Date();
+    await log.save();
+
+    return log;
+  }
+
   async findByDevice(userId: string, homeId: string, deviceId: string) {
     await this.homesService.findOneByMember(homeId, userId);
     await this.findDeviceInHome(deviceId, homeId);
