@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { postGraphQL } from "../utils/api";
 
 export default function LoginScreen({ navigation }) {
@@ -56,8 +57,9 @@ export default function LoginScreen({ navigation }) {
       }
 
       const loginData = result.data?.login;
+      await AsyncStorage.setItem("token", loginData.accessToken);
       Alert.alert("Sukses", `Selamat datang, ${loginData.name}`);
-      navigation.navigate("Dashboard");
+      navigation.replace("Dashboard");
     } catch (error) {
       Alert.alert("Error", "Gagal terhubung ke server");
       console.log(error);

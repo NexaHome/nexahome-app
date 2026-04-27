@@ -13,6 +13,7 @@ import ScreenShell from "../components/ScreenShell";
 import { rooms as dummyRooms, sensors } from "../data/homeData";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../theme";
+import { BASE_URL } from "../utils/api";
 
 const { width } = Dimensions.get("window");
 const PAGE_PADDING = 20;
@@ -36,13 +37,12 @@ const Dashboard = ({ navigation }) => {
       try {
         let token = await AsyncStorage.getItem("token");
 
-        // HARDCODED FOR TESTING - Remove when login is implemented by team
         if (!token) {
-          token =
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJuYW1lIjoiVGVzdCBVc2VyIiwiaWF0IjoxNzc3MTg1ODU4LCJleHAiOjE3Nzc3OTA2NTh9.M04XPNOGIQJatnadTmHe2QZbf69GA__7lk2jZDafdwQ";
+          navigation.replace("Login");
+          return;
         }
-        // Connect to GraphQL server - use Mac IP for real device
-        const url = "http://10.153.217.133:3000/graphql";
+        // Connect to GraphQL server
+        const url = BASE_URL;
         const query = `query { roomsByHome { roomId name subtitle activeDevices totalDevices } dashboardHome { roomsCount activeDevicesCount homeStatus } }`;
         let res;
         try {
