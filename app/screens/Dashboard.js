@@ -82,15 +82,16 @@ const Dashboard = ({ navigation }) => {
         if (data && data.roomsByHome) {
           setRoomItems([
             ...data.roomsByHome,
-            { roomId: "add", name: "+ Add room", isAdd: true },
+            { roomId: "add", name: "+ Add room", isAdd: true },
           ]);
-          setSummary(
-            data.dashboardHome || {
-              roomsCount: 0,
-              activeDevicesCount: 0,
-              homeStatus: "-",
-            },
-          );
+          
+          if (data.dashboardHome) {
+            setSummary(data.dashboardHome);
+            // Persist the active home ID for other screens (like SensorMonitor)
+            if (data.dashboardHome.homeId) {
+              await AsyncStorage.setItem("activeHomeId", data.dashboardHome.homeId);
+            }
+          }
         } else {
           throw new Error("No data in response");
         }

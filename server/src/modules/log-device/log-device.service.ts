@@ -57,6 +57,9 @@ export class LogDeviceService {
   }
 
   private async findDeviceInHome(deviceId: string, homeId: string) {
+    if (!deviceId || !this.isValidObjectId(deviceId)) {
+      throw new DeviceNotFoundException();
+    }
     const device = await this.deviceModel.find(deviceId);
     if (!device) {
       throw new DeviceNotFoundException();
@@ -68,6 +71,10 @@ export class LogDeviceService {
     }
 
     return device;
+  }
+
+  private isValidObjectId(id: string) {
+    return id && /^[0-9a-fA-F]{24}$/.test(id);
   }
 
   private toIdString(value: unknown) {

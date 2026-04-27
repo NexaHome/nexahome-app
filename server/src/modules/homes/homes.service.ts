@@ -62,6 +62,9 @@ export class HomesService {
   }
 
   async findOneByMember(id: string, userId: string) {
+    if (!id || !this.isValidObjectId(id)) {
+      throw new HomeNotFoundException();
+    }
     const home = await this.homeModel.find(id);
     if (!home) {
       throw new HomeNotFoundException();
@@ -271,6 +274,9 @@ export class HomesService {
   }
 
   private async assertHomeOwner(homeId: string, userId: string) {
+    if (!homeId || !this.isValidObjectId(homeId)) {
+      throw new HomeNotFoundException();
+    }
     const home = await this.homeModel.find(homeId);
     if (!home) {
       throw new HomeNotFoundException();
@@ -304,6 +310,10 @@ export class HomesService {
     }
 
     return `${activeDevices} device${activeDevices > 1 ? 's' : ''} on`;
+  }
+
+  private isValidObjectId(id: string) {
+    return id && /^[0-9a-fA-F]{24}$/.test(id);
   }
 
   private async resolveInviteTargetUser(input: AddHomeMemberInput) {

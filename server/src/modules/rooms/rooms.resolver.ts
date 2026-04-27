@@ -22,7 +22,7 @@ export class RoomsResolver {
     return this.roomsService.create(user.userId, homeId, createRoomInput.name);
   }
 
-  @Query(() => [Room], { name: 'roomsByHome' })
+  @Query(() => [Room], { name: 'roomsByHomeBasic' })
   findRoomsByHome(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentHomeId() homeId: string,
