@@ -1,5 +1,5 @@
 import { UseGuards } from '@nestjs/common';
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { Device } from '../../models/device.model';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
 import { CurrentHomeId, CurrentRoomId, CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -61,5 +61,11 @@ export class DevicesResolver {
     @Args('id') id: string,
   ) {
     return this.devicesService.remove(user.userId, homeId, roomId, id);
+  }
+
+  @ResolveField(() => String, { nullable: true })
+  last_value(@Parent() device: Device) {
+    if (!device.last_value) return null;
+    return typeof device.last_value === 'object' ? JSON.stringify(device.last_value) : String(device.last_value);
   }
 }

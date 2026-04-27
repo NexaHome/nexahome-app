@@ -13,8 +13,8 @@ export class LogDevice extends Model {
   @Field(() => ID)
   device_id!: ObjectId; // references devices.id
 
-  @Field()
-  value!: string;
+  @Field(() => String)
+  value!: any;
 
   @Field()
   createdAt!: Date;

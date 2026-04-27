@@ -24,6 +24,18 @@ export class Device extends Model {
   @Field()
   status!: string;
 
+  @Field(() => Boolean, { nullable: true })
+  is_active?: boolean;
+
+  @Field({ nullable: true })
+  category?: string;
+
+  @Field({ nullable: true })
+  antares_device_name?: string;
+
+  @Field(() => String, { nullable: true })
+  last_value?: any;
+
   @Field()
   createdAt!: Date;
 

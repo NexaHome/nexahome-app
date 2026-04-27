@@ -1,5 +1,5 @@
 import { UseGuards } from '@nestjs/common';
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { LogDevice } from '../../models/log.model';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
 import { CurrentHomeId, CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -33,5 +33,10 @@ export class LogDeviceResolver {
   @Query(() => [LogDevice], { name: 'logsByHome' })
   findLogsByHome(@CurrentUser() user: AuthenticatedUser, @CurrentHomeId() homeId: string) {
     return this.logDeviceService.findByHome(user.userId, homeId);
+  }
+
+  @ResolveField(() => String)
+  value(@Parent() log: LogDevice) {
+    return typeof log.value === 'object' ? JSON.stringify(log.value) : String(log.value);
   }
 }
