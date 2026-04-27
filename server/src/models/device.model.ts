@@ -1,15 +1,40 @@
 import { Model } from 'mongoloquent';
+import { Field, ID, ObjectType } from '@nestjs/graphql';
+import { Room } from './room.model';
+import { DeviceAutomation } from './device-automation.model';
+import { LogDevice } from './log.model';
 
+@ObjectType()
 export class Device extends Model {
   static collectionName = 'devices';
 
-  room_id: string; // references rooms.id
+  @Field(() => ID)
+  _id?: string;
 
-  name: string;
+  @Field()
+  room_id!: string; // references rooms.id
 
-  type: string;
+  @Field()
+  name!: string;
 
-  status: string;
+  @Field()
+  type!: string;
 
-  createdAt: Date;
+  @Field()
+  status!: string;
+
+  @Field()
+  createdAt!: Date;
+
+  public room() {
+    return this.belongsTo(Room);
+  }
+
+  public deviceAutomation() {
+    return this.hasMany(DeviceAutomation);
+  }
+
+  public logs() {
+    return this.hasMany(LogDevice);
+  }
 }

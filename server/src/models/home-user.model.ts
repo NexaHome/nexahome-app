@@ -1,5 +1,8 @@
 import { Model } from 'mongoloquent';
 import { Field, ID, ObjectType } from '@nestjs/graphql';
+import { User } from './user.model';
+import { Room } from './room.model';
+import { Home } from './home.model';
 
 @ObjectType()
 export class HomeUser extends Model {
@@ -16,4 +19,12 @@ export class HomeUser extends Model {
 
   @Field()
   createdAt!: Date;
+
+  public user() {
+      return this.belongsTo(User);
+    }
+
+  public homes(){
+    return this.belongsTo(Home);
+  }
 }
