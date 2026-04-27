@@ -13,3 +13,17 @@ export const CurrentUser = createParamDecorator(
     return gqlContext.getContext().req.user as AuthenticatedUser;
   },
 );
+
+export const CurrentHomeId = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): string => {
+    const gqlContext = GqlExecutionContext.create(context);
+    return gqlContext.getContext().homeId as string;
+  },
+);
+
+export const CurrentRoomId = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): string => {
+    const gqlContext = GqlExecutionContext.create(context);
+    return gqlContext.getContext().roomId as string;
+  },
+);

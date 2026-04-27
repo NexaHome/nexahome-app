@@ -8,6 +8,11 @@ import { AppService } from './app.service';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HomesModule } from './modules/homes';
+import { RoomsModule } from './modules/rooms';
+import { DevicesModule } from './modules/devices';
+import { AutomationsModule } from './modules/automations';
+import { DeviceAutomationsModule } from './modules/device-automations';
+import { LogDeviceModule } from './modules/log-device';
 import { formatGraphQLError } from './common/errors/graphql-error.formatter';
 
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
@@ -21,7 +26,11 @@ import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin
       driver: ApolloDriver,
       autoSchemaFile: true,
       playground: false,
-      context: ({ req }) => ({ req }),
+      context: ({ req }) => ({
+        req,
+        homeId: req.headers['x-home-id'],
+        roomId: req.headers['x-room-id'],
+      }),
       plugins: [ApolloServerPluginLandingPageLocalDefault()],
       formatError: formatGraphQLError,
     }),
@@ -37,6 +46,11 @@ import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin
     UsersModule,
     AuthModule,
     HomesModule,
+    RoomsModule,
+    DevicesModule,
+    AutomationsModule,
+    DeviceAutomationsModule,
+    LogDeviceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,11 +1,24 @@
 import { Model } from 'mongoloquent';
+import { Field, ID, ObjectType } from '@nestjs/graphql';
+import { Device } from './device.model';
 
-export class Log extends Model {
+@ObjectType()
+export class LogDevice extends Model {
   static collectionName = 'logs';
 
-  device_id: string; // references devices.id
+  @Field(() => ID)
+  _id?: string;
 
-  value: string;
+  @Field()
+  device_id!: string; // references devices.id
 
-  createdAt: Date;
+  @Field()
+  value!: string;
+
+  @Field()
+  createdAt!: Date;
+
+  public device() {
+    return this.belongsTo(Device);
+  }
 }

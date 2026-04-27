@@ -57,6 +57,24 @@ export class HomeMemberAlreadyExistsException extends AppException {
   }
 }
 
+export class RoomNotFoundException extends AppException {
+  constructor() {
+    super('Room not found', HttpStatus.NOT_FOUND, 'ROOM_NOT_FOUND');
+  }
+}
+
+export class DeviceNotFoundException extends AppException {
+  constructor() {
+    super('Device not found', HttpStatus.NOT_FOUND, 'DEVICE_NOT_FOUND');
+  }
+}
+
+export class AutomationNotFoundException extends AppException {
+  constructor() {
+    super('Automation not found', HttpStatus.NOT_FOUND, 'AUTOMATION_NOT_FOUND');
+  }
+}
+
 // ── Validation Errors ────────────────────────────────────
 export class ValidationException extends AppException {
   constructor(message: string) {

@@ -1,6 +1,7 @@
 import { Model } from 'mongoloquent';
 import { ObjectType, Field, ID } from '@nestjs/graphql';
-import { Home } from './home.model';
+import { Automation } from './automation.model';
+import { HomeUser } from './home-user.model';
 
 @ObjectType()
 export class User extends Model {
@@ -10,17 +11,21 @@ export class User extends Model {
   _id?: string;
 
   @Field()
-  name: string;
+  name!: string;
 
   @Field()
-  email: string;
+  email!: string;
 
   password?: string; // Not exposed to GraphQL
 
   @Field()
-  createdAt: Date;
+  createdAt!: Date;
 
-  public homes() {
-    return this.hasMany(Home);
+  public homeUser() {
+    return this.hasMany(HomeUser);
+  }
+
+  public automations() {
+    return this.hasMany(Automation);
   }
 }
