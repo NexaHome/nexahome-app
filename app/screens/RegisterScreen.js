@@ -14,7 +14,6 @@ import { postGraphQL } from "../utils/api";
 export default function RegisterScreen({ navigation }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -100,14 +99,6 @@ export default function RegisterScreen({ navigation }) {
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
-        />
-
-        <Text style={styles.label}>Phone number</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="+62 812 xxxx xxxx"
-          value={phone}
-          onChangeText={setPhone}
         />
 
         <Text style={styles.label}>Password</Text>

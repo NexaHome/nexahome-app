@@ -18,6 +18,7 @@ import LaundryAutomationRule from "./screens/LaundryAutomationRule";
 import LaundryControl from "./screens/LaundryControl";
 import LaundryStatus from "./screens/LaundryStatus";
 import RoomDetail from "./screens/RoomDetail";
+import Profile from "./screens/Profile";
 import Schedule from "./screens/Schedule";
 import SensorMonitor from "./screens/SensorMonitor";
 import { fonts, lightColors, ThemeProvider, useTheme } from "./theme";
@@ -82,6 +83,7 @@ const AppNavigator = () => {
         />
         <Stack.Screen name="AddRoom" component={AddRoom} />
         <Stack.Screen name="AddFeature" component={AddFeature} />
+        <Stack.Screen name="Profile" component={Profile} />
       </Stack.Navigator>
     </NavigationContainer>
   );
