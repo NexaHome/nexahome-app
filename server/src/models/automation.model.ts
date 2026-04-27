@@ -1,5 +1,6 @@
 import { Model } from 'mongoloquent';
 import { Field, ID, ObjectType } from '@nestjs/graphql';
+import { ObjectId } from 'mongodb';
 import { DeviceAutomation } from './device-automation.model';
 import { User } from './user.model';
 
@@ -10,8 +11,8 @@ export class Automation extends Model {
   @Field(() => ID)
   _id?: string;
 
-  @Field()
-  user_id!: string; // references users.id
+  @Field(() => ID)
+  user_id!: ObjectId; // references users.id
 
   @Field()
   name!: string;

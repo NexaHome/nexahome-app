@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { ObjectId } from 'mongodb';
 import { AppModule } from '../src/app.module';
 import { Home } from '../src/models/home.model';
 import { User } from '../src/models/user.model';
@@ -156,34 +157,34 @@ describe('Home CRUD (e2e)', () => {
     const homeId = await createHome(app, auth.accessToken, 'Rumah Utama');
 
     const livingRoom = await Room.create({
-      home_id: homeId,
+      home_id: new ObjectId(homeId),
       name: 'Ruang Tamu',
       createdAt: new Date(),
     });
 
     const kitchen = await Room.create({
-      home_id: homeId,
+      home_id: new ObjectId(homeId),
       name: 'Dapur',
       createdAt: new Date(),
     });
 
     await Device.createMany([
       {
-        room_id: livingRoom._id?.toString() ?? '',
+        room_id: new ObjectId(livingRoom._id?.toString() ?? ''),
         name: 'Lampu Tamu',
         type: 'light',
         status: 'ON',
         createdAt: new Date(),
       },
       {
-        room_id: livingRoom._id?.toString() ?? '',
+        room_id: new ObjectId(livingRoom._id?.toString() ?? ''),
         name: 'TV',
         type: 'media',
         status: 'OFF',
         createdAt: new Date(),
       },
       {
-        room_id: kitchen._id?.toString() ?? '',
+        room_id: new ObjectId(kitchen._id?.toString() ?? ''),
         name: 'Lampu Dapur',
         type: 'light',
         status: 'ON',

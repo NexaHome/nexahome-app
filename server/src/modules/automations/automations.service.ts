@@ -5,6 +5,7 @@ import { DeviceAutomation } from '../../models/device-automation.model';
 import { CreateAutomationInput } from './dto/create-automation.input';
 import { UpdateAutomationInput } from './dto/update-automation.input';
 import { AutomationNotFoundException } from '../../common/exceptions/app.exceptions';
+import { toIdString, toObjectId } from '../../common/utils/object-id.util';
 
 @Injectable()
 export class AutomationsService {
@@ -15,7 +16,7 @@ export class AutomationsService {
 
   async create(userId: string, createAutomationInput: CreateAutomationInput) {
     const automation = new this.automationModel();
-    automation.user_id = userId;
+    automation.user_id = toObjectId(userId);
     automation.name = createAutomationInput.name;
     automation.trigger = createAutomationInput.trigger;
     automation.action = createAutomationInput.action;
@@ -26,7 +27,7 @@ export class AutomationsService {
   }
 
   async findAllByUser(userId: string) {
-    return this.automationModel.where('user_id', userId).get();
+    return this.automationModel.where('user_id', toObjectId(userId)).get();
   }
 
   async findOneByUser(id: string, userId: string) {
@@ -65,7 +66,7 @@ export class AutomationsService {
   async remove(userId: string, id: string) {
     await this.findOneByUser(id, userId);
 
-    await this.deviceAutomationModel.where('automation_id', id).delete();
+    await this.deviceAutomationModel.where('automation_id', toObjectId(id)).delete();
 
     const deletedCount = await this.automationModel.destroy(id);
 
@@ -73,18 +74,6 @@ export class AutomationsService {
   }
 
   private toIdString(value: unknown) {
-    if (!value) {
-      return '';
-    }
-
-    if (typeof value === 'string') {
-      return value;
-    }
-
-    if (typeof value === 'object' && value !== null && 'toString' in value) {
-      return String(value);
-    }
-
-    return '';
+    return toIdString(value);
   }
 }

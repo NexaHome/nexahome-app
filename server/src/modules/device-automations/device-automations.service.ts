@@ -6,6 +6,7 @@ import { Room } from '../../models/room.model';
 import { Automation } from '../../models/automation.model';
 import { DeviceNotFoundException, RoomNotFoundException, AutomationNotFoundException } from '../../common/exceptions/app.exceptions';
 import { CreateDeviceAutomationInput } from './dto/create-device-automation.input';
+import { toIdString, toObjectId } from '../../common/utils/object-id.util';
 
 @Injectable()
 export class DeviceAutomationsService {
@@ -21,8 +22,8 @@ export class DeviceAutomationsService {
     const automation = await this.findUserAutomation(input.automationId, userId);
 
     const existing = await this.deviceAutomationModel
-      .where('device_id', this.toIdString(device._id))
-      .where('automation_id', this.toIdString(automation._id))
+      .where('device_id', toObjectId(this.toIdString(device._id)))
+      .where('automation_id', toObjectId(this.toIdString(automation._id)))
       .first();
 
     if (existing) {
@@ -30,8 +31,8 @@ export class DeviceAutomationsService {
     }
 
     return this.deviceAutomationModel.create({
-      device_id: this.toIdString(device._id),
-      automation_id: this.toIdString(automation._id),
+      device_id: toObjectId(this.toIdString(device._id)),
+      automation_id: toObjectId(this.toIdString(automation._id)),
       createdAt: new Date(),
     });
   }
@@ -40,7 +41,7 @@ export class DeviceAutomationsService {
     await this.findDeviceInHome(deviceId, homeId, roomId);
     await this.findUserAutomation(automationId, userId);
 
-    await this.deviceAutomationModel.where('device_id', deviceId).where('automation_id', automationId).delete();
+    await this.deviceAutomationModel.where('device_id', toObjectId(deviceId)).where('automation_id', toObjectId(automationId)).delete();
 
     return true;
   }
@@ -48,13 +49,13 @@ export class DeviceAutomationsService {
   async findByDevice(userId: string, homeId: string, roomId: string, deviceId: string) {
     await this.findDeviceInHome(deviceId, homeId, roomId);
 
-    const relations = await this.deviceAutomationModel.where('device_id', deviceId).get();
+    const relations = await this.deviceAutomationModel.where('device_id', toObjectId(deviceId)).get();
     if (relations.length === 0) {
       return [];
     }
 
     const automationIds = relations.map((relation) => this.toIdString(relation.automation_id)).filter((id) => id.length > 0);
-    const automations = await this.automationModel.where('user_id', userId).get();
+    const automations = await this.automationModel.where('user_id', toObjectId(userId)).get();
     const allowedAutomationIds = automations.map((automation) => this.toIdString(automation._id));
 
     return relations.filter((relation) => allowedAutomationIds.includes(this.toIdString(relation.automation_id)) && automationIds.includes(this.toIdString(relation.automation_id)));
@@ -63,7 +64,7 @@ export class DeviceAutomationsService {
   async findByAutomation(userId: string, automationId: string) {
     await this.findUserAutomation(automationId, userId);
 
-    return this.deviceAutomationModel.where('automation_id', automationId).get();
+    return this.deviceAutomationModel.where('automation_id', toObjectId(automationId)).get();
   }
 
   private async findDeviceInHome(deviceId: string, homeId: string, roomId: string) {
@@ -90,18 +91,6 @@ export class DeviceAutomationsService {
   }
 
   private toIdString(value: unknown) {
-    if (!value) {
-      return '';
-    }
-
-    if (typeof value === 'string') {
-      return value;
-    }
-
-    if (typeof value === 'object' && value !== null && 'toString' in value) {
-      return String(value);
-    }
-
-    return '';
+    return toIdString(value);
   }
 }

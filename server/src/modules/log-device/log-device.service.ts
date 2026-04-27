@@ -6,6 +6,7 @@ import { Room } from '../../models/room.model';
 import { HomesService } from '../homes/homes.service';
 import { CreateLogDeviceInput } from './dto/create-log-device.input';
 import { DeviceNotFoundException, RoomNotFoundException } from '../../common/exceptions/app.exceptions';
+import { toIdString, toObjectId, toObjectIds } from '../../common/utils/object-id.util';
 
 @Injectable()
 export class LogDeviceService {
@@ -21,7 +22,7 @@ export class LogDeviceService {
     const device = await this.findDeviceInHome(input.deviceId, homeId);
 
     const log = new this.logModel();
-    log.device_id = this.toIdString(device._id);
+    log.device_id = toObjectId(this.toIdString(device._id));
     log.value = input.value;
     log.createdAt = new Date();
     await log.save();
@@ -33,19 +34,19 @@ export class LogDeviceService {
     await this.homesService.findOneByMember(homeId, userId);
     await this.findDeviceInHome(deviceId, homeId);
 
-    return this.logModel.where('device_id', deviceId).get();
+    return this.logModel.where('device_id', toObjectId(deviceId)).get();
   }
 
   async findByHome(userId: string, homeId: string) {
     await this.homesService.findOneByMember(homeId, userId);
 
-    const rooms = await this.roomModel.where('home_id', homeId).get();
+    const rooms = await this.roomModel.where('home_id', toObjectId(homeId)).get();
     if (rooms.length === 0) {
       return [];
     }
 
     const roomIds = rooms.map((room) => this.toIdString(room._id)).filter((id) => id.length > 0);
-    const devices = roomIds.length > 0 ? await this.deviceModel.whereIn('room_id', roomIds).get() : [];
+    const devices = roomIds.length > 0 ? await this.deviceModel.whereIn('room_id', toObjectIds(roomIds)).get() : [];
 
     if (devices.length === 0) {
       return [];
@@ -53,7 +54,7 @@ export class LogDeviceService {
 
     const deviceIds = devices.map((device) => this.toIdString(device._id)).filter((id) => id.length > 0);
 
-    return this.logModel.whereIn('device_id', deviceIds).get();
+    return this.logModel.whereIn('device_id', toObjectIds(deviceIds)).get();
   }
 
   private async findDeviceInHome(deviceId: string, homeId: string) {
@@ -78,18 +79,6 @@ export class LogDeviceService {
   }
 
   private toIdString(value: unknown) {
-    if (!value) {
-      return '';
-    }
-
-    if (typeof value === 'string') {
-      return value;
-    }
-
-    if (typeof value === 'object' && value !== null && 'toString' in value) {
-      return String(value);
-    }
-
-    return '';
+    return toIdString(value);
   }
 }

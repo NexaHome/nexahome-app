@@ -6,6 +6,7 @@ import { CreateRoomInput } from './dto/create-room.input';
 import { UpdateRoomInput } from './dto/update-room.input';
 import { HomesService } from '../homes/homes.service';
 import { RoomNotFoundException } from '../../common/exceptions/app.exceptions';
+import { toIdString, toObjectId } from '../../common/utils/object-id.util';
 
 @Injectable()
 export class RoomsService {
@@ -20,7 +21,7 @@ export class RoomsService {
     await this.homesService.findOneByMember(homeId, userId);
 
     const room = new this.roomModel();
-    room.home_id = homeId;
+    room.home_id = toObjectId(homeId);
     room.name = name;
     room.createdAt = new Date();
     await room.save();
@@ -32,7 +33,7 @@ export class RoomsService {
     // Verify user has access to this home
     await this.homesService.findOneByMember(homeId, userId);
 
-    return this.roomModel.where('home_id', homeId).get();
+    return this.roomModel.where('home_id', toObjectId(homeId)).get();
   }
 
   async findOneByMember(id: string, userId: string) {
@@ -62,7 +63,7 @@ export class RoomsService {
     await this.findOneByMember(id, userId);
 
     // Delete all devices in this room
-    await this.deviceModel.where('room_id', id).delete();
+    await this.deviceModel.where('room_id', toObjectId(id)).delete();
     
     // Delete the room
     const deletedCount = await this.roomModel.destroy(id);
@@ -71,18 +72,6 @@ export class RoomsService {
   }
 
   private toIdString(value: unknown) {
-    if (!value) {
-      return '';
-    }
-
-    if (typeof value === 'string') {
-      return value;
-    }
-
-    if (typeof value === 'object' && value !== null && 'toString' in value) {
-      return String(value);
-    }
-
-    return '';
+    return toIdString(value);
   }
 }

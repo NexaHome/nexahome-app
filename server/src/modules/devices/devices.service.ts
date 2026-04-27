@@ -8,6 +8,7 @@ import { HomesService } from '../homes/homes.service';
 import { CreateDeviceInput } from './dto/create-device.input';
 import { UpdateDeviceInput } from './dto/update-device.input';
 import { DeviceNotFoundException, RoomNotFoundException } from '../../common/exceptions/app.exceptions';
+import { toIdString, toObjectId } from '../../common/utils/object-id.util';
 
 @Injectable()
 export class DevicesService {
@@ -25,7 +26,7 @@ export class DevicesService {
     const room = await this.findRoomByHome(roomId, homeId);
 
     const device = new this.deviceModel();
-    device.room_id = this.toIdString(room._id);
+    device.room_id = toObjectId(this.toIdString(room._id));
     device.name = createDeviceInput.name;
     device.type = createDeviceInput.type;
     device.status = createDeviceInput.status ?? 'OFF';
@@ -39,7 +40,7 @@ export class DevicesService {
     await this.homesService.findOneByMember(homeId, userId);
     await this.findRoomByHome(roomId, homeId);
 
-    return this.deviceModel.where('room_id', roomId).get();
+    return this.deviceModel.where('room_id', toObjectId(roomId)).get();
   }
 
   async findOneByMember(userId: string, homeId: string, roomId: string, id: string) {
@@ -86,8 +87,8 @@ export class DevicesService {
   async remove(userId: string, homeId: string, roomId: string, id: string) {
     await this.findOneByMember(userId, homeId, roomId, id);
 
-    await this.logModel.where('device_id', id).delete();
-    await this.deviceAutomationModel.where('device_id', id).delete();
+    await this.logModel.where('device_id', toObjectId(id)).delete();
+    await this.deviceAutomationModel.where('device_id', toObjectId(id)).delete();
 
     const deletedCount = await this.deviceModel.destroy(id);
 
@@ -104,18 +105,6 @@ export class DevicesService {
   }
 
   private toIdString(value: unknown) {
-    if (!value) {
-      return '';
-    }
-
-    if (typeof value === 'string') {
-      return value;
-    }
-
-    if (typeof value === 'object' && value !== null && 'toString' in value) {
-      return String(value);
-    }
-
-    return '';
+    return toIdString(value);
   }
 }
