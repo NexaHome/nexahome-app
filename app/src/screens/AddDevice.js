@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, View, ActivityIndicator, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import AnimatedPressable from "../src/components/AnimatedPressable";
-import BottomNav from "../src/components/BottomNav";
-import ScreenShell from "../src/components/ScreenShell";
-import { postGraphQL } from "../utils/api";
+import AnimatedPressable from "../components/AnimatedPressable";
+import BottomNav from "../components/BottomNav";
+import ScreenShell from "../components/ScreenShell";
+import { postGraphQL } from "../../utils/api";
 
 const DEVICE_TEMPLATES = [
   { id: "fire", name: "Sensor Api", type: "sensor", category: "fire", antares_device_name: "Fire", status: "Safe" },
@@ -60,7 +60,7 @@ const AddDevice = ({ navigation, route }) => {
         {
           Authorization: `Bearer ${token}`,
           "x-home-id": homeId,
-          "x-room-id": roomId, // Required by createDevice mutation
+          "x-room-id": roomId,
         }
       );
       

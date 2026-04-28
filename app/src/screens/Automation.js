@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-import { postGraphQL } from "../utils/api";
+import { postGraphQL } from "../../utils/api";
 
 const Automation = ({ navigation }) => {
   const [automations, set_automations] = useState([]);

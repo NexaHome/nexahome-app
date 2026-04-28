@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, TextInput, View, ActivityIndicator, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import AnimatedPressable from "../components/AnimatedPressable";
-import BottomNav from "../components/BottomNav";
-import ScreenShell from "../components/ScreenShell";
+import AnimatedPressable from "../src/components/AnimatedPressable";
+import BottomNav from "../src/components/BottomNav";
+import ScreenShell from "../src/components/ScreenShell";
 import { postGraphQL } from "../utils/api";
 
 const AddRoom = ({ navigation, route }) => {

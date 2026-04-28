@@ -5,7 +5,7 @@ import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
 import Toggle from "../components/Toggle";
-import { postGraphQL } from "../utils/api";
+import { postGraphQL } from "../../utils/api";
 
 const Schedule = ({ navigation }) => {
   const [items, setItems] = useState([]);
