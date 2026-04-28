@@ -84,6 +84,15 @@ const getQueueDelayMs = (trigger) => {
   return 0;
 };
 
+const hasExecutedAfterQueue = (queuedAt, lastExecutedAt) => {
+  if (!queuedAt || !lastExecutedAt) return false;
+  const queuedTime = new Date(queuedAt).getTime();
+  const executedTime = new Date(lastExecutedAt).getTime();
+
+  if (!Number.isFinite(queuedTime) || !Number.isFinite(executedTime)) return false;
+  return executedTime >= queuedTime;
+};
+
 const Schedule = ({ navigation }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -97,6 +106,7 @@ const Schedule = ({ navigation }) => {
     try {
       setLoading(true);
       const token = await SecureStore.getItemAsync("token");
+      const activeHomeId = await SecureStore.getItemAsync("activeHomeId");
       const activeMapRaw = await SecureStore.getItemAsync(ACTIVE_KEY);
       const activeMap = activeMapRaw ? JSON.parse(activeMapRaw) : {};
 
@@ -114,6 +124,8 @@ const Schedule = ({ navigation }) => {
                 name
                 trigger
                 action
+                queuedAt
+                lastExecutedAt
               }
             }
           `,
@@ -128,31 +140,51 @@ const Schedule = ({ navigation }) => {
         throw new Error(result.errors[0]?.message || "Gagal memuat schedules");
       }
 
-      const mapped = (result.data?.automations || []).map((automation) => ({
-        id: automation._id,
-        name: automation.name,
-        trigger: automation.trigger,
-        time: formatTime(automation.trigger),
-        repeat: formatRepeat(automation.trigger),
-        actionLabel: formatActionLabel(automation.action),
-        active:
-          typeof activeMap?.[automation._id] === "boolean"
-            ? activeMap[automation._id]
-            : true,
-      }));
+      const mapped = (result.data?.automations || [])
+        .filter((automation) => {
+          if (!activeHomeId) return true;
 
-      setItems(mapped);
+          const action = parseAutomationJson(automation.action);
+          return action?.homeId === activeHomeId;
+        })
+        .map((automation) => ({
+          executedAfterQueue: hasExecutedAfterQueue(
+            automation.queuedAt,
+            automation.lastExecutedAt,
+          ),
+          id: automation._id,
+          name: automation.name,
+          trigger: automation.trigger,
+          time: formatTime(automation.trigger),
+          repeat: formatRepeat(automation.trigger),
+          actionLabel: formatActionLabel(automation.action),
+          active:
+            typeof activeMap?.[automation._id] === "boolean"
+              ? activeMap[automation._id]
+              : true,
+        }));
+
+      const normalized = mapped.map((item) =>
+        item.executedAfterQueue ? { ...item, active: false } : item,
+      );
+
+      setItems(normalized);
       
       // Initialize remaining times for active delay automations
       const parsed = parseAutomationJson;
       const newRemainingTimes = {};
-      mapped.forEach((item) => {
+      normalized.forEach((item) => {
         const trigger = parsed(item.trigger);
         if (trigger?.type === "delay" && item.active && trigger.delayMs) {
           newRemainingTimes[item.id] = Math.max(0, trigger.delayMs);
         }
       });
       setRemainingTimes(newRemainingTimes);
+
+      const nextMap = Object.fromEntries(
+        normalized.map((item) => [item.id, item.active]),
+      );
+      await updateLocalActiveMap(nextMap);
     } catch (error) {
       console.error("Gagal memuat jadwal", error);
       setItems([]);
@@ -186,6 +218,68 @@ const Schedule = ({ navigation }) => {
     };
   }, []);
 
+  const checkExecutionStatus = useCallback(async () => {
+    try {
+      const token = await SecureStore.getItemAsync("token");
+      if (!token) return;
+
+      const response = await postGraphQL(
+        {
+          query: `
+            query {
+              automations {
+                _id
+                queuedAt
+                lastExecutedAt
+              }
+            }
+          `,
+        },
+        { Authorization: `Bearer ${token}` },
+      );
+
+      const result = await response.json();
+      if (result.errors?.length) return;
+
+      const executionMap = Object.fromEntries(
+        (result.data?.automations || []).map((auto) => [
+          auto._id,
+          hasExecutedAfterQueue(auto.queuedAt, auto.lastExecutedAt),
+        ]),
+      );
+
+      setItems((current) => {
+        const updated = current.map((item) => {
+          const justExecuted = executionMap[item.id] && !item.executedAfterQueue;
+          if (justExecuted) {
+            return { ...item, active: false, executedAfterQueue: true };
+          }
+          return item;
+        });
+        return updated;
+      });
+    } catch (error) {
+      console.error("Gagal check execution status", error);
+    }
+  }, []);
+
+  // Poll backend while there are active delay schedules to catch real execution state
+  useEffect(() => {
+    const hasActiveDelay = items.some((item) => {
+      if (!item.active) return false;
+      const trigger = parseAutomationJson(item.trigger);
+      return trigger?.type === "delay";
+    });
+
+    if (!hasActiveDelay) return;
+
+    const interval = setInterval(() => {
+      checkExecutionStatus();
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [items, checkExecutionStatus]);
+
   const updateLocalActiveMap = async (nextMap) => {
     await SecureStore.setItemAsync(ACTIVE_KEY, JSON.stringify(nextMap));
   };
@@ -193,6 +287,7 @@ const Schedule = ({ navigation }) => {
   const toggleSchedule = async (item) => {
     try {
       const token = await SecureStore.getItemAsync("token");
+      const activeHomeId = await SecureStore.getItemAsync("activeHomeId");
       if (!token) {
         throw new Error("Token tidak ditemukan.");
       }
@@ -216,12 +311,22 @@ const Schedule = ({ navigation }) => {
 
       const response = await postGraphQL(
         { query: mutation, variables },
-        { Authorization: `Bearer ${token}` },
+        {
+          Authorization: `Bearer ${token}`,
+          ...(activeHomeId ? { "x-home-id": activeHomeId } : {}),
+        },
       );
       const result = await response.json();
 
       if (result.errors?.length) {
         throw new Error(result.errors[0]?.message || "Gagal mengubah status schedule");
+      }
+
+      if (nextActive) {
+        const queueResult = result?.data?.queueAutomation;
+        if (!queueResult?.queued) {
+          throw new Error(queueResult?.message || "Automation belum ter-queue");
+        }
       }
 
       setItems((current) =>

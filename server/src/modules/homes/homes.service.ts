@@ -352,9 +352,25 @@ export class HomesService {
       .map((room) => this.toIdString(room._id))
       .filter((id) => id.length > 0);
 
-    const affectedDevices = await this.deviceModel
-      .whereIn('room_id', toObjectIds(roomIds))
-      .updateMany({ status });
+    // Avoid whereIn(ObjectId) update path because it can miss matches in this ORM setup.
+    const allDevices = await this.deviceModel.get();
+    const targetDevices = allDevices.filter((device) =>
+      roomIds.includes(this.toIdString(device.room_id)),
+    );
+
+    let affectedDevices = 0;
+    for (const device of targetDevices) {
+      const deviceId = this.toIdString(device._id);
+      if (!deviceId) continue;
+
+      await this.deviceModel
+        .where('_id', toObjectId(deviceId))
+        .update({
+          status,
+          is_active: status === 'ON',
+        });
+      affectedDevices += 1;
+    }
 
     // Trigger Antares for each affected device
     const devices = await this.deviceModel

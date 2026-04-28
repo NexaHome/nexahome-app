@@ -464,7 +464,7 @@ const Dashboard = ({ navigation }) => {
           </>
         )}
 
-        <Text style={styles.sectionTitle}>Quick actions</Text>
+        {/* <Text style={styles.sectionTitle}>Quick actions</Text>
         <View style={styles.actions}>
           {["All on", "All off", "Away mode"].map((action) => (
             <AnimatedPressable key={action} style={styles.actionButton}>
@@ -473,9 +473,9 @@ const Dashboard = ({ navigation }) => {
               </Text>
             </AnimatedPressable>
           ))}
-        </View>
+        </View> */}
 
-        <Text style={styles.sectionTitle}>Sensor status</Text>
+        {/* <Text style={styles.sectionTitle}>Sensor status</Text>
         <View style={styles.sensorGrid}>
           {realSensors.length === 0 ? (
             <Text style={styles.emptyText}>Tidak ada sensor yang terhubung.</Text>
@@ -510,7 +510,7 @@ const Dashboard = ({ navigation }) => {
               </View>
             ))
           )}
-        </View>
+        </View> */}
       </ScrollView>
 
       <BottomNav active="home" navigation={navigation} />
