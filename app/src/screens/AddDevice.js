@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, View, ActivityIndicator, Alert } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
@@ -32,8 +32,8 @@ const AddDevice = ({ navigation, route }) => {
       setSaving(true);
       setError("");
       
-      const token = await AsyncStorage.getItem("token");
-      const homeId = await AsyncStorage.getItem("activeHomeId");
+      const token = await SecureStore.getItemAsync("token");
+      const homeId = await SecureStore.getItemAsync("activeHomeId");
       
       const query = `
         mutation CreateDevice($createDeviceInput: CreateDeviceInput!) {
