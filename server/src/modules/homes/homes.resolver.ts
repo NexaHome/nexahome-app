@@ -5,7 +5,7 @@ import { HomesService } from './homes.service';
 import { CreateHomeInput } from './dto/create-home.input';
 import { UpdateHomeInput } from './dto/update-home.input';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { CurrentUser, CurrentHomeId } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { DashboardHome } from './dto/dashboard-home.type';
 import { RoomSummary } from './dto/room-summary.type';
@@ -32,11 +32,11 @@ export class HomesResolver {
     return this.homesService.findAllByMember(user.userId);
   }
 
-  @Query(() => Home, { name: 'home' })
-  findHomeById(@CurrentUser() user: AuthenticatedUser, @Args('id') id: string) {
-    return this.homesService.findOneByMember(id, user.userId);
-  }
 
+  @Query(() => Home, { name: 'home' })
+  findHomeById(@CurrentUser() user: AuthenticatedUser, @CurrentHomeId() homeId: string) {
+    return this.homesService.findOneByMember(homeId, user.userId);
+  }
   @Mutation(() => Home)
   updateHome(
     @CurrentUser() user: AuthenticatedUser,
@@ -59,14 +59,14 @@ export class HomesResolver {
     return this.homesService.getDashboard(user.userId, homeId);
   }
 
+
   @Query(() => [RoomSummary])
   roomsByHome(
     @CurrentUser() user: AuthenticatedUser,
-    @Args('homeId', { nullable: true }) homeId?: string,
+    @CurrentHomeId() homeId: string,
   ) {
     return this.homesService.getRoomSummaries(user.userId, homeId);
   }
-
   @Mutation(() => QuickActionResult)
   allDevicesOn(@CurrentUser() user: AuthenticatedUser, @Args('homeId') homeId: string) {
     return this.homesService.allDevicesOn(user.userId, homeId);

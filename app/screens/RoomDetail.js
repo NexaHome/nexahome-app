@@ -44,14 +44,16 @@ const RoomDetail = ({ route, navigation }) => {
           throw new Error("Token tidak ditemukan, silakan login ulang.");
         }
 
+        const homeId = await AsyncStorage.getItem("activeHomeId");
+        if (!homeId) {
+          throw new Error("Home aktif tidak ditemukan.");
+        }
+
         const query = `
           query RoomSummaries {
-            roomsByHome {
-              roomId
+            roomsByHomeBasic {
+              _id
               name
-              subtitle
-              activeDevices
-              totalDevices
             }
           }
         `;
@@ -62,6 +64,7 @@ const RoomDetail = ({ route, navigation }) => {
           },
           {
             Authorization: `Bearer ${token}`,
+            "x-home-id": homeId,
           },
         );
         const result = await response.json();
@@ -72,16 +75,16 @@ const RoomDetail = ({ route, navigation }) => {
           );
         }
 
-        const rooms = result.data?.roomsByHome || [];
-        const selectedRoom = rooms.find((item) => item.roomId === roomId);
+        const rooms = result.data?.roomsByHomeBasic || [];
+        const selectedRoom = rooms.find((item) => item._id === roomId);
 
         if (!selectedRoom) {
           throw new Error("Room tidak ditemukan di server");
         }
 
         setRoomName(selectedRoom.name || initialRoomName);
-        setActiveDevices(selectedRoom.activeDevices || 0);
-        setRoomSubtitle(selectedRoom.subtitle || "-");
+        setActiveDevices(0);
+        setRoomSubtitle("Room");
         setRoomDevices([]);
       } catch (fetchError) {
         setError(fetchError.message || "Terjadi kesalahan");

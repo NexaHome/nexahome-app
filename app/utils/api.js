@@ -1,4 +1,4 @@
-export const BASE_URL = "http://192.168.1.7:3000/graphql";
+export const BASE_URL = "http://192.168.0.11:3000/graphql";
 
 export const postGraphQL = async (body, customHeaders = {}) => {
   const response = await fetch(BASE_URL, {
