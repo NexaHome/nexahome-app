@@ -40,6 +40,8 @@ export class HomesService {
     home.name = createHomeInput.name;
     home.owner_id = toObjectId(userId);
     home.createdAt = new Date();
+    // Generate a 6-character uppercase alphanumeric invite code
+    home.invite_code = Math.random().toString(36).substring(2, 8).toUpperCase();
     await home.save();
 
     const homeId = this.toIdString(home._id);
@@ -84,12 +86,20 @@ export class HomesService {
   }
 
   async update(id: string, userId: string, updateHomeInput: UpdateHomeInput) {
-    await this.findOneByMember(id, userId);
+    const home = await this.findOneByMember(id, userId);
 
+    const updateData: any = {};
     if (typeof updateHomeInput.name !== 'undefined') {
-      await this.homeModel.where('_id', id).update({
-        name: updateHomeInput.name,
-      });
+      updateData.name = updateHomeInput.name;
+    }
+
+    // Auto-generate invite code for older homes that don't have it
+    if (!home.invite_code) {
+      updateData.invite_code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await this.homeModel.where('_id', id).update(updateData);
     }
 
     return await this.findOneByMember(id, userId);
@@ -131,6 +141,36 @@ export class HomesService {
       user_id: toObjectId(targetUserId),
       createdAt: new Date(),
     });
+  }
+
+  async joinHomeByCode(userId: string, inviteCode: string) {
+    if (!inviteCode || typeof inviteCode !== 'string') {
+      throw new ValidationException('Invalid invite code');
+    }
+
+    const home = await this.homeModel.where('invite_code', inviteCode.toUpperCase()).first();
+    if (!home) {
+      throw new HomeNotFoundException();
+    }
+
+    const homeId = this.toIdString(home._id);
+
+    const existingMembership = await this.homeUserModel
+      .where('home_id', toObjectId(homeId))
+      .where('user_id', toObjectId(userId))
+      .first();
+
+    if (existingMembership) {
+      throw new HomeMemberAlreadyExistsException();
+    }
+
+    await this.homeUserModel.create({
+      home_id: toObjectId(homeId),
+      user_id: toObjectId(userId),
+      createdAt: new Date(),
+    });
+
+    return home;
   }
 
   async getMembers(homeId: string, userId: string): Promise<HomeMember[]> {
