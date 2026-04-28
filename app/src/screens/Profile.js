@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 24,
     paddingTop: 40,
-    paddingBottom: 120,
+    paddingBottom: 80,
   },
   profileCard: {
     width: "100%",
