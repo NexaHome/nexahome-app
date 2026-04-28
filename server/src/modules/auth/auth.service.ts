@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { UsersService } from '../users/users.service';
 import { LoginInput } from './dto/login.input';
+import { HomesService } from '../homes/homes.service';
 import { CreateUserInput } from '../users/dto/create-user.input';
 import { AuthResponse } from './dto/auth-response.type';
 import { RegisterResponse } from './dto/register-response.type';
@@ -16,6 +17,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly homesService: HomesService,
   ) {}
 
   async register(createUserInput: CreateUserInput): Promise<RegisterResponse> {
@@ -32,6 +34,13 @@ export class AuthService {
       ...createUserInput,
       password: hashedPassword,
     });
+
+    // Automatically create a default home for the new user
+    if (user && user._id) {
+      await this.homesService.create(user._id.toString(), {
+        name: 'My Home',
+      });
+    }
 
     return {
       userId: user._id?.toString() ?? '',

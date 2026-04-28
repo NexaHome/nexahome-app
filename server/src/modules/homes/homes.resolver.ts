@@ -99,4 +99,12 @@ export class HomesResolver {
   membersByHome(@CurrentUser() user: AuthenticatedUser, @Args('homeId') homeId: string) {
     return this.homesService.getMembers(homeId, user.userId);
   }
+
+  @Mutation(() => Home)
+  joinHomeByCode(
+    @CurrentUser() user: AuthenticatedUser,
+    @Args('inviteCode') inviteCode: string,
+  ) {
+    return this.homesService.joinHomeByCode(user.userId, inviteCode);
+  }
 }

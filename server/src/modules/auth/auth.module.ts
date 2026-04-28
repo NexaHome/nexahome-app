@@ -7,10 +7,12 @@ import { AuthResolver } from './auth.resolver';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GqlAuthGuard } from './guards/gql-auth.guard';
 import { UsersModule } from '../users/users.module';
+import { HomesModule } from '../homes/homes.module';
 
 @Module({
   imports: [
     UsersModule,
+    HomesModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
