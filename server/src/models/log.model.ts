@@ -5,7 +5,7 @@ import { Device } from './device.model';
 
 @ObjectType()
 export class LogDevice extends Model {
-  static collectionName = 'logs';
+  static collectionName = 'logdevices';
 
   @Field(() => ID)
   _id?: string;

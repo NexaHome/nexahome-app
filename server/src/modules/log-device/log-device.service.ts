@@ -140,7 +140,7 @@ export class LogDeviceService {
 
     const deviceIds = devices.map((device) => this.toIdString(device._id)).filter((id) => id.length > 0);
 
-    return this.logModel.whereIn('device_id', toObjectIds(deviceIds)).get();
+    return this.logModel.whereIn('device_id', toObjectIds(deviceIds)).orderBy('createdAt', 'desc').limit(50).get();
   }
 
   private async findDeviceInHome(deviceId: string, homeId: string) {
