@@ -15,6 +15,7 @@ import { postGraphQL } from "../../utils/api";
 const SensorMonitor = ({ navigation }) => {
   const [sensors, setSensors] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [automations, set_automations] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchSensorData = async () => {
@@ -28,7 +29,7 @@ const SensorMonitor = ({ navigation }) => {
       }
 
       const query = `
-        query DevicesAndLogs {
+        query DevicesLogsAndAutomations {
           devicesByHome {
             _id
             name
@@ -42,6 +43,13 @@ const SensorMonitor = ({ navigation }) => {
             device_id
             value
             createdAt
+          }
+          automations {
+            _id
+            name
+            trigger
+            action
+            is_active
           }
         }
       `;
@@ -89,9 +97,8 @@ const SensorMonitor = ({ navigation }) => {
         });
         
         setSensors(mappedSensors);
-        
-        const dbLogs = result.data.logsByHome || [];
-        setLogs(dbLogs);
+        setLogs(result.data.logsByHome || []);
+        set_automations(result.data.automations || []);
       }
     } catch (error) {
       console.log("Fetch failed:", error.message);
@@ -114,11 +121,11 @@ const SensorMonitor = ({ navigation }) => {
     }
     const val = Number(valObj.value) || 0;
     // Scale value (0-4095) to chart height (0-100)
-    return Math.min(100, Math.floor((val / 4095) * 100));
+    return Math.min(100, Math.max(10, Math.floor((val / 4095) * 100)));
   });
 
   const displayBars =
-    chartData.length > 0 ? chartData : [34, 52, 41, 72, 58, 86, 62, 46, 68, 78];
+    chartData.length >= 5 ? chartData : [34, 52, 41, 72, 58, 86, 62, 46, 68, 78];
 
   return (
     <ScreenShell>
@@ -180,18 +187,23 @@ const SensorMonitor = ({ navigation }) => {
         </View>
 
         <Text style={styles.sectionTitle}>Linked automations</Text>
-        <View style={styles.automationCard}>
-          <View style={styles.automationDot} />
-          <Text style={styles.automationText}>
-            Gas above 300 ppm turns exhaust fan on
-          </Text>
-        </View>
-        <View style={styles.automationCard}>
-          <View style={styles.automationDotAmber} />
-          <Text style={styles.automationText}>
-            Bright light lowers living room lamp
-          </Text>
-        </View>
+        {automations.length === 0 ? (
+          <Text style={styles.subtitle}>Belum ada aturan otomatisasi.</Text>
+        ) : (
+          automations.slice(0, 3).map((auto) => (
+            <View key={auto._id} style={styles.automationCard}>
+              <View
+                style={[
+                  styles.automationDot,
+                  !auto.is_active && { backgroundColor: "#D8DEE9" },
+                ]}
+              />
+              <Text style={styles.automationText}>
+                {auto.name}: {auto.trigger} → {auto.action}
+              </Text>
+            </View>
+          ))
+        )}
       </ScrollView>
       <BottomNav active="sensors" navigation={navigation} />
     </ScreenShell>

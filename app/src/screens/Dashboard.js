@@ -11,7 +11,6 @@ import * as SecureStore from "expo-secure-store";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-import { sensors } from "../data/homeData";
 import { useTheme } from "../../theme";
 import { postGraphQL } from "../../utils/api";
 
@@ -39,41 +38,49 @@ const Dashboard = ({ navigation }) => {
   const [homeResultRaw, setHomeResultRaw] = useState(null);
 
   const loadRoomsForHome = async (token, homeId) => {
-    const homeResponse = await postGraphQL(
-      {
-        query: `
-          query {
-            home {
-              _id
-              name
-            }
-            roomsByHomeBasic {
-              _id
-              name
-            }
-          }
-        `,
-      },
+    const dashboardQuery = `
+      query DashboardData {
+        home {
+          _id
+          name
+        }
+        roomsByHomeBasic {
+          _id
+          name
+        }
+        devicesByHome {
+          _id
+          name
+          type
+          is_active
+          status
+          last_value
+        }
+      }
+    `;
+
+    const response = await postGraphQL(
+      { query: dashboardQuery },
       {
         Authorization: `Bearer ${token}`,
         "x-home-id": homeId,
       },
     );
 
-    const homeResult = await homeResponse.json();
-    setHomeResultRaw(JSON.stringify(homeResult?.data || {}));
+    const result = await response.json();
+    const data = result?.data || {};
 
-    if (homeResult?.errors?.length) {
-      const message =
-        homeResult.errors[0]?.message || "Gagal memuat data dashboard";
+    if (result?.errors?.length) {
+      const message = result.errors[0]?.message || "Gagal memuat data dashboard";
       if (!message.toLowerCase().includes("home not found")) {
         setRoomError(message);
       }
     }
 
-    if (homeResult?.data?.roomsByHomeBasic?.length) {
+    // Set Rooms
+    if (data.roomsByHomeBasic?.length) {
       setRoomItems([
-        ...homeResult.data.roomsByHomeBasic.map((room) => ({
+        ...data.roomsByHomeBasic.map((room) => ({
           roomId: room._id,
           name: room.name,
           isAdd: false,
@@ -84,16 +91,62 @@ const Dashboard = ({ navigation }) => {
       setRoomItems([{ roomId: "add", name: "+ Add room", isAdd: true }]);
     }
 
-    const homeData = homeResult?.data?.home;
-    const roomsCount = homeResult?.data?.roomsByHomeBasic?.length ?? 0;
+    // Process Devices and Sensors
+    const SENSOR_ICONS = {
+      fire: "🔥",
+      gas: "💨",
+      water: "💧",
+      rain: "🌧️",
+      light: "💡",
+      motion: "🏃",
+      temperature: "🌡️",
+      humidity: "💧",
+    };
+
+    const allDevices = data.devicesByHome || [];
+    const activeCount = allDevices.filter((d) => d.is_active).length;
+    const sensorsOnly = allDevices
+      .filter((d) => d.type === "sensor")
+      .map((s) => {
+        let valObj = {};
+        if (s.last_value) {
+          try {
+            valObj = JSON.parse(s.last_value);
+          } catch (e) {}
+        }
+
+        const isAmber =
+          s.status &&
+          s.status !== "Safe" &&
+          s.status !== "Normal" &&
+          s.status !== "Clear";
+
+        const category = (s.category || "").toLowerCase();
+
+        return {
+          id: s._id,
+          label: s.name,
+          icon: SENSOR_ICONS[category] || "📡",
+          value: valObj.formatted || valObj.value || "-",
+          state: s.status || "Normal",
+          tone: isAmber ? "amber" : "green",
+        };
+      });
+
+    const homeData = data.home;
+    const roomsCount = data.roomsByHomeBasic?.length ?? 0;
 
     if (homeData) {
       setSummary({
         roomsCount,
-        activeDevicesCount: 0,
+        activeDevicesCount: activeCount,
         homeStatus: "Online",
         homeName: homeData.name,
       });
+      // We can use a local state for sensors or use the summary object. 
+      // For now, let's keep it simple and use the summary or a new state.
+      // I'll add a state for sensors below.
+      setRealSensors(sensorsOnly);
     } else {
       setSummary({
         roomsCount: 0,
@@ -101,8 +154,11 @@ const Dashboard = ({ navigation }) => {
         homeStatus: "No Home",
         homeName: "Rumah Utama",
       });
+      setRealSensors([]);
     }
   };
+
+  const [realSensors, setRealSensors] = useState([]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
@@ -421,32 +477,39 @@ const Dashboard = ({ navigation }) => {
 
         <Text style={styles.sectionTitle}>Sensor status</Text>
         <View style={styles.sensorGrid}>
-          {sensors.map((sensor) => (
-            <View key={sensor.id} style={styles.sensorItem}>
-              <Text style={styles.sensorLabel} numberOfLines={1}>
-                {sensor.label}
-              </Text>
-              <Text style={styles.sensorValue} numberOfLines={1}>
-                {sensor.value}
-              </Text>
-              <View
-                style={[
-                  styles.statusPill,
-                  sensor.tone === "amber" && styles.statusPillAmber,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.statusText,
-                    sensor.tone === "amber" && styles.statusTextAmber,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {sensor.state}
+          {realSensors.length === 0 ? (
+            <Text style={styles.emptyText}>Tidak ada sensor yang terhubung.</Text>
+          ) : (
+            realSensors.map((sensor) => (
+              <View key={sensor.id} style={styles.sensorItem}>
+                <View style={styles.sensorTop}>
+                  <Text style={styles.sensorIcon}>{sensor.icon}</Text>
+                  <Text style={styles.sensorLabel} numberOfLines={1}>
+                    {sensor.label}
+                  </Text>
+                </View>
+                <Text style={styles.sensorValue} numberOfLines={1}>
+                  {sensor.value}
                 </Text>
+                <View
+                  style={[
+                    styles.statusPill,
+                    sensor.tone === "amber" && styles.statusPillAmber,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusText,
+                      sensor.tone === "amber" && styles.statusTextAmber,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {sensor.state}
+                  </Text>
+                </View>
               </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -738,34 +801,45 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   sensorGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  sensorItem: {
+    width: (width - PAGE_PADDING * 2 - 12) / 2,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#D8DEE9",
-    borderRadius: 14,
-    padding: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
+    borderRadius: 16,
+    padding: 14,
   },
-  sensorItem: {
-    width: "24%",
-    minHeight: 80,
+  sensorTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  sensorIcon: {
+    fontSize: 16,
+    marginRight: 6,
   },
   sensorLabel: {
-    color: "#94A3B8",
-    fontSize: 11,
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "700",
+    flex: 1,
   },
   sensorValue: {
     color: "#0A0F2C",
-    fontSize: 13.5,
+    fontSize: 18,
     fontWeight: "900",
-    marginTop: 4,
+    marginVertical: 4,
   },
   statusPill: {
     alignSelf: "flex-start",
-    marginTop: 8,
-    paddingHorizontal: 7,
+    marginTop: 6,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 5,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: "#00D4FF",
     backgroundColor: "#E6FAFF",

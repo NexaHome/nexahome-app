@@ -23,6 +23,9 @@ export class Automation extends Model {
   @Field()
   action!: string;
 
+  @Field({ defaultValue: true })
+  is_active!: boolean;
+
   @Field()
   createdAt!: Date;
 
