@@ -9,14 +9,27 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { postGraphQL } from "../utils/api";
+import { gql, useMutation } from "@apollo/client";
+
+const REGISTER_MUTATION = gql`
+  mutation Register($name: String!, $email: String!, $password: String!) {
+    register(
+      createUserInput: { name: $name, email: $email, password: $password }
+    ) {
+      userId
+      email
+      name
+      message
+    }
+  }
+`;
 
 export default function RegisterScreen({ navigation }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [register, { loading }] = useMutation(REGISTER_MUTATION);
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {
@@ -30,23 +43,7 @@ export default function RegisterScreen({ navigation }) {
     }
 
     try {
-      setLoading(true);
-
-      const response = await postGraphQL({
-        query: `
-            mutation Register($name: String!, $email: String!, $password: String!) {
-              register(createUserInput: {
-                name: $name,
-                email: $email,
-                password: $password
-              }) {
-                userId
-                email
-                name
-                message
-              }
-            }
-          `,
+      const { data } = await register({
         variables: {
           name,
           email,
@@ -54,23 +51,17 @@ export default function RegisterScreen({ navigation }) {
         },
       });
 
-      const result = await response.json();
-
-      if (result.errors) {
-        Alert.alert(
-          "Register gagal",
-          result.errors[0]?.message || "Terjadi kesalahan",
-        );
+      if (!data?.register) {
+        Alert.alert("Register gagal", "Terjadi kesalahan");
         return;
       }
 
       Alert.alert("Sukses", "Akun berhasil dibuat, silakan login");
       navigation.navigate("Login");
     } catch (error) {
-      Alert.alert("Error", "Gagal terhubung ke server");
+      const msg = error?.message || "Gagal terhubung ke server";
+      Alert.alert("Error", msg);
       console.log(error);
-    } finally {
-      setLoading(false);
     }
   };
 
