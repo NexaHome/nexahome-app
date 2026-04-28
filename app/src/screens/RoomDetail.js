@@ -29,9 +29,6 @@ const RoomDetail = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAddDevice, setShowAddDevice] = useState(false);
-  const [deviceName, setDeviceName] = useState("");
-  const [deviceType, setDeviceType] = useState("");
-  const [deviceStatus, setDeviceStatus] = useState("");
   const [creatingDevice, setCreatingDevice] = useState(false);
   const [createError, setCreateError] = useState("");
   const [homeLogs, setHomeLogs] = useState([]);
@@ -192,80 +189,7 @@ const RoomDetail = ({ route, navigation }) => {
     }
   };
 
-  const handleCreateDevice = async () => {
-    if (!deviceName.trim() || !deviceType.trim()) {
-      setCreateError("Nama dan tipe device wajib diisi.");
-      return;
-    }
-
-    try {
-      setCreatingDevice(true);
-      setCreateError("");
-
-      const token = await SecureStore.getItemAsync("token");
-      if (!token) {
-        throw new Error("Token tidak ditemukan, silakan login ulang.");
-      }
-
-      const homeId = await SecureStore.getItemAsync("activeHomeId");
-      if (!homeId) {
-        throw new Error("Home aktif tidak ditemukan.");
-      }
-
-      const mutation = `
-        mutation CreateDevice($createDeviceInput: CreateDeviceInput!) {
-          createDevice(createDeviceInput: $createDeviceInput) {
-            _id
-            room_id
-            name
-            type
-            status
-            is_active
-            category
-            antares_device_name
-            last_value
-            createdAt
-          }
-        }
-      `;
-
-      const createDeviceInput = {
-        name: deviceName.trim(),
-        type: deviceType.trim(),
-      };
-
-      if (deviceStatus.trim()) {
-        createDeviceInput.status = deviceStatus.trim();
-      }
-
-      const response = await postGraphQL(
-        {
-          query: mutation,
-          variables: { createDeviceInput },
-        },
-        {
-          Authorization: `Bearer ${token}`,
-          "x-home-id": homeId,
-          "x-room-id": roomId,
-        },
-      );
-
-      const result = await response.json();
-      if (!response.ok || result.errors?.length) {
-        throw new Error(result.errors?.[0]?.message || "Gagal menambah device");
-      }
-
-      setDeviceName("");
-      setDeviceType("");
-      setDeviceStatus("");
-      setShowAddDevice(false);
-      await fetchRoomAndDevices();
-    } catch (createDeviceError) {
-      setCreateError(createDeviceError.message || "Terjadi kesalahan");
-    } finally {
-      setCreatingDevice(false);
-    }
-  };
+  // Create Device logic moved to AddDevice.js screen
 
   useEffect(() => {
     fetchRoomAndDevices();
@@ -308,10 +232,10 @@ const RoomDetail = ({ route, navigation }) => {
             </AnimatedPressable>
             <AnimatedPressable
               style={styles.addButton}
-              onPress={() => setShowAddDevice((value) => !value)}
+              onPress={() => navigation.navigate("AddDevice", { roomName, roomId })}
             >
               <Text style={styles.addText}>
-                {showAddDevice ? "Close" : "+ Add"}
+                + Add
               </Text>
             </AnimatedPressable>
           </View>
@@ -380,53 +304,7 @@ const RoomDetail = ({ route, navigation }) => {
           />
         )}
 
-        {showAddDevice && (
-          <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Tambah device</Text>
-            <Text style={styles.label}>Nama device</Text>
-            <TextInput
-              style={styles.input}
-              value={deviceName}
-              onChangeText={setDeviceName}
-              placeholder="Contoh: Lampu Utama"
-            />
-
-            <Text style={styles.label}>Tipe device</Text>
-            <TextInput
-              style={styles.input}
-              value={deviceType}
-              onChangeText={setDeviceType}
-              placeholder="Contoh: switch"
-            />
-
-            <Text style={styles.label}>Status (opsional)</Text>
-            <TextInput
-              style={styles.input}
-              value={deviceStatus}
-              onChangeText={setDeviceStatus}
-              placeholder="Contoh: OFF"
-            />
-
-            {!!createError && (
-              <Text style={styles.errorText}>{createError}</Text>
-            )}
-
-            <AnimatedPressable
-              style={[
-                styles.primaryButton,
-                creatingDevice && styles.primaryButtonDisabled,
-              ]}
-              onPress={handleCreateDevice}
-              disabled={creatingDevice}
-            >
-              {creatingDevice ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.primaryButtonText}>Simpan device</Text>
-              )}
-            </AnimatedPressable>
-          </View>
-        )}
+        {/* Inline Add Device form has been removed in favor of AddDevice.js template screen */}
 
         <Text style={styles.sectionTitle}>Recent activity</Text>
         {logsLoading && (
