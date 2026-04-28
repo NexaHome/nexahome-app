@@ -4,25 +4,27 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { StatusBar } from "expo-status-bar";
 import { Text, TextInput } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import StartedScreen from "./screens/StartedScreen";
-import LoginScreen from "./screens/LoginScreen";
-import RegisterScreen from "./screens/RegisterScreen";
-import Dashboard from "./screens/Dashboard";
-import DeviceControl from "./screens/DeviceControl";
-import Alerts from "./screens/Alerts";
-import Automation from "./screens/Automation";
+import StartedScreen from "./src/screens/StartedScreen";
+import LoginScreen from "./src/screens/LoginScreen";
+import RegisterScreen from "./src/screens/RegisterScreen";
+import Dashboard from "./src/screens/Dashboard";
+import DeviceControl from "./src/screens/DeviceControl";
+import Alerts from "./src/screens/Alerts";
+import Automation from "./src/screens/Automation";
 import AddDevice from "./screens/AddDevice";
 import AddHome from "./screens/AddHome";
-import AddRoom from "./screens/AddRoom";
-import Members from "./screens/Members";
-import LaundryAutomationRule from "./screens/LaundryAutomationRule";
-import LaundryControl from "./screens/LaundryControl";
-import LaundryStatus from "./screens/LaundryStatus";
-import RoomDetail from "./screens/RoomDetail";
-import Profile from "./screens/Profile";
-import Schedule from "./screens/Schedule";
-import SensorMonitor from "./screens/SensorMonitor";
+import AddRoom from "./src/screens/AddRoom";
+import Members from "./src/screens/Members";
+import LaundryAutomationRule from "./src/screens/LaundryAutomationRule";
+import LaundryControl from "./src/screens/LaundryControl";
+import LaundryStatus from "./src/screens/LaundryStatus";
+import RoomDetail from "./src/screens/RoomDetail";
+import Profile from "./src/screens/Profile";
+import Schedule from "./src/screens/Schedule";
+import SensorMonitor from "./src/screens/SensorMonitor";
 import { fonts, lightColors, ThemeProvider, useTheme } from "./theme";
+import { ApolloProvider } from "@apollo/client";
+import client from "./utils/apollo";
 
 const Stack = createStackNavigator();
 
@@ -94,9 +96,11 @@ const AppNavigator = () => {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
-        <AppNavigator />
-      </ThemeProvider>
+      <ApolloProvider client={client}>
+        <ThemeProvider>
+          <AppNavigator />
+        </ThemeProvider>
+      </ApolloProvider>
     </SafeAreaProvider>
   );
 }

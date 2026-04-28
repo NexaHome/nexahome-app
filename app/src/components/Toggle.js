@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, StyleSheet } from "react-native";
 import AnimatedPressable from "./AnimatedPressable";
-import { transformStyle, useTheme } from "../theme";
+import { transformStyle, useTheme } from "../../theme";
 
 const Toggle = ({ active = false, onPress }) => {
   const { mode, theme } = useTheme();
@@ -22,10 +22,19 @@ const Toggle = ({ active = false, onPress }) => {
 
   return (
     <AnimatedPressable
-      style={transformStyle([styles.track, active && styles.trackActive], theme, mode)}
+      style={transformStyle(
+        [styles.track, active && styles.trackActive],
+        theme,
+        mode,
+      )}
       onPress={onPress}
     >
-      <Animated.View style={[transformStyle(styles.knob, theme, mode), { transform: [{ translateX }] }]} />
+      <Animated.View
+        style={[
+          transformStyle(styles.knob, theme, mode),
+          { transform: [{ translateX }] },
+        ]}
+      />
     </AnimatedPressable>
   );
 };

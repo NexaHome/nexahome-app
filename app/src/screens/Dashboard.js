@@ -11,9 +11,9 @@ import * as SecureStore from "expo-secure-store";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-
-import { useTheme } from "../theme";
-import { postGraphQL } from "../utils/api";
+import { sensors } from "../data/homeData";
+import { useTheme } from "../../theme";
+import { postGraphQL } from "../../utils/api";
 
 const { width } = Dimensions.get("window");
 const PAGE_PADDING = 20;
@@ -22,8 +22,7 @@ const CARD_WIDTH = (width - PAGE_PADDING * 2 - CARD_GAP) / 2;
 
 const Dashboard = ({ navigation }) => {
   const { mode, toggleMode } = useTheme();
-    const [sensors, set_sensors] = useState([]);
-const [user, setUser] = useState({ name: "User", email: "" });
+  const [user, setUser] = useState({ name: "User", email: "" });
   const [homes, setHomes] = useState([]);
   const [roomItems, setRoomItems] = useState([
     { roomId: "add", name: "+ Add room", isAdd: true },
@@ -109,8 +108,10 @@ const [user, setUser] = useState({ name: "User", email: "" });
   };
 
   useEffect(() => {
-    loadDashboard();
-    const unsubscribe = navigation.addListener("focus", loadDashboard);
+    const unsubscribe = navigation.addListener("focus", () => {
+      loadDashboard();
+    });
+
     return unsubscribe;
   }, [navigation]);
 
@@ -290,7 +291,7 @@ const [user, setUser] = useState({ name: "User", email: "" });
           </View>
         </View>
 
-        {homes.length >= 0 && (
+        {homes.length > 1 && (
           <View style={styles.homeSelectorWrap}>
             <Text style={styles.selectorLabel}>Pilih home</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -314,12 +315,6 @@ const [user, setUser] = useState({ name: "User", email: "" });
                   </AnimatedPressable>
                 );
               })}
-              <AnimatedPressable
-                style={[styles.homeChip, { borderStyle: "dashed" }]}
-                onPress={() => navigation.navigate("AddHome")}
-              >
-                <Text style={styles.homeChipText}>+ Add Home</Text>
-              </AnimatedPressable>
             </ScrollView>
           </View>
         )}

@@ -9,13 +9,24 @@ import {
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { postGraphQL } from "../utils/api";
+import * as SecureStore from "expo-secure-store";
+import { gql, useMutation } from "@apollo/client";
+
+const LOGIN_MUTATION = gql`
+  mutation Login($loginInput: LoginInput!) {
+    login(loginInput: $loginInput) {
+      accessToken
+      userId
+      email
+      name
+    }
+  }
+`;
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [login, { loading }] = useMutation(LOGIN_MUTATION);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -24,47 +35,27 @@ export default function LoginScreen({ navigation }) {
     }
 
     try {
-      setLoading(true);
-
-      const response = await postGraphQL({
-        query: `
-            mutation Login($email: String!, $password: String!) {
-              login(loginInput: {
-                email: $email,
-                password: $password
-              }) {
-                accessToken
-                userId
-                email
-                name
-              }
-            }
-          `,
+      const { data } = await login({
         variables: {
-          email,
-          password,
+          loginInput: {
+            email,
+            password,
+          },
         },
       });
 
-      const result = await response.json();
-
-      if (result.errors) {
-        Alert.alert(
-          "Login gagal",
-          result.errors[0]?.message || "Email atau password salah",
-        );
+      const loginData = data?.login;
+      if (!loginData) {
+        Alert.alert("Login gagal", "Email atau password salah");
         return;
       }
-
-      const loginData = result.data?.login;
-      await AsyncStorage.setItem("token", loginData.accessToken);
+      await SecureStore.setItemAsync("token", loginData.accessToken);
       Alert.alert("Sukses", `Selamat datang, ${loginData.name}`);
       navigation.replace("Dashboard");
     } catch (error) {
-      Alert.alert("Error", "Gagal terhubung ke server");
+      const msg = error?.message || "Gagal terhubung ke server";
+      Alert.alert("Error", msg);
       console.log(error);
-    } finally {
-      setLoading(false);
     }
   };
 

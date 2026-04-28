@@ -9,8 +9,8 @@ import {
   View,
   Alert,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { postGraphQL } from "../utils/api";
+import * as SecureStore from "expo-secure-store";
+import { postGraphQL } from "../../utils/api";
 
 export default function Profile({ navigation }) {
   const [notifications, setNotifications] = useState(true);
@@ -23,7 +23,7 @@ export default function Profile({ navigation }) {
 
   const fetchProfile = async () => {
     try {
-      const token = await AsyncStorage.getItem("token");
+      const token = await SecureStore.getItemAsync("token");
 
       if (!token) {
         Alert.alert("Session habis", "Silakan login ulang");
@@ -65,9 +65,9 @@ export default function Profile({ navigation }) {
   };
 
   const handleLogout = async () => {
-    await AsyncStorage.removeItem("token");
-    await AsyncStorage.removeItem("userName");
-    await AsyncStorage.removeItem("userEmail");
+    await SecureStore.deleteItemAsync("token");
+    await SecureStore.deleteItemAsync("userName");
+    await SecureStore.deleteItemAsync("userEmail");
     navigation.navigate("Login");
   };
 

@@ -13,6 +13,7 @@ import { DevicesModule } from './modules/devices';
 import { AutomationsModule } from './modules/automations';
 import { DeviceAutomationsModule } from './modules/device-automations';
 import { LogDeviceModule } from './modules/log-device';
+import { DeviceRecommendationsModule } from './modules/device-recommendations';
 import { AntaresModule } from './modules/antares/antares.module';
 import { formatGraphQLError } from './common/errors/graphql-error.formatter';
 
@@ -52,6 +53,7 @@ import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin
     AutomationsModule,
     DeviceAutomationsModule,
     LogDeviceModule,
+    DeviceRecommendationsModule,
     AntaresModule,
   ],
   controllers: [AppController],
