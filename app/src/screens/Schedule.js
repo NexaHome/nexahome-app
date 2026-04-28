@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useState, useRef, useEffect } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Alert, Animated, PanResponder } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { useFocusEffect } from "@react-navigation/native";
 import AnimatedPressable from "../components/AnimatedPressable";
@@ -9,6 +9,7 @@ import Toggle from "../components/Toggle";
 import { postGraphQL } from "../../utils/api";
 
 const ACTIVE_KEY = "schedule.active.map";
+const QUEUED_TIMES_KEY = "schedule.queued.times";
 
 const parseAutomationJson = (value) => {
   if (!value) return null;
@@ -19,7 +20,7 @@ const parseAutomationJson = (value) => {
   }
 };
 
-const formatTime = (trigger) => {
+const formatTime = (trigger, remainingMs) => {
   const parsed = parseAutomationJson(trigger);
   if (parsed?.type === "schedule" && parsed.runAt) {
     const date = new Date(parsed.runAt);
@@ -31,8 +32,18 @@ const formatTime = (trigger) => {
   }
 
   if (parsed?.type === "delay" && typeof parsed.delayMs === "number") {
-    const minutes = Math.max(1, Math.round(parsed.delayMs / 60000));
-    return `+${minutes}m`;
+    // Use remainingMs if provided (for live countdown), otherwise use static format
+    const ms = remainingMs !== undefined ? remainingMs : parsed.delayMs;
+    if (ms <= 0) return "Executing...";
+    
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    
+    if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    }
+    return `${seconds}s`;
   }
 
   return "--:--";
@@ -76,6 +87,11 @@ const getQueueDelayMs = (trigger) => {
 const Schedule = ({ navigation }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(null);
+  const [revealedCardId, setRevealedCardId] = useState(null);
+  const [remainingTimes, setRemainingTimes] = useState({});
+  const panResponderRef = useRef({});
+  const countdownIntervalRef = useRef(null);
 
   const fetchSchedules = useCallback(async () => {
     try {
@@ -126,6 +142,17 @@ const Schedule = ({ navigation }) => {
       }));
 
       setItems(mapped);
+      
+      // Initialize remaining times for active delay automations
+      const parsed = parseAutomationJson;
+      const newRemainingTimes = {};
+      mapped.forEach((item) => {
+        const trigger = parsed(item.trigger);
+        if (trigger?.type === "delay" && item.active && trigger.delayMs) {
+          newRemainingTimes[item.id] = Math.max(0, trigger.delayMs);
+        }
+      });
+      setRemainingTimes(newRemainingTimes);
     } catch (error) {
       console.error("Gagal memuat jadwal", error);
       setItems([]);
@@ -139,6 +166,25 @@ const Schedule = ({ navigation }) => {
       fetchSchedules();
     }, [fetchSchedules]),
   );
+
+  // Countdown timer for delay automations
+  useEffect(() => {
+    countdownIntervalRef.current = setInterval(() => {
+      setRemainingTimes((prev) => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach((id) => {
+          updated[id] = Math.max(0, updated[id] - 1000);
+        });
+        return updated;
+      });
+    }, 1000);
+
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+    };
+  }, []);
 
   const updateLocalActiveMap = async (nextMap) => {
     await SecureStore.setItemAsync(ACTIVE_KEY, JSON.stringify(nextMap));
@@ -184,6 +230,23 @@ const Schedule = ({ navigation }) => {
         ),
       );
 
+      // Update remaining times for delay automations
+      if (nextActive) {
+        const trigger = parseAutomationJson(item.trigger);
+        if (trigger?.type === "delay" && trigger.delayMs) {
+          setRemainingTimes((prev) => ({
+            ...prev,
+            [item.id]: trigger.delayMs,
+          }));
+        }
+      } else {
+        setRemainingTimes((prev) => {
+          const updated = { ...prev };
+          delete updated[item.id];
+          return updated;
+        });
+      }
+
       const nextMap = Object.fromEntries(
         items.map((currentItem) => [
           currentItem.id,
@@ -196,9 +259,65 @@ const Schedule = ({ navigation }) => {
     }
   };
 
+  const deleteSchedule = async (item) => {
+    Alert.alert("Delete schedule", `Hapus "${item.name}"?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            setDeleting(item.id);
+            const token = await SecureStore.getItemAsync("token");
+            if (!token) throw new Error("Token tidak ditemukan.");
+
+            const response = await postGraphQL(
+              { query: `mutation DeleteAutomation($id: String!) { deleteAutomation(id: $id) }`, variables: { id: item.id } },
+              { Authorization: `Bearer ${token}` },
+            );
+            const result = await response.json();
+            if (result.errors?.length) throw new Error(result.errors[0]?.message || "Gagal menghapus");
+
+            fetchSchedules();
+          } catch (error) {
+            console.error("Gagal menghapus jadwal", error);
+            Alert.alert("Error", error.message || "Gagal menghapus jadwal");
+          } finally {
+            setDeleting(null);
+          }
+        },
+      },
+    ]);
+  };
+
+  const createPanResponder = (cardId) => {
+    const panResponder = PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (e, { dx }) => Math.abs(dx) > 10,
+      onPanResponderMove: (e, { dx }) => {
+        if (dx < -30) {
+          setRevealedCardId(cardId);
+        }
+      },
+      onPanResponderRelease: (e, { dx }) => {
+        if (dx > -30) {
+          setRevealedCardId(null);
+        }
+      },
+    });
+    return panResponder;
+  };
+
+  const getPanResponder = (cardId) => {
+    if (!panResponderRef.current[cardId]) {
+      panResponderRef.current[cardId] = createPanResponder(cardId);
+    }
+    return panResponderRef.current[cardId];
+  };
+
   return (
     <ScreenShell>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} onScroll={() => setRevealedCardId(null)} scrollEventThrottle={16}>
         <View style={styles.header}>
           <View>
             <Text style={styles.kicker}>Home automation</Text>
@@ -235,24 +354,41 @@ const Schedule = ({ navigation }) => {
 
         {!loading &&
           items.map((item) => (
-            <View key={item.id} style={[styles.card, item.active && styles.cardActive]}>
-              <View style={styles.cardCopy}>
-                <Text style={styles.cardTitle} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <Text style={styles.meta}>
-                  Turn on - {item.time} - {item.repeat}
-                </Text>
-                <Text style={styles.actionLabel} numberOfLines={1}>
-                  {item.actionLabel}
-                </Text>
+            <View
+              key={item.id}
+              {...getPanResponder(item.id).panHandlers}
+              style={[styles.cardContainer, { position: 'relative' }]}
+            >
+              <View style={[styles.card, item.active && styles.cardActive]}>
+                <View style={styles.cardCopy}>
+                  <Text style={styles.cardTitle} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.meta}>
+                    Turn on - {formatTime(item.trigger, remainingTimes[item.id])} - {item.repeat}
+                  </Text>
+                  <Text style={styles.actionLabel} numberOfLines={1}>
+                    {item.actionLabel}
+                  </Text>
+                </View>
+                <View style={styles.cardActions}>
+                  <Toggle active={item.active} onPress={() => toggleSchedule(item)} />
+                  {revealedCardId === item.id && (
+                    <AnimatedPressable
+                      style={styles.deleteButton}
+                      onPress={() => deleteSchedule(item)}
+                      disabled={deleting === item.id}
+                    >
+                      <Text style={styles.deleteButtonText}>✕</Text>
+                    </AnimatedPressable>
+                  )}
+                </View>
               </View>
-              <Toggle active={item.active} onPress={() => toggleSchedule(item)} />
             </View>
           ))}
 
         {!loading && items.length > 0 && (
-          <Text style={styles.hint}>Swipe left to edit or delete</Text>
+          <Text style={styles.hint}>Swipe left to delete</Text>
         )}
       </ScrollView>
       <BottomNav active="schedule" navigation={navigation} />
@@ -350,6 +486,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  cardContainer: {
+    marginBottom: 0,
+  },
   cardActive: {
     borderColor: "#C9F0D6",
     backgroundColor: "#F7FFF9",
@@ -374,6 +513,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     fontWeight: "700",
+  },
+  cardActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  deleteButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FF5C7A",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "900",
   },
   hint: {
     textAlign: "center",

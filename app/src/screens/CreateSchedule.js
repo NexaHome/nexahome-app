@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View, Platform } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View, Platform, Modal, TouchableOpacity } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import AnimatedPressable from "../components/AnimatedPressable";
@@ -20,7 +20,7 @@ const TRIGGER_TYPES = [
 const CreateSchedule = ({ navigation }) => {
   const [name, setName] = useState("Morning routine");
   const [triggerType, setTriggerType] = useState("Schedule");
-  const [delayMs, setDelayMs] = useState("3000");
+  const [delaySec, setDelaySec] = useState("3");
   const [scheduleDate, setScheduleDate] = useState("2026-04-28");
   const [scheduleTime, setScheduleTime] = useState("18:30");
   const [command, setCommand] = useState("AllDevicesOff");
@@ -32,7 +32,7 @@ const CreateSchedule = ({ navigation }) => {
 
   const handleDelayChange = (value) => {
     const numericValue = value.replace(/[^0-9]/g, "");
-    setDelayMs(numericValue);
+    setDelaySec(numericValue);
   };
 
   const handleDateChange = (event, selectedDate) => {
@@ -58,13 +58,35 @@ const CreateSchedule = ({ navigation }) => {
     }
   };
 
+  const safeDateFromString = (s) => {
+    try {
+      const d = new Date(s + "T00:00:00");
+      return Number.isNaN(d.getTime()) ? new Date() : d;
+    } catch (e) {
+      return new Date();
+    }
+  };
+
+  const safeTimeFromString = (s) => {
+    try {
+      const parts = (s || "00:00").split(":");
+      const now = new Date();
+      const h = Number(parts[0] || 0);
+      const m = Number(parts[1] || 0);
+      now.setHours(h, m, 0, 0);
+      return now;
+    } catch (e) {
+      return new Date();
+    }
+  };
+
   const previewText = useMemo(() => {
     if (triggerType === "Delay") {
-      return `Delay ${delayMs || "0"} ms`;
+      return `Delay ${delaySec || "0"} s`;
     }
 
     return `${scheduleDate || "YYYY-MM-DD"} ${scheduleTime || "HH:mm"}`;
-  }, [delayMs, scheduleDate, scheduleTime, triggerType]);
+  }, [delaySec, scheduleDate, scheduleTime, triggerType]);
 
   const buildRunAt = () => {
     const value = `${scheduleDate}T${scheduleTime}:00`;
@@ -97,7 +119,7 @@ const CreateSchedule = ({ navigation }) => {
 
       const trigger =
         triggerType === "Delay"
-          ? { type: "Delay", delayMs: Number(delayMs) || 0 }
+          ? { type: "Delay", delayMs: (Number(delaySec) || 0) * 1000 }
           : { type: "Schedule", runAt: buildRunAt() };
 
       const action =
@@ -197,17 +219,18 @@ const CreateSchedule = ({ navigation }) => {
 
           {triggerType === "Delay" ? (
             <>
-              <Text style={styles.label}>Delay in ms</Text>
+              <Text style={styles.label}>Delay in seconds</Text>
               <TextInput
                 style={styles.input}
-                value={delayMs}
+                value={delaySec}
                 onChangeText={handleDelayChange}
                 keyboardType="numeric"
-                placeholder="3000"
+                placeholder="3"
               />
             </>
           ) : (
-            <View style={styles.rowGap}>
+            <>
+              <View style={styles.rowGap}>
               <View style={styles.halfCol}>
                 <Text style={styles.label}>Date</Text>
                 <AnimatedPressable
@@ -218,13 +241,12 @@ const CreateSchedule = ({ navigation }) => {
                     {scheduleDate || "Select date"}
                   </Text>
                 </AnimatedPressable>
-                {showDatePicker && (
+                {showDatePicker && Platform.OS === "android" && (
                   <DateTimePicker
-                    value={new Date(scheduleDate + "T00:00:00")}
+                    value={safeDateFromString(scheduleDate)}
                     mode="date"
-                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    display="default"
                     onChange={handleDateChange}
-                    onTouchCancel={() => setShowDatePicker(false)}
                   />
                 )}
               </View>
@@ -238,19 +260,60 @@ const CreateSchedule = ({ navigation }) => {
                     {scheduleTime || "Select time"}
                   </Text>
                 </AnimatedPressable>
-                {showTimePicker && (
+                {showTimePicker && Platform.OS === "android" && (
                   <DateTimePicker
-                    value={new Date(`2026-04-28T${scheduleTime}:00`)}
+                    value={safeTimeFromString(scheduleTime)}
                     mode="time"
-                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    display="default"
                     onChange={handleTimeChange}
                     is24Hour={true}
-                    onTouchCancel={() => setShowTimePicker(false)}
                   />
                 )}
               </View>
             </View>
-          )}
+
+            {Platform.OS === "ios" && (
+              <>
+                <Modal visible={showDatePicker} transparent animationType="slide">
+                  <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                      <View style={styles.modalToolbar}>
+                        <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                          <Text style={styles.modalButtonText}>Done</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <DateTimePicker
+                        value={safeDateFromString(scheduleDate)}
+                        mode="date"
+                        display="spinner"
+                        onChange={handleDateChange}
+                      />
+                    </View>
+                  </View>
+                </Modal>
+
+                <Modal visible={showTimePicker} transparent animationType="slide">
+                  <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                      <View style={styles.modalToolbar}>
+                        <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+                          <Text style={styles.modalButtonText}>Done</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <DateTimePicker
+                        value={safeTimeFromString(scheduleTime)}
+                        mode="time"
+                        display="spinner"
+                        onChange={handleTimeChange}
+                        is24Hour={true}
+                      />
+                    </View>
+                  </View>
+                </Modal>
+              </>
+            )}
+          </>
+        )}
 
           <Text style={styles.label}>Action</Text>
           <View style={styles.commandList}>
@@ -485,6 +548,26 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     fontWeight: "800",
   },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    paddingBottom: 20,
+  },
+  modalToolbar: {
+    height: 44,
+    alignItems: "flex-end",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderColor: "#EFEFEF",
+  },
+  modalButtonText: { color: "#0A0F2C", fontSize: 16, fontWeight: "800" },
 });
 
 export default CreateSchedule;
