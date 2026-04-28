@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
@@ -14,8 +14,9 @@ const Automation = ({ navigation }) => {
     const fetchAutomations = async () => {
       try {
         setLoading(true);
-        const token = await AsyncStorage.getItem("token");
-        
+        const token = await SecureStore.getItemAsync("token");
+        const activeHomeId = await SecureStore.getItemAsync("activeHomeId");
+
         const query = `
           query {
             automations {
@@ -23,24 +24,30 @@ const Automation = ({ navigation }) => {
               name
               trigger
               action
+              is_active
             }
           }
         `;
-        
+
         const response = await postGraphQL(
           { query },
-          { Authorization: `Bearer ${token}` }
+          { 
+            Authorization: `Bearer ${token}`,
+            "x-home-id": activeHomeId
+          }
         );
-        
+
         const result = await response.json();
         if (result.data?.automations) {
-          set_automations(result.data.automations.map(a => ({
-            id: a._id,
-            name: a.name,
-            sensor: a.trigger || "N/A",
-            action: a.action,
-            active: true // Dummy status as there's no active field in DB
-          })));
+          set_automations(
+            result.data.automations.map((a) => ({
+              id: a._id,
+              name: a.name,
+              sensor: a.trigger || "N/A",
+              action: a.action,
+              active: a.is_active ?? true,
+            }))
+          );
         }
       } catch (err) {
         console.error("Gagal memuat automation", err);
@@ -48,7 +55,7 @@ const Automation = ({ navigation }) => {
         setLoading(false);
       }
     };
-    
+
     fetchAutomations();
   }, []);
 

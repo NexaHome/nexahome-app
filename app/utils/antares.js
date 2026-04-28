@@ -104,8 +104,8 @@ export const getAntaresLogs = async () => {
 };
 
 export const getSensorsByHome = async () => {
-  const token = await AsyncStorage.getItem("token");
-  const homeId = await AsyncStorage.getItem("activeHomeId");
+  const token = await SecureStore.getItemAsync("token");
+  const homeId = await SecureStore.getItemAsync("activeHomeId");
   
   if (!homeId) return [];
 
@@ -142,7 +142,7 @@ export const getSensorsByHome = async () => {
 };
 
 export const getAllDevices = async () => {
-  const token = await AsyncStorage.getItem("token");
+  const token = await SecureStore.getItemAsync("token");
 
   const query = `
     query AllDevices {
