@@ -1,4 +1,4 @@
-export const BASE_URL = "http://10.0.0.121:3000/graphql";
+export const BASE_URL = process.env.GRAPHQL_URL;
 
 export const postGraphQL = async (body, customHeaders = {}) => {
   const response = await fetch(BASE_URL, {
