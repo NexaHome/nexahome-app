@@ -7,9 +7,15 @@ import { LogDevice } from '../../models/log.model';
 import { HomesModule } from '../homes';
 import { DevicesResolver } from './devices.resolver';
 import { DevicesService } from './devices.service';
+import { AntaresModule } from '../antares/antares.module';
 
 @Module({
-  imports: [MongoloquentModule.forFeature([Device, Room, DeviceAutomation, LogDevice]), HomesModule],
+  imports: [
+    MongoloquentModule.forFeature([Device, Room, DeviceAutomation, LogDevice]),
+    HomesModule,
+    AntaresModule,
+  ],
   providers: [DevicesResolver, DevicesService],
+  exports: [DevicesService],
 })
 export class DevicesModule {}

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MongoloquentModule } from '@mongoloquent/nestjs';
 import { Home } from '../../models/home.model';
 import { Room } from '../../models/room.model';
@@ -8,8 +8,13 @@ import { User } from '../../models/user.model';
 import { HomesResolver } from './homes.resolver';
 import { HomesService } from './homes.service';
 
+import { AntaresModule } from '../antares/antares.module';
+
 @Module({
-  imports: [MongoloquentModule.forFeature([Home, Room, Device, HomeUser, User])],
+  imports: [
+    MongoloquentModule.forFeature([Home, Room, Device, HomeUser, User]),
+    forwardRef(() => AntaresModule),
+  ],
   providers: [HomesResolver, HomesService],
   exports: [HomesService],
 })
