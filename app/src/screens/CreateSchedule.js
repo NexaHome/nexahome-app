@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View, Platform, Modal, TouchableOpacity } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -336,7 +336,7 @@ const CreateSchedule = ({ navigation }) => {
             })}
           </View>
 
-          {command === "SetAwayMode" && (
+          {/* {command === "SetAwayMode" && (
             <View style={styles.previewRow}>
               <Text style={styles.previewRowLabel}>Away mode enabled</Text>
               <AnimatedPressable
@@ -348,7 +348,7 @@ const CreateSchedule = ({ navigation }) => {
                 </Text>
               </AnimatedPressable>
             </View>
-          )}
+          )} */}
         </View>
 
         <Text style={styles.sectionTitle}>Preview</Text>
