@@ -18,6 +18,9 @@ export class Home extends Model {
   @Field(() => ID)
   owner_id!: ObjectId; // references users.id
 
+  @Field({ nullable: true })
+  invite_code?: string;
+
   @Field()
   createdAt!: Date;
 

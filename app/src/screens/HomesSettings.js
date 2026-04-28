@@ -19,6 +19,10 @@ const HomesSettings = ({ navigation }) => {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState(null);
+  
+  // Join home state
+  const [inviteCode, setInviteCode] = useState("");
+  const [joining, setJoining] = useState(false);
 
   const loadHomes = async () => {
     try {
@@ -31,7 +35,7 @@ const HomesSettings = ({ navigation }) => {
 
       const response = await postGraphQL(
         {
-          query: `query Homes { homes { _id name owner_id createdAt } }`,
+          query: `query Homes { homes { _id name owner_id invite_code createdAt } }`,
         },
         { Authorization: `Bearer ${token}` },
       );
@@ -163,6 +167,45 @@ const HomesSettings = ({ navigation }) => {
       },
     ]);
   };
+  const handleJoin = async () => {
+    if (!inviteCode.trim()) {
+      Alert.alert("Error", "Kode invite tidak boleh kosong");
+      return;
+    }
+
+    try {
+      setJoining(true);
+      const token = await SecureStore.getItemAsync("token");
+      if (!token) {
+        navigation.replace("Login");
+        return;
+      }
+
+      const query = `
+        mutation JoinHome($inviteCode: String!) {
+          joinHomeByCode(inviteCode: $inviteCode) { _id name }
+        }
+      `;
+      const variables = { inviteCode: inviteCode.trim() };
+      const res = await postGraphQL(
+        { query, variables },
+        { Authorization: `Bearer ${token}` },
+      );
+      
+      const r = await res.json();
+      if (r.errors) {
+        throw new Error(r.errors[0].message || "Gagal join home");
+      }
+
+      Alert.alert("Sukses", `Berhasil bergabung dengan ${r.data?.joinHomeByCode?.name}`);
+      setInviteCode("");
+      await loadHomes();
+    } catch (err) {
+      Alert.alert("Error", err.message || "Gagal join home");
+    } finally {
+      setJoining(false);
+    }
+  };
 
   return (
     <ScreenShell>
@@ -206,6 +249,32 @@ const HomesSettings = ({ navigation }) => {
           </View>
         </View>
 
+        <View style={styles.formCard}>
+          <Text style={styles.label}>Join home via Code</Text>
+          <TextInput
+            value={inviteCode}
+            onChangeText={setInviteCode}
+            placeholder="Masukkan Invite Code (misal: A1B2C3)"
+            style={styles.input}
+            editable={!joining}
+            autoCapitalize="characters"
+          />
+
+          <View style={styles.formActions}>
+            <AnimatedPressable
+              style={[styles.saveButton, joining && { opacity: 0.6 }]}
+              onPress={handleJoin}
+              disabled={joining}
+            >
+              {joining ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.saveText}>Join Home</Text>
+              )}
+            </AnimatedPressable>
+          </View>
+        </View>
+
         <Text style={styles.sectionTitle}>Your homes</Text>
         {loading ? (
           <ActivityIndicator />
@@ -217,6 +286,7 @@ const HomesSettings = ({ navigation }) => {
               <View style={styles.homeRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.homeName}>{item.name}</Text>
+                  <Text style={styles.homeMeta}>Invite Code: {item.invite_code || "-"}</Text>
                   <Text style={styles.homeMeta}>ID: {item._id}</Text>
                 </View>
                 <AnimatedPressable
