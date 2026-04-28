@@ -10,69 +10,111 @@ import * as SecureStore from "expo-secure-store";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-import { sensors as mockSensors } from "../data/homeData";
-import { getAntaresData, getAntaresLogs } from "../../utils/antares";
+import { postGraphQL } from "../../utils/api";
 
 const SensorMonitor = ({ navigation }) => {
-  const [sensors, setSensors] = useState(mockSensors);
+  const [sensors, setSensors] = useState([]);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchAntaresData = async () => {
+  const fetchSensorData = async () => {
     try {
-      const liveData = await getAntaresData();
-      if (liveData && liveData.sensors) {
-        const updatedSensors = mockSensors.map((s) => {
-          const antares = liveData.sensors[s.id];
-          if (antares) {
-            let unit = "";
-            if (s.id === "fire") unit = " units";
-            if (s.id === "gas") unit = " ppm";
-            if (s.id === "water") unit = " units";
-            if (s.id === "light") unit = " lux";
+      const token = await SecureStore.getItemAsync("token");
+      const activeHomeId = await SecureStore.getItemAsync("activeHomeId");
 
-            return {
-              ...s,
-              value: `${antares.value}${unit}`,
-              state:
-                antares.status.charAt(0).toUpperCase() +
-                antares.status.slice(1),
-              tone: antares.status === "normal" ? "green" : "amber",
-            };
-          }
-          return s;
-        });
-        setSensors(updatedSensors);
+      if (!token || !activeHomeId) {
+        setLoading(false);
+        return;
       }
 
-      // Only fetch logs if we have activeHomeId
-      const activeHomeId = await SecureStore.getItemAsync("activeHomeId");
-      if (activeHomeId) {
-        const historyLogs = await getAntaresLogs();
-        if (historyLogs) {
-          setLogs(historyLogs);
+      const query = `
+        query DevicesAndLogs {
+          devicesByHome {
+            _id
+            name
+            type
+            status
+            category
+            last_value
+          }
+          logsByHome {
+            _id
+            device_id
+            value
+            createdAt
+          }
         }
+      `;
+
+      const response = await postGraphQL(
+        { query },
+        {
+          Authorization: `Bearer ${token}`,
+          "x-home-id": activeHomeId,
+        }
+      );
+
+      const result = await response.json();
+      if (result.data) {
+        const dbDevices = result.data.devicesByHome || [];
+        // Only show devices marked as type 'sensor'
+        const sensorDevices = dbDevices.filter(d => d.type === 'sensor');
+        
+        const mappedSensors = sensorDevices.map((d) => {
+          let valObj = {};
+          if (d.last_value) {
+            try {
+              valObj = JSON.parse(d.last_value);
+            } catch (e) {}
+          }
+          
+          let displayValue = "-";
+          if (valObj.formatted) {
+            displayValue = valObj.formatted;
+          } else if (valObj.value !== undefined) {
+            displayValue = String(valObj.value);
+          }
+
+          // Define warning states
+          const isAmber = d.status && d.status !== 'Safe' && d.status !== 'Normal' && d.status !== 'Clear';
+
+          return {
+            id: d._id,
+            label: d.name,
+            value: displayValue,
+            state: d.status || 'Unknown',
+            tone: isAmber ? 'amber' : 'green',
+            category: d.category
+          };
+        });
+        
+        setSensors(mappedSensors);
+        
+        const dbLogs = result.data.logsByHome || [];
+        setLogs(dbLogs);
       }
     } catch (error) {
-      if (error.message !== "Home not found") {
-        console.log("Antares fetch failed:", error.message);
-      }
+      console.log("Fetch failed:", error.message);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAntaresData();
-    const interval = setInterval(fetchAntaresData, 10000); // Refresh every 10s
+    fetchSensorData();
+    const interval = setInterval(fetchSensorData, 10000); // Refresh every 10s
     return () => clearInterval(interval);
   }, []);
 
-  // Map logs to chart bars (example: fire sensor values)
+  // Map logs to chart bars (example: fire/gas sensor values)
   const chartData = logs.slice(-10).map((log) => {
-    const fireVal = log.value?.sensors?.fire?.value || 0;
-    // Scale fireVal (0-4095) to chart height (0-100)
-    return Math.min(100, Math.floor((fireVal / 4095) * 100));
+    let valObj = {};
+    if (log.value) {
+      try { valObj = JSON.parse(log.value); } catch (e) {}
+    }
+    const val = Number(valObj.value) || 0;
+    // Scale value (0-4095) to chart height (0-100)
+    return Math.min(100, Math.floor((val / 4095) * 100));
   });
 
   const displayBars =
