@@ -26,6 +26,12 @@ export class Automation extends Model {
   @Field({ defaultValue: true })
   is_active!: boolean;
 
+  @Field({ nullable: true })
+  queuedAt?: Date;
+
+  @Field({ nullable: true })
+  lastExecutedAt?: Date;
+
   @Field()
   createdAt!: Date;
 

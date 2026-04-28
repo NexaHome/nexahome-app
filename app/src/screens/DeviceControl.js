@@ -179,10 +179,6 @@ const DeviceControl = ({ route, navigation }) => {
 
   const handleTogglePower = async () => {
     const nextPower = !power;
-    if (!nextPower) {
-      setPower(false);
-      return;
-    }
 
     try {
       setActionError("");
@@ -214,7 +210,7 @@ const DeviceControl = ({ route, navigation }) => {
           variables: {
             createLogInput: {
               deviceId,
-              value: "ON",
+              value: nextPower ? "ON" : "OFF",
             },
           },
         },
@@ -230,7 +226,37 @@ const DeviceControl = ({ route, navigation }) => {
         throw new Error(result.errors?.[0]?.message || "Gagal update status");
       }
 
-      setPower(true);
+      // Also update the device record so dashboards and lists reflect the new active state
+      try {
+        const updateMutation = `
+          mutation UpdateDevice($id: String!, $input: UpdateDeviceInput!) {
+            updateDevice(id: $id, updateDeviceInput: $input) {
+              _id
+              is_active
+              status
+            }
+          }
+        `;
+        await postGraphQL(
+          {
+            query: updateMutation,
+            variables: {
+              id: deviceId,
+              input: { is_active: nextPower, status: nextPower ? "ON" : "OFF" },
+            },
+          },
+          {
+            Authorization: `Bearer ${token}`,
+            "x-home-id": homeId,
+            ...(roomId ? { "x-room-id": roomId } : {}),
+          },
+        );
+      } catch (e) {
+        // non-fatal: still proceed to update local UI
+        console.warn('Failed to update device is_active', e?.message || e);
+      }
+
+      setPower(nextPower);
       if (showLogs) {
         fetchLogs();
       }
