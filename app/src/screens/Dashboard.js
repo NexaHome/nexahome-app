@@ -334,6 +334,23 @@ const Dashboard = ({ navigation }) => {
           </View>
         )}
 
+        {/* AI Insights Card */}
+        <AnimatedPressable
+          style={styles.aiCard}
+          onPress={() => navigation.navigate("AIRecommendations")}
+        >
+          <View style={styles.aiCardRow}>
+            <Text style={styles.aiIcon}>✨</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.aiTitle}>AI Insights</Text>
+              <Text style={styles.aiDesc}>
+                Dapatkan rekomendasi cerdas dari data sensor
+              </Text>
+            </View>
+            <Text style={styles.aiArrow}>→</Text>
+          </View>
+        </AnimatedPressable>
+
         <Text style={styles.sectionTitle}>Rooms</Text>
 
         {loadingRooms ? (
@@ -764,6 +781,38 @@ const styles = StyleSheet.create({
   },
   statusTextAmber: {
     color: "#6D4DFF",
+  },
+  aiCard: {
+    marginTop: 16,
+    backgroundColor: "#F0ECFF",
+    borderWidth: 1,
+    borderColor: "#7B61FF",
+    borderRadius: 14,
+    padding: 16,
+  },
+  aiCardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  aiIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  aiTitle: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: "#0A0F2C",
+  },
+  aiDesc: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  aiArrow: {
+    fontSize: 20,
+    color: "#7B61FF",
+    fontWeight: "900",
+    marginLeft: 8,
   },
 });
 

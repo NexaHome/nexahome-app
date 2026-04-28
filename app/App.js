@@ -23,6 +23,7 @@ import RoomDetail from "./src/screens/RoomDetail";
 import Profile from "./src/screens/Profile";
 import Schedule from "./src/screens/Schedule";
 import SensorMonitor from "./src/screens/SensorMonitor";
+import AIRecommendations from "./src/screens/AIRecommendations";
 import { fonts, lightColors, ThemeProvider, useTheme } from "./theme";
 import { ApolloProvider } from "@apollo/client/react";
 import client from "./utils/apollo";
@@ -89,6 +90,7 @@ const AppNavigator = () => {
         <Stack.Screen name="HomesSettings" component={HomesSettings} />
         <Stack.Screen name="AddRoom" component={AddRoom} />
         <Stack.Screen name="AddDevice" component={AddDevice} />
+        <Stack.Screen name="AIRecommendations" component={AIRecommendations} />
         <Stack.Screen name="Profile" component={Profile} />
       </Stack.Navigator>
     </NavigationContainer>
