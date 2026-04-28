@@ -67,11 +67,9 @@ const Dashboard = ({ navigation }) => {
     if (homeResult?.errors?.length) {
       const message =
         homeResult.errors[0]?.message || "Gagal memuat data dashboard";
-      setRoomError(
-        message.toLowerCase().includes("home not found")
-          ? "Belum ada home untuk akun ini"
-          : message,
-      );
+      if (!message.toLowerCase().includes("home not found")) {
+        setRoomError(message);
+      }
     }
 
     if (homeResult?.data?.roomsByHomeBasic?.length) {
@@ -178,6 +176,20 @@ const Dashboard = ({ navigation }) => {
 
       const homes = homesResult?.data?.homes || [];
       setHomes(homes);
+
+      if (homes.length === 0) {
+        setSelectedHomeIdState(null);
+        setRoomItems([{ roomId: "add", name: "+ Add room", isAdd: true }]);
+        setSummary({
+          roomsCount: 0,
+          activeDevicesCount: 0,
+          homeStatus: "No Home",
+          homeName: "Rumah Utama",
+        });
+        setRoomError("");
+        return;
+      }
+
       const savedHomeId = await SecureStore.getItemAsync("activeHomeId");
       const selectedHomeId =
         homes.find((home) => home._id === savedHomeId)?._id ||
@@ -197,7 +209,7 @@ const Dashboard = ({ navigation }) => {
           homeStatus: "No Home",
           homeName: "Rumah Utama",
         });
-        setRoomError("Belum ada home untuk akun ini");
+        setRoomError("");
         return;
       }
 
@@ -207,7 +219,7 @@ const Dashboard = ({ navigation }) => {
       console.log("DASHBOARD ERROR:", error);
       setRoomError(
         error?.message?.toLowerCase().includes("home")
-          ? "Belum ada home untuk akun ini"
+          ? ""
           : "Gagal memuat data dashboard",
       );
       setRoomItems([{ roomId: "add", name: "+ Add room", isAdd: true }]);
@@ -290,6 +302,13 @@ const Dashboard = ({ navigation }) => {
             <Text style={styles.onlineText}>{summary.homeStatus}</Text>
           </View>
         </View>
+
+        <AnimatedPressable
+          style={styles.addHomeButton}
+          onPress={() => navigation.navigate("HomesSettings")}
+        >
+          <Text style={styles.addHomeButtonText}>Settings</Text>
+        </AnimatedPressable>
 
         {homes.length > 1 && (
           <View style={styles.homeSelectorWrap}>
@@ -535,6 +554,68 @@ const styles = StyleSheet.create({
   homeSelectorWrap: {
     marginTop: 14,
     marginBottom: 6,
+  },
+  addHomeButton: {
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: "#EEF2FF",
+    borderWidth: 1,
+    borderColor: "#C7D2FE",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  addHomeButtonText: {
+    color: "#4338CA",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  emptyText: {
+    color: "#64748B",
+    fontSize: 13,
+    marginBottom: 10,
+  },
+  emptyHomesCard: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#D8DEE9",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 6,
+  },
+  emptyHomesCta: {
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: "#0A0F2C",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyHomesCtaText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  homesList: {
+    gap: 10,
+  },
+  homeItemCard: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#D8DEE9",
+    borderRadius: 14,
+    padding: 12,
+  },
+  homeItemName: {
+    color: "#0A0F2C",
+    fontSize: 15,
+    fontWeight: "900",
+    marginBottom: 6,
+  },
+  homeItemMeta: {
+    color: "#64748B",
+    fontSize: 12,
+    marginTop: 2,
   },
   selectorLabel: {
     color: "#64748B",
