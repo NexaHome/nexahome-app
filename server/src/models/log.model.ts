@@ -19,6 +19,9 @@ export class LogDevice extends Model {
   @Field()
   createdAt!: Date;
 
+  @Field(() => Device, { nullable: true })
+  device_info?: Device;
+
   public device() {
     return this.belongsTo(Device);
   }

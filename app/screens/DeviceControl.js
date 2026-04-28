@@ -3,7 +3,7 @@ import { Animated, ScrollView, StyleSheet, Text, View } from "react-native";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-import { devices } from "../data/homeData";
+
 
 const DeviceControl = ({ route, navigation }) => {
   const device = useMemo(() => {
@@ -11,7 +11,8 @@ const DeviceControl = ({ route, navigation }) => {
     return devices.find((item) => item.id === selectedId) || devices[0];
   }, [route.params?.deviceId]);
 
-  const [power, setPower] = useState(device.power);
+    const [devices, set_devices] = useState([]);
+const [power, setPower] = useState(device.power);
   const [brightness, setBrightness] = useState(device.brightness);
   const heroAnim = useRef(new Animated.Value(device.power ? 1 : 0)).current;
 

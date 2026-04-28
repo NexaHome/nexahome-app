@@ -8,7 +8,7 @@ import { HomesService } from '../homes/homes.service';
 import { CreateDeviceInput } from './dto/create-device.input';
 import { UpdateDeviceInput } from './dto/update-device.input';
 import { DeviceNotFoundException, RoomNotFoundException } from '../../common/exceptions/app.exceptions';
-import { toIdString, toObjectId } from '../../common/utils/object-id.util';
+import { toIdString, toObjectId, toObjectIds } from '../../common/utils/object-id.util';
 
 @Injectable()
 export class DevicesService {
@@ -30,6 +30,8 @@ export class DevicesService {
     device.name = createDeviceInput.name;
     device.type = createDeviceInput.type;
     device.status = createDeviceInput.status ?? 'OFF';
+    device.category = createDeviceInput.category;
+    device.antares_device_name = createDeviceInput.antares_device_name;
     device.createdAt = new Date();
     await device.save();
 
@@ -41,6 +43,25 @@ export class DevicesService {
     await this.findRoomByHome(roomId, homeId);
 
     return this.deviceModel.where('room_id', toObjectId(roomId)).get();
+  }
+
+  async findAllByHome(userId: string, homeId: string) {
+    await this.homesService.findOneByMember(homeId, userId);
+
+    const rooms = await this.roomModel.where('home_id', toObjectId(homeId)).get();
+    if (rooms.length === 0) {
+      return [];
+    }
+
+    const roomIds = rooms.map((room) => this.toIdString(room._id)).filter((id) => id.length > 0);
+    
+    // Instead of whereIn which might have bugs with ObjectIds, fetch all and filter
+    const allDevices = await this.deviceModel.get();
+    return allDevices.filter(d => roomIds.includes(this.toIdString(d.room_id)));
+  }
+
+  async findAll() {
+    return this.deviceModel.get();
   }
 
   async findOneByMember(userId: string, homeId: string, roomId: string, id: string) {
@@ -63,25 +84,43 @@ export class DevicesService {
   async update(userId: string, homeId: string, roomId: string, id: string, updateDeviceInput: UpdateDeviceInput) {
     const device = await this.findOneByMember(userId, homeId, roomId, id);
 
-    const updatePayload: Record<string, string> = {};
-
-    if (typeof updateDeviceInput.name !== 'undefined') {
-      updatePayload.name = updateDeviceInput.name;
+    if (updateDeviceInput.name !== undefined) device.name = updateDeviceInput.name;
+    if (updateDeviceInput.type !== undefined) device.type = updateDeviceInput.type;
+    if (updateDeviceInput.status !== undefined) device.status = updateDeviceInput.status;
+    if (updateDeviceInput.is_active !== undefined) device.is_active = updateDeviceInput.is_active;
+    if (updateDeviceInput.category !== undefined) device.category = updateDeviceInput.category;
+    if (updateDeviceInput.antares_device_name !== undefined) device.antares_device_name = updateDeviceInput.antares_device_name;
+    if (updateDeviceInput.room_id !== undefined) {
+      // Validate that the new room belongs to the same home
+      await this.findRoomByHome(updateDeviceInput.room_id, homeId);
+      device.room_id = toObjectId(updateDeviceInput.room_id);
     }
 
-    if (typeof updateDeviceInput.type !== 'undefined') {
-      updatePayload.type = updateDeviceInput.type;
-    }
-
-    if (typeof updateDeviceInput.status !== 'undefined') {
-      updatePayload.status = updateDeviceInput.status;
-    }
-
-    if (Object.keys(updatePayload).length > 0) {
-      await this.deviceModel.where('_id', id).update(updatePayload);
-    }
+    device.updatedAt = new Date();
+    await device.save();
 
     return this.findOneByMember(userId, homeId, roomId, this.toIdString(device._id));
+  }
+
+  async assignToRoom(userId: string, homeId: string, deviceId: string, newRoomId: string) {
+    await this.homesService.findOneByMember(homeId, userId);
+    
+    const device = await this.deviceModel.find(deviceId);
+    if (!device) {
+      throw new DeviceNotFoundException();
+    }
+
+    // Verify the device's current room is in this home
+    await this.findRoomByHome(this.toIdString(device.room_id), homeId);
+    
+    // Verify the new room is in this home
+    await this.findRoomByHome(newRoomId, homeId);
+
+    device.room_id = toObjectId(newRoomId);
+    device.updatedAt = new Date();
+    await device.save();
+
+    return device;
   }
 
   async remove(userId: string, homeId: string, roomId: string, id: string) {

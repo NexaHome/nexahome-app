@@ -127,7 +127,7 @@ const RoomDetail = ({ route, navigation }) => {
             <AnimatedPressable
               style={styles.addButton}
               onPress={() =>
-                navigation.navigate("AddFeature", { roomName, roomId })
+                navigation.navigate("AddDevice", { roomName, roomId })
               }
             >
               <Text style={styles.addText}>+ Add</Text>

@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { LogDeviceService } from '../log-device/log-device.service';
+import { Room } from '../../models/room.model';
+import { Device } from '../../models/device.model';
+import { toObjectId } from '../../common/utils/object-id.util';
 
 @Injectable()
 export class AntaresService {
@@ -13,10 +16,51 @@ export class AntaresService {
 
   async getLatestData(userId?: string, homeId?: string, appName?: string, deviceName?: string) {
     const app = appName || this.configService.get<string>('ANTARES_APP_NAME') || '';
-    const device = deviceName || this.configService.get<string>('ANTARES_DEVICE_NAME') || '';
     const accessKey = this.configService.get<string>('ANTARES_ACCESS_KEY') || '';
-    const url = `https://platform.antares.id:8443/~/antares-cse/antares-id/${app}/${device}/la`;
 
+    // Jika deviceName diberikan spesifik, fetch data device tersebut
+    if (deviceName) {
+      return this.fetchFromAntares(app, deviceName, accessKey, userId, homeId);
+    }
+
+    if (!homeId) return null;
+
+    const rooms = await Room.where('home_id', toObjectId(homeId)).get();
+    if (!rooms.length) return null;
+
+    const devicesData: any = {};
+    const fetchPromises: Promise<void>[] = [];
+
+    for (const room of rooms) {
+      const devices = await Device.where('room_id', room._id).get();
+      for (const device of devices) {
+        if (!device.antares_device_name) continue;
+        
+        fetchPromises.push(
+          this.fetchFromAntares(app, device.antares_device_name, accessKey, userId, homeId, device._id?.toString())
+            .then(async (parsed) => {
+              if (parsed) {
+                const category = device.category?.toLowerCase() || 'unknown';
+                devicesData[category] = parsed;
+                // Update last_value pada device
+                await Device.where('_id', device._id).update({ last_value: parsed });
+              }
+            })
+        );
+      }
+    }
+
+    await Promise.all(fetchPromises);
+
+    if (Object.keys(devicesData).length === 0) {
+      return null;
+    }
+
+    return { sensors: devicesData };
+  }
+
+  private async fetchFromAntares(app: string, device: string, accessKey: string, userId?: string, homeId?: string, deviceId?: string) {
+    const url = `https://platform.antares.id:8443/~/antares-cse/antares-id/${app}/${device}/la`;
     try {
       const res = await fetch(url, {
         method: 'GET',
@@ -27,7 +71,8 @@ export class AntaresService {
       });
 
       if (!res.ok) {
-        throw new Error(`Antares error: ${res.statusText}`);
+        this.logger.warn(`Antares error for ${device}: ${res.statusText}`);
+        return null;
       }
 
       const json = await res.json();
@@ -42,15 +87,11 @@ export class AntaresService {
         // Keep as raw if not JSON
       }
 
-      // Auto-log to MongoDB if we have user and home context
-      if (userId && homeId && typeof parsed === 'object') {
+      // Auto-log to MongoDB if we have user, home and deviceId
+      if (userId && homeId && deviceId && typeof parsed === 'object') {
         try {
-          // Find the device ID for 'Antares Gateway' in this home
-          // For now, we'll assume a specific device ID or search for it
-          // As a shortcut for this task, I'll use the ID I created: 69ef274da967ce00702d461b
-          const targetDeviceId = '69ef274da967ce00702d461b';
           await this.logDeviceService.create(userId, homeId, {
-            deviceId: targetDeviceId,
+            deviceId: deviceId,
             value: JSON.stringify(parsed),
           });
         } catch (logError) {
@@ -60,7 +101,7 @@ export class AntaresService {
 
       return parsed;
     } catch (error) {
-      this.logger.error(`Antares Error: ${error.message}`);
+      this.logger.error(`Antares Error for ${device}: ${error.message}`);
       return null;
     }
   }
@@ -69,6 +110,11 @@ export class AntaresService {
     const app = appName || this.configService.get<string>('ANTARES_APP_NAME') || '';
     const device = deviceName || this.configService.get<string>('ANTARES_DEVICE_NAME') || '';
     const accessKey = this.configService.get<string>('ANTARES_ACCESS_KEY') || '';
+    
+    if (!device) {
+      throw new Error('Antares device name is required');
+    }
+
     const url = `https://platform.antares.id:8443/~/antares-cse/antares-id/${app}/${device}`;
 
     const body = {
@@ -89,12 +135,12 @@ export class AntaresService {
       });
 
       if (!response.ok) {
-        throw new Error(`Antares error: ${response.statusText}`);
+        throw new Error(`Antares error for ${device}: ${response.statusText}`);
       }
 
       return await response.json();
     } catch (error) {
-      this.logger.error(`Failed to send to Antares: ${error.message}`);
+      this.logger.error(`Failed to send to Antares for ${device}: ${error.message}`);
       throw error;
     }
   }
