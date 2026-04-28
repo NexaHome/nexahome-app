@@ -75,6 +75,7 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
 
         if (action?.command === 'allDevicesOn' && action.homeId) {
           const result = await this.homesService.allDevicesOn(userId, action.homeId);
+          await this.markAutomationExecuted(automationId);
           return {
             queued: true,
             automationId,
@@ -86,6 +87,7 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
 
         if (action?.command === 'allDevicesOff' && action.homeId) {
           const result = await this.homesService.allDevicesOff(userId, action.homeId);
+          await this.markAutomationExecuted(automationId);
           return {
             queued: true,
             automationId,
@@ -101,6 +103,7 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
             action.homeId,
             action.enabled ?? true,
           );
+          await this.markAutomationExecuted(automationId);
           return {
             queued: true,
             automationId,
@@ -109,6 +112,8 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
             delayMs: action.delayMs,
           };
         }
+
+        await this.markAutomationExecuted(automationId);
 
         return {
           queued: true,
@@ -151,6 +156,10 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
         removeOnFail: 50,
       },
     );
+
+    await this.automationModel
+      .where('_id', automationId)
+      .update({ queuedAt: new Date() });
 
     return {
       queued: true,
@@ -231,5 +240,11 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
     } catch {
       return null;
     }
+  }
+
+  private async markAutomationExecuted(automationId: string) {
+    await this.automationModel
+      .where('_id', automationId)
+      .update({ lastExecutedAt: new Date() });
   }
 }
