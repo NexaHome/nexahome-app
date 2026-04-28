@@ -63,4 +63,15 @@ export class AutomationsResolver {
       .findOneByUser(id, user.userId)
       .then(() => this.automationQueueService.enqueueAutomation(id, delayMs ?? 0));
   }
+
+  @Mutation(() => Boolean)
+  cancelAutomation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Args('id') id: string,
+  ) {
+    return this.automationsService
+      .findOneByUser(id, user.userId)
+      .then(() => this.automationQueueService.cancelAutomation(id))
+      .then(() => true);
+  }
 }
