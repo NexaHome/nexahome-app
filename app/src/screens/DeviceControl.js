@@ -179,42 +179,32 @@ const DeviceControl = ({ route, navigation }) => {
 
   const handleTogglePower = async () => {
     const nextPower = !power;
-    if (!nextPower) {
-      setPower(false);
-      return;
-    }
-
     try {
       setActionError("");
-
       const token = await SecureStore.getItemAsync("token");
-      if (!token) {
-        throw new Error("Token tidak ditemukan, silakan login ulang.");
-      }
+      if (!token) throw new Error("Token tidak ditemukan, silakan login ulang.");
 
       const homeId = await SecureStore.getItemAsync("activeHomeId");
-      if (!homeId) {
-        throw new Error("Home aktif tidak ditemukan.");
-      }
+      if (!homeId) throw new Error("Home aktif tidak ditemukan.");
 
       const mutation = `
-        mutation CreateLog($createLogInput: CreateLogDeviceInput!) {
-          createLog(createLogInput: $createLogInput) {
+        mutation UpdateDevice($id: String!, $input: UpdateDeviceInput!) {
+          updateDevice(id: $id, updateDeviceInput: $input) {
             _id
-            device_id
-            value
-            createdAt
+            status
+            is_active
           }
         }
       `;
-
+      
       const response = await postGraphQL(
         {
           query: mutation,
           variables: {
-            createLogInput: {
-              deviceId,
-              value: "ON",
+            id: deviceId,
+            input: {
+              status: nextPower ? "ON" : "OFF",
+              is_active: nextPower,
             },
           },
         },
@@ -230,10 +220,8 @@ const DeviceControl = ({ route, navigation }) => {
         throw new Error(result.errors?.[0]?.message || "Gagal update status");
       }
 
-      setPower(true);
-      if (showLogs) {
-        fetchLogs();
-      }
+      setPower(nextPower);
+      if (showLogs) fetchLogs();
     } catch (toggleError) {
       setActionError(toggleError.message || "Terjadi kesalahan");
     }

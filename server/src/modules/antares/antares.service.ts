@@ -106,20 +106,23 @@ export class AntaresService {
     }
   }
 
-  async sendData(data: any, appName?: string, deviceName?: string) {
+  async sendData(data: any, appName?: string, targetDeviceName?: string) {
     const app = appName || this.configService.get<string>('ANTARES_APP_NAME') || '';
-    const device = deviceName || this.configService.get<string>('ANTARES_DEVICE_NAME') || '';
     const accessKey = this.configService.get<string>('ANTARES_ACCESS_KEY') || '';
     
-    if (!device) {
-      throw new Error('Antares device name is required');
-    }
+    // ALWAYS use 'Control' container for app commands to ensure stability
+    const controlContainer = 'Control';
+    const url = `https://platform.antares.id:8443/~/antares-cse/antares-id/${app}/${controlContainer}`;
 
-    const url = `https://platform.antares.id:8443/~/antares-cse/antares-id/${app}/${device}`;
+    // Wrap the payload with the target device name
+    const payload = {
+      target: targetDeviceName || 'Unknown',
+      ...data
+    };
 
     const body = {
       'm2m:cin': {
-        con: typeof data === 'string' ? data : JSON.stringify(data),
+        con: JSON.stringify(payload),
       },
     };
 
@@ -135,12 +138,13 @@ export class AntaresService {
       });
 
       if (!response.ok) {
-        throw new Error(`Antares error for ${device}: ${response.statusText}`);
+        throw new Error(`Antares error for Control: ${response.statusText}`);
       }
 
+      this.logger.log(`Command sent to Control for target: ${targetDeviceName}`);
       return await response.json();
     } catch (error) {
-      this.logger.error(`Failed to send to Antares for ${device}: ${error.message}`);
+      this.logger.error(`Failed to send to Antares Control: ${error.message}`);
       throw error;
     }
   }

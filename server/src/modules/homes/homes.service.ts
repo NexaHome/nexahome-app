@@ -19,6 +19,7 @@ import { QuickActionResult } from './dto/quick-action-result.type';
 import { RoomSummary } from './dto/room-summary.type';
 import { AddHomeMemberInput } from './dto/add-home-member.input';
 import { HomeMember } from './dto/home-member.type';
+import { AntaresService } from '../antares/antares.service';
 import {
   toIdString,
   toObjectId,
@@ -33,6 +34,7 @@ export class HomesService {
     @InjectModel(Device) private readonly deviceModel: typeof Device,
     @InjectModel(HomeUser) private readonly homeUserModel: typeof HomeUser,
     @InjectModel(User) private readonly userModel: typeof User,
+    private readonly antaresService: AntaresService,
   ) {}
 
   async create(userId: string, createHomeInput: CreateHomeInput) {
@@ -354,11 +356,42 @@ export class HomesService {
       .whereIn('room_id', toObjectIds(roomIds))
       .updateMany({ status });
 
+    // Trigger Antares for each affected device
+    const devices = await this.deviceModel
+      .whereIn('room_id', toObjectIds(roomIds))
+      .get();
+
+    for (const device of devices) {
+      if (device.antares_device_name) {
+        const payload = this.getCommandPayload(device.category, status);
+        try {
+          await this.antaresService.sendData(payload, undefined, device.antares_device_name);
+        } catch (err) {
+          // Continue with other devices even if one fails
+        }
+      }
+    }
+
     return {
       success: true,
       affectedDevices,
       message,
     };
+  }
+
+  private getCommandPayload(category: string | undefined, status: string) {
+    const cat = (category || '').toLowerCase();
+    const isON = status.toUpperCase() === 'ON';
+
+    if (cat === 'light') {
+      return { lamp: isON ? 'on' : 'off', status: isON ? 'on' : 'off' };
+    }
+
+    if (cat === 'rain') {
+      return { servo: isON ? 'open' : 'close' };
+    }
+
+    return { status: status.toLowerCase() };
   }
 
   private async resolveTargetHome(userId: string, homeId?: string) {

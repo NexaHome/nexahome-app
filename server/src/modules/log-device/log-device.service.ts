@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@mongoloquent/nestjs';
 import { LogDevice } from '../../models/log.model';
 import { Device } from '../../models/device.model';
@@ -14,6 +14,7 @@ export class LogDeviceService {
     @InjectModel(LogDevice) private readonly logModel: typeof LogDevice,
     @InjectModel(Device) private readonly deviceModel: typeof Device,
     @InjectModel(Room) private readonly roomModel: typeof Room,
+    @Inject(forwardRef(() => HomesService))
     private readonly homesService: HomesService,
   ) {}
 
@@ -31,8 +32,8 @@ export class LogDeviceService {
   }
 
   async createFromWebhook(antaresDeviceName: string, value: any) {
-    if (!antaresDeviceName) {
-      throw new DeviceNotFoundException();
+    if (!antaresDeviceName || antaresDeviceName === 'antares-cse') {
+      return null;
     }
 
     // Get all devices and filter case-insensitively

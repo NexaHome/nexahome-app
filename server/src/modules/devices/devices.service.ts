@@ -9,6 +9,7 @@ import { CreateDeviceInput } from './dto/create-device.input';
 import { UpdateDeviceInput } from './dto/update-device.input';
 import { DeviceNotFoundException, RoomNotFoundException } from '../../common/exceptions/app.exceptions';
 import { toIdString, toObjectId, toObjectIds } from '../../common/utils/object-id.util';
+import { AntaresService } from '../antares/antares.service';
 
 @Injectable()
 export class DevicesService {
@@ -18,6 +19,7 @@ export class DevicesService {
     @InjectModel(DeviceAutomation) private readonly deviceAutomationModel: typeof DeviceAutomation,
     @InjectModel(LogDevice) private readonly logModel: typeof LogDevice,
     private readonly homesService: HomesService,
+    private readonly antaresService: AntaresService,
   ) {}
 
   async create(userId: string, homeId: string, roomId: string, createDeviceInput: CreateDeviceInput) {
@@ -99,7 +101,34 @@ export class DevicesService {
     device.updatedAt = new Date();
     await device.save();
 
+    // Trigger Antares if status or is_active changed
+    if (
+      (updateDeviceInput.status !== undefined || updateDeviceInput.is_active !== undefined) &&
+      device.antares_device_name
+    ) {
+      const isON = updateDeviceInput.is_active ?? (updateDeviceInput.status === 'ON');
+      const payload = this.getCommandPayload(device.category, isON ? 'ON' : 'OFF');
+      try {
+        await this.antaresService.sendData(payload, undefined, device.antares_device_name);
+      } catch (err) {}
+    }
+
     return this.findOneByMember(userId, homeId, roomId, this.toIdString(device._id));
+  }
+
+  private getCommandPayload(category: string | undefined, status: string) {
+    const cat = (category || '').toLowerCase();
+    const isON = status.toUpperCase() === 'ON';
+
+    if (cat === 'light') {
+      return { lamp: isON ? 'on' : 'off', status: isON ? 'on' : 'off' };
+    }
+
+    if (cat === 'rain') {
+      return { servo: isON ? 'open' : 'close' };
+    }
+
+    return { status: status.toLowerCase() };
   }
 
   async assignToRoom(userId: string, homeId: string, deviceId: string, newRoomId: string) {

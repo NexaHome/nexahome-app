@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MongoloquentModule } from '@mongoloquent/nestjs';
 import { LogDevice } from '../../models/log.model';
 import { Device } from '../../models/device.model';
@@ -9,7 +9,10 @@ import { LogDeviceService } from './log-device.service';
 import { LogDeviceController } from './log-device.controller';
 
 @Module({
-  imports: [MongoloquentModule.forFeature([LogDevice, Device, Room]), HomesModule],
+  imports: [
+    MongoloquentModule.forFeature([LogDevice, Device, Room]),
+    forwardRef(() => HomesModule),
+  ],
   controllers: [LogDeviceController],
   providers: [LogDeviceResolver, LogDeviceService],
   exports: [LogDeviceService],
