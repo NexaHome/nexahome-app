@@ -1,13 +1,59 @@
-import React, { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useState, useEffect } from "react";
+import { ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
 import Toggle from "../components/Toggle";
-import { schedules } from "../data/homeData";
+import { postGraphQL } from "../../utils/api";
 
 const Schedule = ({ navigation }) => {
-  const [items, setItems] = useState(schedules);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSchedules = async () => {
+      try {
+        setLoading(true);
+        const token = await AsyncStorage.getItem("token");
+        
+        const query = `
+          query {
+            automations {
+              _id
+              name
+              trigger
+              action
+            }
+          }
+        `;
+        
+        const response = await postGraphQL(
+          { query },
+          { Authorization: `Bearer ${token}` }
+        );
+        
+        const result = await response.json();
+        if (result.data?.automations) {
+          // Asumsi bahwa semua rules di sini bertindak sebagai jadwal
+          setItems(result.data.automations.map(a => ({
+            id: a._id,
+            name: a.name,
+            time: "00:00", // Waktu dummy karena trigger string
+            repeat: "Setiap hari",
+            device: a.action,
+            active: true
+          })));
+        }
+      } catch (err) {
+        console.error("Gagal memuat jadwal", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchSchedules();
+  }, []);
 
   const toggleSchedule = (id) => {
     setItems((current) =>
@@ -27,7 +73,13 @@ const Schedule = ({ navigation }) => {
           </AnimatedPressable>
         </View>
 
-        {items.map((item) => (
+        {loading && <ActivityIndicator size="small" color="#7B61FF" style={{ marginTop: 20 }} />}
+        
+        {!loading && items.length === 0 && (
+          <Text style={{ color: "#64748B", marginTop: 20 }}>Belum ada jadwal yang dibuat.</Text>
+        )}
+
+        {!loading && items.map((item) => (
           <View key={item.id} style={styles.card}>
             <View style={styles.cardCopy}>
               <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
@@ -37,7 +89,7 @@ const Schedule = ({ navigation }) => {
             <Toggle active={item.active} onPress={() => toggleSchedule(item.id)} />
           </View>
         ))}
-        <Text style={styles.hint}>Swipe left to edit or delete</Text>
+        {!loading && items.length > 0 && <Text style={styles.hint}>Swipe left to edit or delete</Text>}
       </ScrollView>
       <BottomNav active="schedule" navigation={navigation} />
     </ScreenShell>

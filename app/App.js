@@ -11,7 +11,8 @@ import Dashboard from "./src/screens/Dashboard";
 import DeviceControl from "./src/screens/DeviceControl";
 import Alerts from "./src/screens/Alerts";
 import Automation from "./src/screens/Automation";
-import AddFeature from "./src/screens/AddFeature";
+import AddDevice from "./src/screens/AddDevice";
+import AddHome from "./src/screens/AddHome";
 import AddRoom from "./src/screens/AddRoom";
 import Members from "./src/screens/Members";
 import LaundryAutomationRule from "./src/screens/LaundryAutomationRule";
@@ -22,7 +23,7 @@ import Profile from "./src/screens/Profile";
 import Schedule from "./src/screens/Schedule";
 import SensorMonitor from "./src/screens/SensorMonitor";
 import { fonts, lightColors, ThemeProvider, useTheme } from "./theme";
-import { ApolloProvider } from "@apollo/client";
+import { ApolloProvider } from "@apollo/client/react";
 import client from "./utils/apollo";
 
 const Stack = createStackNavigator();
@@ -83,8 +84,9 @@ const AppNavigator = () => {
           name="LaundryAutomationRule"
           component={LaundryAutomationRule}
         />
+        <Stack.Screen name="AddHome" component={AddHome} />
         <Stack.Screen name="AddRoom" component={AddRoom} />
-        <Stack.Screen name="AddFeature" component={AddFeature} />
+        <Stack.Screen name="AddDevice" component={AddDevice} />
         <Stack.Screen name="Profile" component={Profile} />
       </Stack.Navigator>
     </NavigationContainer>

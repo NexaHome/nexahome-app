@@ -4,10 +4,11 @@ import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
 import Toggle from "../components/Toggle";
-import { members } from "../data/homeData";
+
 
 const Members = ({ navigation }) => {
-  const [control, setControl] = useState(true);
+    const [members, set_members] = useState([]);
+const [control, setControl] = useState(true);
   const [schedule, setSchedule] = useState(false);
   const [invite, setInvite] = useState(false);
 

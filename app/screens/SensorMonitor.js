@@ -10,40 +10,54 @@ import * as SecureStore from "expo-secure-store";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-import { sensors as mockSensors } from "../data/homeData";
-import { getAntaresData, getAntaresLogs } from "../utils/antares";
+import { getAntaresData, getAntaresLogs, getSensorsByHome } from "../utils/antares";
 
 const SensorMonitor = ({ navigation }) => {
-  const [sensors, setSensors] = useState(mockSensors);
+  const [sensors, setSensors] = useState([]);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAntaresData = async () => {
     try {
-      const liveData = await getAntaresData();
-      if (liveData && liveData.sensors) {
-        const updatedSensors = mockSensors.map((s) => {
-          const antares = liveData.sensors[s.id];
-          if (antares) {
-            let unit = "";
-            if (s.id === "fire") unit = " units";
-            if (s.id === "gas") unit = " ppm";
-            if (s.id === "water") unit = " units";
-            if (s.id === "light") unit = " lux";
+      const dbSensors = await getSensorsByHome();
+      const validSensors = dbSensors.filter(d => d.category);
 
-            return {
-              ...s,
-              value: `${antares.value}${unit}`,
-              state:
-                antares.status.charAt(0).toUpperCase() +
-                antares.status.slice(1),
-              tone: antares.status === "normal" ? "green" : "amber",
-            };
-          }
-          return s;
-        });
-        setSensors(updatedSensors);
-      }
+      const liveData = await getAntaresData(); 
+      
+      const updatedSensors = validSensors.map(s => {
+        const category = s.category.toLowerCase();
+        const antares = liveData?.sensors?.[category] || s.last_value;
+
+        if (antares && typeof antares === 'object') {
+          let unit = "";
+          if (category === "fire") unit = "";
+          if (category === "gas") unit = " ppm";
+          if (category === "water") unit = " cm";
+          if (category === "light") unit = " lux";
+
+          const safeStatuses = ["normal", "safe", "low", "clear", "dry"];
+          const currentStatus = antares.status ? antares.status.toLowerCase() : "unknown";
+
+          return { 
+            id: s._id,
+            category: category,
+            label: s.name, 
+            value: `${antares.value !== undefined ? antares.value : '--'}${unit}`,
+            state: antares.status ? antares.status.charAt(0).toUpperCase() + antares.status.slice(1) : "Unknown",
+            tone: safeStatuses.includes(currentStatus) ? "green" : "amber"
+          };
+        }
+
+        return {
+          id: s._id,
+          category: category,
+          label: s.name,
+          value: "--",
+          state: "Offline",
+          tone: "amber"
+        };
+      });
+      setSensors(updatedSensors);
 
       // Only fetch logs if we have activeHomeId
       const activeHomeId = await SecureStore.getItemAsync("activeHomeId");
@@ -68,11 +82,12 @@ const SensorMonitor = ({ navigation }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Map logs to chart bars (example: fire sensor values)
-  const chartData = logs.slice(-10).map((log) => {
-    const fireVal = log.value?.sensors?.fire?.value || 0;
-    // Scale fireVal (0-4095) to chart height (0-100)
-    return Math.min(100, Math.floor((fireVal / 4095) * 100));
+  // Map logs to chart bars (example: gas sensor values)
+  const gasLogs = logs.filter(log => log.device_info?.category?.toLowerCase() === "gas");
+  const chartData = gasLogs.slice(-10).map(log => {
+    const gasVal = log.value?.value || 0;
+    // Scale gasVal (0-4095) to chart height (0-100)
+    return Math.min(100, Math.floor((gasVal / 4095) * 100));
   });
 
   const displayBars =

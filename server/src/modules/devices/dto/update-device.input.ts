@@ -19,4 +19,7 @@ export class UpdateDeviceInput {
 
   @Field({ nullable: true })
   antares_device_name?: string;
+
+  @Field(() => String, { nullable: true })
+  room_id?: string;
 }

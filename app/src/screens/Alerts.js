@@ -1,9 +1,9 @@
-import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useState, useEffect } from "react";
+import { ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-native";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-import { alerts } from "../data/homeData";
+import { getAntaresLogs } from "../../utils/antares";
 
 const toneStyle = {
   Critical: { card: "#FFF0F3", border: "#FF5C7A", text: "#FF5C7A" },
@@ -13,27 +13,89 @@ const toneStyle = {
 };
 
 const Alerts = ({ navigation }) => {
+  const [alerts, set_alerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterMode, setFilterMode] = useState("All");
+
+  useEffect(() => {
+    const getLogs = async () => {
+      try {
+        setLoading(true);
+        const logs = await getAntaresLogs();
+        
+        const formattedAlerts = logs.map(log => {
+          let parsedValue = {};
+          try {
+            parsedValue = JSON.parse(log.value);
+          } catch (e) { }
+
+          let level = "Info";
+          if (parsedValue.status) {
+            const st = parsedValue.status.toLowerCase();
+            if (["danger", "high", "abnormal"].includes(st)) level = "Critical";
+            else if (["warning", "medium", "rainy"].includes(st)) level = "Warning";
+            else level = "Info";
+          }
+
+          return {
+            id: log._id,
+            title: log.device_info?.name || "Perangkat",
+            level,
+            detail: `Status tercatat: ${parsedValue.status || "Tidak diketahui"} - Nilai: ${parsedValue.value || parsedValue.formatted || ""}`,
+            createdAt: new Date(log.createdAt)
+          };
+        });
+
+        set_alerts(formattedAlerts);
+      } catch (err) {
+        console.error("Gagal mengambil alerts", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    getLogs();
+  }, []);
+
+  const filteredAlerts = alerts.filter(a => {
+    if (filterMode === "Critical") return a.level === "Critical";
+    if (filterMode === "Unread") return a.level !== "Read";
+    return true;
+  });
+
   return (
     <ScreenShell>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Alerts</Text>
-          <AnimatedPressable style={styles.markButton}>
+          <AnimatedPressable style={styles.markButton} onPress={() => set_alerts(alerts.map(a => ({...a, level: "Read"})))}>
             <Text style={styles.markText}>Mark all read</Text>
           </AnimatedPressable>
         </View>
 
         <View style={styles.filters}>
-          {["All", "Unread", "Critical"].map((filter, index) => (
-            <View key={filter} style={[styles.filter, index === 0 && styles.filterActive]}>
-              <Text style={[styles.filterText, index === 0 && styles.filterTextActive]}>
-                {filter}
-              </Text>
-            </View>
-          ))}
+          {["All", "Unread", "Critical"].map((filter) => {
+            const active = filterMode === filter;
+            return (
+              <AnimatedPressable
+                key={filter}
+                style={[styles.filter, active && styles.filterActive]}
+                onPress={() => setFilterMode(filter)}
+              >
+                <Text style={[styles.filterText, active && styles.filterTextActive]}>
+                  {filter}
+                </Text>
+              </AnimatedPressable>
+            );
+          })}
         </View>
 
-        {alerts.map((item) => {
+        {loading && <ActivityIndicator size="small" color="#7B61FF" style={{ marginTop: 20 }} />}
+        
+        {!loading && filteredAlerts.length === 0 && (
+          <Text style={{ color: "#64748B", marginTop: 20 }}>Belum ada log atau alert.</Text>
+        )}
+
+        {!loading && filteredAlerts.map((item) => {
           const tone = toneStyle[item.level] || toneStyle.Info;
           return (
             <View
@@ -51,6 +113,7 @@ const Alerts = ({ navigation }) => {
                   </View>
                 </View>
                 <Text style={styles.detail} numberOfLines={1}>{item.detail}</Text>
+                <Text style={{fontSize: 10, color: "#94A3B8", marginTop: 4}}>{item.createdAt.toLocaleString()}</Text>
                 <View style={styles.actionRow}>
                   <AnimatedPressable style={styles.actionButton}>
                     <Text style={styles.actionText}>Resolve</Text>

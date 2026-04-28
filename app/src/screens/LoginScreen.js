@@ -10,7 +10,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as SecureStore from "expo-secure-store";
-import { gql, useMutation } from "@apollo/client";
+import { gql } from "@apollo/client/core";
+import { useMutation } from "@apollo/client/react";
 
 const LOGIN_MUTATION = gql`
   mutation Login($loginInput: LoginInput!) {

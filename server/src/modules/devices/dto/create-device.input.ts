@@ -10,4 +10,10 @@ export class CreateDeviceInput {
 
   @Field({ nullable: true })
   status?: string;
+
+  @Field({ nullable: true })
+  category?: string;
+
+  @Field({ nullable: true })
+  antares_device_name?: string;
 }

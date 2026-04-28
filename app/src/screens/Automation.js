@@ -1,11 +1,57 @@
-import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useState, useEffect } from "react";
+import { ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-import { automations } from "../data/homeData";
+import { postGraphQL } from "../../utils/api";
 
 const Automation = ({ navigation }) => {
+  const [automations, set_automations] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAutomations = async () => {
+      try {
+        setLoading(true);
+        const token = await AsyncStorage.getItem("token");
+        
+        const query = `
+          query {
+            automations {
+              _id
+              name
+              trigger
+              action
+            }
+          }
+        `;
+        
+        const response = await postGraphQL(
+          { query },
+          { Authorization: `Bearer ${token}` }
+        );
+        
+        const result = await response.json();
+        if (result.data?.automations) {
+          set_automations(result.data.automations.map(a => ({
+            id: a._id,
+            name: a.name,
+            sensor: a.trigger || "N/A",
+            action: a.action,
+            active: true // Dummy status as there's no active field in DB
+          })));
+        }
+      } catch (err) {
+        console.error("Gagal memuat automation", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAutomations();
+  }, []);
+
   return (
     <ScreenShell>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -16,11 +62,17 @@ const Automation = ({ navigation }) => {
           </AnimatedPressable>
         </View>
 
-        {automations.map((item) => (
+        {loading && <ActivityIndicator size="small" color="#7B61FF" style={{ marginTop: 20 }} />}
+        
+        {!loading && automations.length === 0 && (
+          <Text style={{ color: "#64748B", marginTop: 20 }}>Belum ada aturan otomatisasi yang dibuat.</Text>
+        )}
+
+        {!loading && automations.map((item) => (
           <View key={item.id} style={styles.card}>
             <Text style={styles.cardTitle}>{item.name}</Text>
             <Text style={styles.action}>Then {item.action}</Text>
-            <Text style={styles.sensor}>Sensor: {item.sensor}</Text>
+            <Text style={styles.sensor}>Trigger: {item.sensor}</Text>
             <View style={styles.footer}>
               <View style={[styles.status, !item.active && styles.statusOff]}>
                 <Text style={[styles.statusText, !item.active && styles.statusTextOff]}>

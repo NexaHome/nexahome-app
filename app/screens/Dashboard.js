@@ -11,7 +11,7 @@ import * as SecureStore from "expo-secure-store";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-import { sensors } from "../data/homeData";
+
 import { useTheme } from "../theme";
 import { postGraphQL } from "../utils/api";
 
@@ -22,7 +22,8 @@ const CARD_WIDTH = (width - PAGE_PADDING * 2 - CARD_GAP) / 2;
 
 const Dashboard = ({ navigation }) => {
   const { mode, toggleMode } = useTheme();
-  const [user, setUser] = useState({ name: "User", email: "" });
+    const [sensors, set_sensors] = useState([]);
+const [user, setUser] = useState({ name: "User", email: "" });
   const [homes, setHomes] = useState([]);
   const [roomItems, setRoomItems] = useState([
     { roomId: "add", name: "+ Add room", isAdd: true },
@@ -289,7 +290,7 @@ const Dashboard = ({ navigation }) => {
           </View>
         </View>
 
-        {homes.length > 1 && (
+        {homes.length >= 0 && (
           <View style={styles.homeSelectorWrap}>
             <Text style={styles.selectorLabel}>Pilih home</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -313,6 +314,12 @@ const Dashboard = ({ navigation }) => {
                   </AnimatedPressable>
                 );
               })}
+              <AnimatedPressable
+                style={[styles.homeChip, { borderStyle: "dashed" }]}
+                onPress={() => navigation.navigate("AddHome")}
+              >
+                <Text style={styles.homeChipText}>+ Add Home</Text>
+              </AnimatedPressable>
             </ScrollView>
           </View>
         )}
