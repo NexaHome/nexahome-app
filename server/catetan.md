@@ -194,8 +194,13 @@ mutation CreateAutomation($createAutomationInput: CreateAutomationInput!) {
 {
   "createAutomationInput": {
     "name": "Auto Night Mode",
-    "trigger": "22:00",
-    "action": "TURN_OFF_ALL"
+    "trigger": {
+      "type": "schedule",
+      "runAt": "2026-04-28T22:00:00Z"
+    },
+    "action": {
+      "command": "allDevicesOff"
+    }
   }
 }
 ```
