@@ -1,4 +1,4 @@
-export const BASE_URL = process.env.GRAPHQL_URL;
+export const BASE_URL = process.env.EXPO_PUBLIC_GRAPHQL_URL;
 
 export const postGraphQL = async (body, customHeaders = {}) => {
   const response = await fetch(BASE_URL, {
