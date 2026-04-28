@@ -53,7 +53,7 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
     }
 
     this.queue = new Queue<AutomationExecutionData, AutomationExecutionResult>('automations', {
-      connection: { url: redisUrl },
+      connection: { url: redisUrl, skipCheck: true } as any,
     });
 
     this.worker = new Worker<AutomationExecutionData, AutomationExecutionResult>(
@@ -118,7 +118,7 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
           delayMs: action?.delayMs,
         };
       },
-      { connection: { url: redisUrl } },
+      { connection: { url: redisUrl, skipCheck: true } as any },
     );
 
     this.worker.on('failed', (job, err) => {
