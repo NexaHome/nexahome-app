@@ -20,6 +20,28 @@ const PAGE_PADDING = 20;
 const CARD_GAP = 12;
 const CARD_WIDTH = (width - PAGE_PADDING * 2 - CARD_GAP) / 2;
 
+// Format tanggal ke format user-friendly
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  const diffWeeks = Math.floor(diffDays / 7);
+  const diffMonths = Math.floor(diffDays / 30);
+  const diffYears = Math.floor(diffDays / 365);
+
+  if (diffSecs < 60) return "Baru saja";
+  if (diffMins < 60) return `${diffMins} menit lalu`;
+  if (diffHours < 24) return `${diffHours} jam lalu`;
+  if (diffDays < 7) return `${diffDays} hari lalu`;
+  if (diffWeeks < 4) return `${diffWeeks} minggu lalu`;
+  if (diffMonths < 12) return `${diffMonths} bulan lalu`;
+  return `${diffYears} tahun lalu`;
+};
+
 const RoomDetail = ({ route, navigation }) => {
   const { roomName: initialRoomName = "Room", roomId } = route.params || {};
   const [roomName, setRoomName] = useState(initialRoomName);
@@ -232,11 +254,11 @@ const RoomDetail = ({ route, navigation }) => {
             </AnimatedPressable>
             <AnimatedPressable
               style={styles.addButton}
-              onPress={() => navigation.navigate("AddDevice", { roomName, roomId })}
+              onPress={() =>
+                navigation.navigate("AddDevice", { roomName, roomId })
+              }
             >
-              <Text style={styles.addText}>
-                + Add
-              </Text>
+              <Text style={styles.addText}>+ Add</Text>
             </AnimatedPressable>
           </View>
         </View>
@@ -282,10 +304,6 @@ const RoomDetail = ({ route, navigation }) => {
                   <Text style={styles.deviceName} numberOfLines={2}>
                     {item.name || "Device"}
                   </Text>
-                  <Text style={styles.deviceDetail} numberOfLines={2}>
-                    {subtitle}
-                    {item.last_value ? ` • ${item.last_value}` : ""}
-                  </Text>
                   <View
                     style={[styles.statePill, !isActive && styles.statePillOff]}
                   >
@@ -326,10 +344,12 @@ const RoomDetail = ({ route, navigation }) => {
               const name = deviceNameMap[log.device_id] || log.device_id;
               return (
                 <View key={log._id} style={styles.activityItem}>
-                  <Text style={styles.activityTitle}>
-                    {name} • {log.value}
+                  <View style={styles.activityContent}>
+                    <Text style={styles.activityTitle}>{name}</Text>
+                  </View>
+                  <Text style={styles.activityTime}>
+                    {formatDate(log.createdAt)}
                   </Text>
-                  <Text style={styles.activityTime}>{log.createdAt}</Text>
                 </View>
               );
             })}
@@ -365,10 +385,13 @@ const RoomDetail = ({ route, navigation }) => {
                   const name = deviceNameMap[log.device_id] || log.device_id;
                   return (
                     <View key={log._id} style={styles.logItem}>
-                      <Text style={styles.logValue}>
-                        {name} • {log.value}
+                      <View style={styles.logContent}>
+                        <Text style={styles.logName}>{name}</Text>
+                        <Text style={styles.logValue}>{log.value}</Text>
+                      </View>
+                      <Text style={styles.logTime}>
+                        {formatDate(log.createdAt)}
                       </Text>
-                      <Text style={styles.logTime}>{log.createdAt}</Text>
                     </View>
                   );
                 })}
@@ -587,21 +610,30 @@ const styles = StyleSheet.create({
     borderColor: "#D8DEE9",
     borderRadius: 10,
     paddingHorizontal: 12,
+    paddingVertical: 10,
     marginBottom: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  activityTitle: {
+  activityContent: {
     flex: 1,
+    marginRight: 8,
+  },
+  activityTitle: {
     color: "#0A0F2C",
     fontSize: 13,
     fontWeight: "700",
-    paddingRight: 8,
+    marginBottom: 4,
+  },
+  activityStatus: {
+    color: "#7B61FF",
+    fontSize: 12,
+    fontWeight: "600",
   },
   activityTime: {
     color: "#94A3B8",
-    fontSize: 12,
+    fontSize: 11,
   },
   logButton: {
     alignItems: "center",
@@ -611,6 +643,52 @@ const styles = StyleSheet.create({
     color: "#7B61FF",
     fontSize: 13,
     fontWeight: "900",
+  },
+  logCard: {
+    marginTop: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#D8DEE9",
+    borderRadius: 10,
+    padding: 14,
+  },
+  logTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0A0F2C",
+    marginBottom: 12,
+  },
+  logItem: {
+    minHeight: 50,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  logContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  logName: {
+    color: "#0A0F2C",
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  logValue: {
+    color: "#7B61FF",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  logTime: {
+    color: "#94A3B8",
+    fontSize: 11,
   },
 });
 

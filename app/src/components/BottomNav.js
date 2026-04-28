@@ -1,7 +1,7 @@
 import React from "react";
-import { Text, View, StyleSheet } from "react-native";
-import AnimatedPressable from "./AnimatedPressable";
+import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
 import { transformStyle, useTheme } from "../../theme";
+import AnimatedPressable from "./AnimatedPressable";
 
 const tabs = [
   { key: "home", label: "Home", route: "Dashboard" },
@@ -23,6 +23,7 @@ const BottomNav = ({ active = "home", navigation }) => {
             key={tab.key}
             style={styles.tab}
             onPress={() => tab.route && navigation.navigate(tab.route)}
+            activeOpacity={0.7}
           >
             <Text
               style={[
@@ -46,21 +47,25 @@ const BottomNav = ({ active = "home", navigation }) => {
 
 const styles = StyleSheet.create({
   nav: {
-    height: 70,
+    height: 54,
     paddingHorizontal: 10,
-    paddingTop: 9,
+    paddingVertical: 6,
     borderTopWidth: 1,
     borderTopColor: "#D8DEE9",
     backgroundColor: "#FFFFFF",
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "space-around",
+    alignItems: "center",
+    gap: 2,
   },
   tab: {
-    width: 66,
+    flex: 1,
+    maxWidth: 70,
     alignItems: "center",
+    paddingVertical: 6,
   },
   label: {
-    fontSize: 11.5,
+    fontSize: 11,
     color: "#94A3B8",
     fontWeight: "600",
   },
@@ -78,7 +83,7 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 3,
     backgroundColor: "transparent",
-    marginTop: 7,
+    marginTop: 4,
   },
   activeIndicator: {
     backgroundColor: "#0A0F2C",

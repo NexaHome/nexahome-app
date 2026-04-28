@@ -312,7 +312,7 @@ const Members = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  content: { padding: 20, paddingBottom: 26 },
+  content: { padding: 20, paddingBottom: 60 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
