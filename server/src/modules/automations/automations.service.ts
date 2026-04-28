@@ -95,18 +95,61 @@ export class AutomationsService {
     return toIdString(value);
   }
 
-  private serializeTrigger(trigger: CreateAutomationInput['trigger'] | UpdateAutomationInput['trigger']) {
-    return JSON.stringify(trigger);
+  private serializeTrigger(trigger: CreateAutomationInput['trigger'] | UpdateAutomationInput['trigger'] | undefined) {
+    if (!trigger) {
+      return JSON.stringify({ type: 'delay' });
+    }
+
+    const currentTrigger = trigger;
+    return JSON.stringify({
+      type: this.normalizeTriggerType(currentTrigger.type),
+      ...(typeof currentTrigger.delayMs === 'number' ? { delayMs: currentTrigger.delayMs } : {}),
+      ...(typeof currentTrigger.runAt === 'string' ? { runAt: currentTrigger.runAt } : {}),
+    });
   }
 
   private serializeAction(
-    action: CreateAutomationInput['action'] | UpdateAutomationInput['action'],
+    action: CreateAutomationInput['action'] | UpdateAutomationInput['action'] | undefined,
     homeId?: string,
   ) {
+    if (!action) {
+      return JSON.stringify({ command: 'allDevicesOff', ...(homeId ? { homeId } : {}) });
+    }
+
+    const currentAction = action;
     return JSON.stringify({
-      ...action,
+      command: this.normalizeActionCommand(currentAction.command),
+      ...(typeof currentAction.enabled === 'boolean' ? { enabled: currentAction.enabled } : {}),
       ...(homeId ? { homeId } : {}),
     });
+  }
+
+  private normalizeTriggerType(value: string) {
+    if (value === 'Delay' || value === 'delay') {
+      return 'delay';
+    }
+
+    if (value === 'Schedule' || value === 'schedule') {
+      return 'schedule';
+    }
+
+    return value;
+  }
+
+  private normalizeActionCommand(value: string) {
+    if (value === 'AllDevicesOn' || value === 'allDevicesOn') {
+      return 'allDevicesOn';
+    }
+
+    if (value === 'AllDevicesOff' || value === 'allDevicesOff') {
+      return 'allDevicesOff';
+    }
+
+    if (value === 'SetAwayMode' || value === 'setAwayMode') {
+      return 'setAwayMode';
+    }
+
+    return value;
   }
 
   private extractHomeIdFromAction(action: string) {
