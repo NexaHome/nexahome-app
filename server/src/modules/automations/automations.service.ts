@@ -6,22 +6,28 @@ import { CreateAutomationInput } from './dto/create-automation.input';
 import { UpdateAutomationInput } from './dto/update-automation.input';
 import { AutomationNotFoundException } from '../../common/exceptions/app.exceptions';
 import { toIdString, toObjectId } from '../../common/utils/object-id.util';
+import { AutomationQueueService } from './automation-queue.service';
 
 @Injectable()
 export class AutomationsService {
   constructor(
     @InjectModel(Automation) private readonly automationModel: typeof Automation,
     @InjectModel(DeviceAutomation) private readonly deviceAutomationModel: typeof DeviceAutomation,
+    private readonly automationQueueService: AutomationQueueService,
   ) {}
 
-  async create(userId: string, createAutomationInput: CreateAutomationInput) {
+  async create(userId: string, createAutomationInput: CreateAutomationInput, homeId?: string) {
     const automation = new this.automationModel();
     automation.user_id = toObjectId(userId);
     automation.name = createAutomationInput.name;
-    automation.trigger = createAutomationInput.trigger;
-    automation.action = createAutomationInput.action;
+    automation.trigger = this.serializeTrigger(createAutomationInput.trigger);
+    automation.action = this.serializeAction(createAutomationInput.action, homeId);
     automation.createdAt = new Date();
     await automation.save();
+
+    const automationId = this.toIdString(automation._id);
+    const delayMs = this.automationQueueService.resolveDelayMs(automation.trigger);
+    await this.automationQueueService.enqueueAutomation(automationId, delayMs);
 
     return automation;
   }
@@ -39,7 +45,7 @@ export class AutomationsService {
     return automation;
   }
 
-  async update(userId: string, id: string, updateAutomationInput: UpdateAutomationInput) {
+  async update(userId: string, id: string, updateAutomationInput: UpdateAutomationInput, homeId?: string) {
     const automation = await this.findOneByUser(id, userId);
 
     const updatePayload: Record<string, string> = {};
@@ -49,16 +55,27 @@ export class AutomationsService {
     }
 
     if (typeof updateAutomationInput.trigger !== 'undefined') {
-      updatePayload.trigger = updateAutomationInput.trigger;
+      updatePayload.trigger = this.serializeTrigger(updateAutomationInput.trigger);
     }
 
     if (typeof updateAutomationInput.action !== 'undefined') {
-      updatePayload.action = updateAutomationInput.action;
+      updatePayload.action = this.serializeAction(
+        updateAutomationInput.action,
+        homeId ?? this.extractHomeIdFromAction(automation.action),
+      );
     }
 
     if (Object.keys(updatePayload).length > 0) {
       await this.automationModel.where('_id', id).update(updatePayload);
     }
+
+    const automationId = this.toIdString(automation._id);
+    const delayMs = this.automationQueueService.resolveDelayMs(
+      typeof updateAutomationInput.trigger !== 'undefined'
+        ? this.serializeTrigger(updateAutomationInput.trigger)
+        : automation.trigger,
+    );
+    await this.automationQueueService.enqueueAutomation(automationId, delayMs);
 
     return this.findOneByUser(this.toIdString(automation._id), userId);
   }
@@ -66,6 +83,7 @@ export class AutomationsService {
   async remove(userId: string, id: string) {
     await this.findOneByUser(id, userId);
 
+    await this.automationQueueService.cancelAutomation(id);
     await this.deviceAutomationModel.where('automation_id', toObjectId(id)).delete();
 
     const deletedCount = await this.automationModel.destroy(id);
@@ -75,5 +93,28 @@ export class AutomationsService {
 
   private toIdString(value: unknown) {
     return toIdString(value);
+  }
+
+  private serializeTrigger(trigger: CreateAutomationInput['trigger'] | UpdateAutomationInput['trigger']) {
+    return JSON.stringify(trigger);
+  }
+
+  private serializeAction(
+    action: CreateAutomationInput['action'] | UpdateAutomationInput['action'],
+    homeId?: string,
+  ) {
+    return JSON.stringify({
+      ...action,
+      ...(homeId ? { homeId } : {}),
+    });
+  }
+
+  private extractHomeIdFromAction(action: string) {
+    try {
+      const parsed = JSON.parse(action);
+      return typeof parsed.homeId === 'string' ? parsed.homeId : undefined;
+    } catch {
+      return undefined;
+    }
   }
 }
