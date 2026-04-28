@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { transformChildren, transformStyle, useTheme } from "../theme";
+import { transformChildren, transformStyle, useTheme } from "../../theme";
 
 const ScreenShell = ({ children, style }) => {
   const { mode, theme } = useTheme();

@@ -1,7 +1,7 @@
 import React from "react";
 import { Text, View, StyleSheet } from "react-native";
 import AnimatedPressable from "./AnimatedPressable";
-import { transformStyle, useTheme } from "../theme";
+import { transformStyle, useTheme } from "../../theme";
 
 const tabs = [
   { key: "home", label: "Home", route: "Dashboard" },

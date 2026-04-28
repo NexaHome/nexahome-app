@@ -11,7 +11,7 @@ import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
 import { sensors as mockSensors } from "../data/homeData";
-import { getAntaresData, getAntaresLogs } from "../utils/antares";
+import { getAntaresData, getAntaresLogs } from "../../utils/antares";
 
 const SensorMonitor = ({ navigation }) => {
   const [sensors, setSensors] = useState(mockSensors);
