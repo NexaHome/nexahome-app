@@ -11,7 +11,8 @@ import Dashboard from "./src/screens/Dashboard";
 import DeviceControl from "./src/screens/DeviceControl";
 import Alerts from "./src/screens/Alerts";
 import Automation from "./src/screens/Automation";
-import AddFeature from "./src/screens/AddFeature";
+import AddDevice from "./screens/AddDevice";
+import AddHome from "./screens/AddHome";
 import AddRoom from "./src/screens/AddRoom";
 import Members from "./src/screens/Members";
 import LaundryAutomationRule from "./src/screens/LaundryAutomationRule";
@@ -83,8 +84,9 @@ const AppNavigator = () => {
           name="LaundryAutomationRule"
           component={LaundryAutomationRule}
         />
+        <Stack.Screen name="AddHome" component={AddHome} />
         <Stack.Screen name="AddRoom" component={AddRoom} />
-        <Stack.Screen name="AddFeature" component={AddFeature} />
+        <Stack.Screen name="AddDevice" component={AddDevice} />
         <Stack.Screen name="Profile" component={Profile} />
       </Stack.Navigator>
     </NavigationContainer>

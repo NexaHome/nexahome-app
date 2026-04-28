@@ -32,6 +32,19 @@ export class DevicesResolver {
     return this.devicesService.findAllByRoom(user.userId, homeId, roomId);
   }
 
+  @Query(() => [Device], { name: 'devicesByHome' })
+  findDevicesByHome(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentHomeId() homeId: string,
+  ) {
+    return this.devicesService.findAllByHome(user.userId, homeId);
+  }
+
+  @Query(() => [Device], { name: 'allDevices' })
+  findAllDevices() {
+    return this.devicesService.findAll();
+  }
+
   @Query(() => Device, { name: 'device' })
   findDeviceById(
     @CurrentUser() user: AuthenticatedUser,
@@ -51,6 +64,16 @@ export class DevicesResolver {
     @Args('updateDeviceInput') updateDeviceInput: UpdateDeviceInput,
   ) {
     return this.devicesService.update(user.userId, homeId, roomId, id, updateDeviceInput);
+  }
+
+  @Mutation(() => Device)
+  assignDeviceToRoom(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentHomeId() homeId: string,
+    @Args('deviceId') deviceId: string,
+    @Args('newRoomId') newRoomId: string,
+  ) {
+    return this.devicesService.assignToRoom(user.userId, homeId, deviceId, newRoomId);
   }
 
   @Mutation(() => Boolean)

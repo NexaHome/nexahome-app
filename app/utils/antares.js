@@ -75,6 +75,9 @@ export const getAntaresLogs = async () => {
         device_id
         value
         createdAt
+        device_info {
+          category
+        }
       }
     }
   `;
@@ -97,5 +100,77 @@ export const getAntaresLogs = async () => {
   return result.data.logsByHome.map((log) => ({
     ...log,
     value: typeof log.value === "string" ? JSON.parse(log.value) : log.value,
+  }));
+};
+
+export const getSensorsByHome = async () => {
+  const token = await AsyncStorage.getItem("token");
+  const homeId = await AsyncStorage.getItem("activeHomeId");
+  
+  if (!homeId) return [];
+
+  const query = `
+    query DevicesByHome {
+      devicesByHome {
+        _id
+        name
+        type
+        status
+        category
+        last_value
+        room_id
+      }
+    }
+  `;
+
+  const response = await postGraphQL({
+    query,
+  }, {
+    Authorization: `Bearer ${token}`,
+    'x-home-id': homeId
+  });
+
+  const result = await response.json();
+  if (result.errors) {
+    throw new Error(result.errors[0].message);
+  }
+
+  return result.data.devicesByHome.map(device => ({
+    ...device,
+    last_value: typeof device.last_value === 'string' ? JSON.parse(device.last_value) : device.last_value
+  }));
+};
+
+export const getAllDevices = async () => {
+  const token = await AsyncStorage.getItem("token");
+
+  const query = `
+    query AllDevices {
+      allDevices {
+        _id
+        name
+        type
+        status
+        category
+        last_value
+        room_id
+      }
+    }
+  `;
+
+  const response = await postGraphQL({
+    query,
+  }, {
+    Authorization: `Bearer ${token}`
+  });
+
+  const result = await response.json();
+  if (result.errors) {
+    throw new Error(result.errors[0].message);
+  }
+
+  return result.data.allDevices.map(device => ({
+    ...device,
+    last_value: typeof device.last_value === 'string' ? JSON.parse(device.last_value) : device.last_value
   }));
 };

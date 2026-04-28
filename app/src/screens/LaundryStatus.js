@@ -1,15 +1,50 @@
-import React, { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useState, useEffect } from "react";
+import { ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-native";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
 import Toggle from "../components/Toggle";
-import { laundryStatus } from "../data/homeData";
+import { getSensorsByHome } from "../utils/antares";
 
 const LaundryStatus = ({ navigation, route }) => {
   const [autoMode, setAutoMode] = useState(true);
-  const weather = route.params?.weather || "rainy";
-  const status = laundryStatus[weather];
+  const [loading, setLoading] = useState(true);
+  const [rainSensor, setRainSensor] = useState(null);
+
+  useEffect(() => {
+    const fetchSensor = async () => {
+      try {
+        setLoading(true);
+        const sensors = await getSensorsByHome();
+        const rain = sensors.find(s => s.category?.toLowerCase() === 'rain' || s.antares_device_name === 'rain');
+        setRainSensor(rain);
+      } catch (err) {
+        console.error("Gagal memuat sensor hujan", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchSensor();
+  }, []);
+
+  // Determine status based on rain sensor
+  let isSafe = true; // Default safe (clear)
+  let sensorValue = "Tidak ada data";
+  let statusBadge = "Tidak diketahui";
+  
+  if (rainSensor && rainSensor.last_value) {
+    const val = rainSensor.last_value;
+    if (val.status && val.status.toLowerCase() !== 'clear' && val.status.toLowerCase() !== 'safe') {
+      isSafe = false;
+      statusBadge = "Hujan";
+    } else {
+      isSafe = true;
+      statusBadge = "Cerah";
+    }
+    
+    sensorValue = val.formatted || `${val.value} ${val.unit || ''}`;
+  }
 
   return (
     <ScreenShell>
@@ -29,10 +64,10 @@ const LaundryStatus = ({ navigation, route }) => {
               <View key={item} style={styles.hanger} />
             ))}
           </View>
-          <Text style={styles.position}>Posisi: {status.position}</Text>
-          <View style={[styles.modePill, status.safe && styles.safePill]}>
-            <Text style={[styles.modeText, status.safe && styles.safeText]}>
-              {status.safe ? "Cerah - aman" : "Otomatis aktif"}
+          <Text style={styles.position}>Posisi: {isSafe ? "Luar" : "Dalam"}</Text>
+          <View style={[styles.modePill, isSafe && styles.safePill]}>
+            <Text style={[styles.modeText, isSafe && styles.safeText]}>
+              {isSafe ? "Cerah - aman" : "Hujan - dimasukkan"}
             </Text>
           </View>
         </View>
@@ -40,12 +75,18 @@ const LaundryStatus = ({ navigation, route }) => {
         <View style={styles.infoCard}>
           <View>
             <Text style={styles.infoLabel}>Sensor hujan</Text>
-            <Text style={styles.infoTitle}>{status.title}</Text>
-            <Text style={styles.infoMeta}>{status.value} - terdeteksi 5 menit lalu</Text>
+            {loading ? (
+              <ActivityIndicator size="small" color="#7B61FF" style={{ marginTop: 4, alignSelf: "flex-start" }} />
+            ) : (
+              <>
+                <Text style={styles.infoTitle}>{rainSensor ? rainSensor.name : "Sensor Hujan"}</Text>
+                <Text style={styles.infoMeta}>{sensorValue}</Text>
+              </>
+            )}
           </View>
-          <View style={[styles.weatherBadge, status.safe && styles.weatherBadgeSafe]}>
-            <Text style={[styles.weatherText, status.safe && styles.weatherTextSafe]}>
-              {status.badge}
+          <View style={[styles.weatherBadge, isSafe && styles.weatherBadgeSafe]}>
+            <Text style={[styles.weatherText, isSafe && styles.weatherTextSafe]}>
+              {statusBadge}
             </Text>
           </View>
         </View>
@@ -57,9 +98,11 @@ const LaundryStatus = ({ navigation, route }) => {
 
         <View style={styles.historyCard}>
           <Text style={styles.infoLabel}>Riwayat hari ini</Text>
-          {status.history.map((item) => (
-            <Text key={item} style={styles.historyText}>{item}</Text>
-          ))}
+          {!rainSensor ? (
+             <Text style={styles.historyText}>Belum ada riwayat</Text>
+          ) : (
+             <Text style={styles.historyText}>Sensor aktif dan memantau cuaca.</Text>
+          )}
         </View>
 
         <AnimatedPressable

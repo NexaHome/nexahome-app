@@ -1,133 +1,124 @@
 import React, { useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import * as SecureStore from "expo-secure-store";
-import { gql, useMutation } from "@apollo/client";
+import { ScrollView, StyleSheet, Text, TextInput, View, ActivityIndicator, Alert } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-
-const CREATE_ROOM = gql`
-  mutation CreateRoom($createRoomInput: CreateRoomInput!) {
-    createRoom(createRoomInput: $createRoomInput) {
-      _id
-      name
-    }
-  }
-`;
-
-const UPDATE_ROOM = gql`
-  mutation UpdateRoom($id: String!, $updateRoomInput: UpdateRoomInput!) {
-    updateRoom(id: $id, updateRoomInput: $updateRoomInput) {
-      _id
-      name
-    }
-  }
-`;
-
-const DELETE_ROOM = gql`
-  mutation DeleteRoom($id: String!) {
-    deleteRoom(id: $id)
-  }
-`;
+import { postGraphQL } from "../utils/api";
 
 const AddRoom = ({ navigation, route }) => {
   const isEdit = route.params?.mode === "edit";
   const roomId = route.params?.roomId;
+  
   const [name, setName] = useState(route.params?.roomName || "");
-  const [area, setArea] = useState("Luar rumah");
-  const [icon, setIcon] = useState("Jemuran");
-
-  const [createRoom, { loading: creating }] = useMutation(CREATE_ROOM);
-  const [updateRoom, { loading: updating }] = useMutation(UPDATE_ROOM);
-  const [deleteRoom, { loading: deleting }] = useMutation(DELETE_ROOM);
+  const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert("Error", "Nama room wajib diisi");
+      Alert.alert("Error", "Nama ruangan tidak boleh kosong");
       return;
     }
 
     try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem("token");
+      const activeHomeId = await AsyncStorage.getItem("activeHomeId");
+      
+      let query, variables;
+
       if (isEdit) {
-        if (!roomId) {
-          Alert.alert("Error", "Room ID tidak ditemukan");
-          return;
-        }
-
-        await updateRoom({
-          variables: {
-            id: roomId,
-            updateRoomInput: { name: name.trim() },
-          },
-        });
-
-        Alert.alert("Sukses", "Room berhasil diperbarui");
-        navigation.goBack();
-        return;
-      }
-
-      const token = await SecureStore.getItemAsync("token");
-      const homeId = await SecureStore.getItemAsync("activeHomeId");
-
-      if (!token) {
-        Alert.alert("Session habis", "Silakan login ulang");
-        navigation.replace("Login");
-        return;
-      }
-
-      if (!homeId) {
-        Alert.alert("Error", "Home aktif belum dipilih");
-        return;
-      }
-
-      await createRoom({
-        variables: {
-          createRoomInput: { name: name.trim() },
-        },
-        context: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "x-home-id": homeId,
-          },
-        },
-      });
-
-      Alert.alert("Sukses", "Room berhasil ditambahkan");
-      navigation.goBack();
-    } catch (error) {
-      const msg = error?.message || "Gagal menyimpan room";
-      Alert.alert("Error", msg);
-      console.log(error);
-    }
-  };
-
-  const handleDelete = () => {
-    if (!roomId) {
-      Alert.alert("Error", "Room ID tidak ditemukan");
-      return;
-    }
-
-    Alert.alert("Hapus room?", "Room ini akan dihapus permanen.", [
-      { text: "Batal", style: "cancel" },
-      {
-        text: "Hapus",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteRoom({ variables: { id: roomId } });
-            Alert.alert("Sukses", "Room berhasil dihapus");
-            navigation.goBack();
-          } catch (error) {
-            const msg = error?.message || "Gagal menghapus room";
-            Alert.alert("Error", msg);
-            console.log(error);
+        query = `
+          mutation UpdateRoom($id: String!, $updateRoomInput: UpdateRoomInput!) {
+            updateRoom(id: $id, updateRoomInput: $updateRoomInput) {
+              _id
+              name
+            }
           }
-        },
-      },
-    ]);
+        `;
+        variables = {
+          id: roomId,
+          updateRoomInput: { name }
+        };
+      } else {
+        query = `
+          mutation CreateRoom($createRoomInput: CreateRoomInput!) {
+            createRoom(createRoomInput: $createRoomInput) {
+              _id
+              name
+            }
+          }
+        `;
+        variables = {
+          createRoomInput: { name }
+        };
+      }
+
+      const response = await postGraphQL(
+        { query, variables },
+        { 
+          Authorization: `Bearer ${token}`,
+          'x-home-id': activeHomeId
+        }
+      );
+      
+      const result = await response.json();
+      if (result.errors) {
+        throw new Error(result.errors[0].message || "Gagal menyimpan ruangan");
+      }
+      
+      Alert.alert("Sukses", `Ruangan berhasil ${isEdit ? 'diperbarui' : 'ditambahkan'}!`, [
+        { text: "OK", onPress: () => navigation.goBack() }
+      ]);
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const isLoading = creating || updating || deleting;
+  const handleDelete = async () => {
+    Alert.alert(
+      "Konfirmasi Hapus",
+      "Apakah Anda yakin ingin menghapus ruangan ini?",
+      [
+        { text: "Batal", style: "cancel" },
+        { 
+          text: "Hapus", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setDeleting(true);
+              const token = await AsyncStorage.getItem("token");
+              
+              const query = `
+                mutation DeleteRoom($id: String!) {
+                  deleteRoom(id: $id)
+                }
+              `;
+              
+              const response = await postGraphQL(
+                { query, variables: { id: roomId } },
+                { Authorization: `Bearer ${token}` }
+              );
+              
+              const result = await response.json();
+              if (result.errors) {
+                throw new Error(result.errors[0].message || "Gagal menghapus ruangan");
+              }
+              
+              Alert.alert("Sukses", "Ruangan berhasil dihapus!", [
+                { text: "OK", onPress: () => navigation.replace("Dashboard") }
+              ]);
+            } catch (error) {
+              Alert.alert("Error", error.message);
+              setDeleting(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   return (
     <ScreenShell>
@@ -145,27 +136,12 @@ const AddRoom = ({ navigation, route }) => {
 
         <View style={styles.formCard}>
           <Text style={styles.label}>Nama room</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="Contoh: Teras"
-          />
-
-          <Text style={styles.label}>Area / lantai</Text>
-          <TextInput
-            style={styles.input}
-            value={area}
-            onChangeText={setArea}
-            placeholder="Contoh: Luar rumah"
-          />
-
-          <Text style={styles.label}>Icon / kategori</Text>
-          <TextInput
-            style={styles.input}
-            value={icon}
-            onChangeText={setIcon}
-            placeholder="Contoh: Jemuran"
+          <TextInput 
+            style={styles.input} 
+            value={name} 
+            onChangeText={setName} 
+            placeholder="Contoh: Teras, Dapur, Ruang Tamu" 
+            editable={!loading && !deleting}
           />
         </View>
 
@@ -173,38 +149,35 @@ const AddRoom = ({ navigation, route }) => {
         <View style={styles.previewCard}>
           <View>
             <Text style={styles.previewTitle}>{name || "Room baru"}</Text>
-            <Text style={styles.previewMeta}>
-              {area || "Belum diatur"} - {icon || "Kategori"}
-            </Text>
           </View>
           <View style={styles.previewBadge}>
-            <Text style={styles.previewBadgeText}>Ready</Text>
+            <Text style={styles.previewBadgeText}>{isEdit ? "Tersimpan" : "Baru"}</Text>
           </View>
         </View>
 
-        <AnimatedPressable
-          style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+        <AnimatedPressable 
+          style={[styles.saveButton, (loading || deleting) && { opacity: 0.7 }]} 
           onPress={handleSave}
-          disabled={isLoading}
+          disabled={loading || deleting}
         >
-          <Text style={styles.saveText}>
-            {isLoading
-              ? "Menyimpan..."
-              : isEdit
-              ? "Simpan perubahan"
-              : "Tambah room"}
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" size="small" />
+          ) : (
+            <Text style={styles.saveText}>{isEdit ? "Simpan perubahan" : "Tambah room"}</Text>
+          )}
         </AnimatedPressable>
-
+        
         {isEdit && (
-          <AnimatedPressable
-            style={[styles.deleteButton, isLoading && styles.deleteButtonDisabled]}
+          <AnimatedPressable 
+            style={[styles.deleteButton, (loading || deleting) && { opacity: 0.7 }]} 
             onPress={handleDelete}
-            disabled={isLoading}
+            disabled={loading || deleting}
           >
-            <Text style={styles.deleteText}>
-              {deleting ? "Menghapus..." : "Hapus room"}
-            </Text>
+            {deleting ? (
+              <ActivityIndicator color="#FF5C7A" size="small" />
+            ) : (
+              <Text style={styles.deleteText}>Hapus room</Text>
+            )}
           </AnimatedPressable>
         )}
       </ScrollView>
@@ -277,7 +250,6 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   previewTitle: { color: "#0A0F2C", fontSize: 17, fontWeight: "900" },
-  previewMeta: { color: "#64748B", fontSize: 12.5, marginTop: 5 },
   previewBadge: {
     paddingHorizontal: 12,
     paddingVertical: 7,
@@ -294,7 +266,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  saveButtonDisabled: { opacity: 0.7 },
   saveText: { color: "#FFFFFF", fontSize: 14, fontWeight: "900" },
   deleteButton: {
     height: 48,
@@ -305,7 +276,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 10,
   },
-  deleteButtonDisabled: { opacity: 0.7 },
   deleteText: { color: "#FF5C7A", fontSize: 14, fontWeight: "900" },
 });
 

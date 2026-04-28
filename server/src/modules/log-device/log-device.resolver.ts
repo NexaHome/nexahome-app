@@ -6,6 +6,7 @@ import { CurrentHomeId, CurrentUser } from '../../common/decorators/current-user
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { CreateLogDeviceInput } from './dto/create-log-device.input';
 import { LogDeviceService } from './log-device.service';
+import { Device } from '../../models/device.model';
 
 @Resolver(() => LogDevice)
 @UseGuards(GqlAuthGuard)
@@ -38,5 +39,10 @@ export class LogDeviceResolver {
   @ResolveField(() => String)
   value(@Parent() log: LogDevice) {
     return typeof log.value === 'object' ? JSON.stringify(log.value) : String(log.value);
+  }
+
+  @ResolveField(() => Device, { nullable: true })
+  async device_info(@Parent() log: LogDevice) {
+    return Device.find(log.device_id.toString());
   }
 }
