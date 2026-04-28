@@ -123,9 +123,8 @@ const Members = ({ navigation }) => {
           query: `
             mutation AddHomeMember($homeId: String!, $addHomeMemberInput: AddHomeMemberInput!) {
               addHomeMember(homeId: $homeId, addHomeMemberInput: $addHomeMemberInput) {
-                userId
-                name
-                email
+                _id
+                user_id
               }
             }
           `,
