@@ -12,8 +12,8 @@ import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
 import { sensors } from "../data/homeData";
-import { useTheme } from "../theme";
-import { postGraphQL } from "../utils/api";
+import { useTheme } from "../../theme";
+import { postGraphQL } from "../../utils/api";
 
 const { width } = Dimensions.get("window");
 const PAGE_PADDING = 20;
@@ -108,8 +108,10 @@ const Dashboard = ({ navigation }) => {
   };
 
   useEffect(() => {
-    loadDashboard();
-    const unsubscribe = navigation.addListener("focus", loadDashboard);
+    const unsubscribe = navigation.addListener("focus", () => {
+      loadDashboard();
+    });
+
     return unsubscribe;
   }, [navigation]);
 

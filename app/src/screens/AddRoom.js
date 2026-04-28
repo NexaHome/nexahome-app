@@ -1,133 +1,91 @@
 import React, { useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import * as SecureStore from "expo-secure-store";
-import { gql, useMutation } from "@apollo/client";
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-
-const CREATE_ROOM = gql`
-  mutation CreateRoom($createRoomInput: CreateRoomInput!) {
-    createRoom(createRoomInput: $createRoomInput) {
-      _id
-      name
-    }
-  }
-`;
-
-const UPDATE_ROOM = gql`
-  mutation UpdateRoom($id: String!, $updateRoomInput: UpdateRoomInput!) {
-    updateRoom(id: $id, updateRoomInput: $updateRoomInput) {
-      _id
-      name
-    }
-  }
-`;
-
-const DELETE_ROOM = gql`
-  mutation DeleteRoom($id: String!) {
-    deleteRoom(id: $id)
-  }
-`;
+import { postGraphQL } from "../../utils/api";
 
 const AddRoom = ({ navigation, route }) => {
   const isEdit = route.params?.mode === "edit";
-  const roomId = route.params?.roomId;
-  const [name, setName] = useState(route.params?.roomName || "");
+  const [name, setName] = useState(route.params?.roomName || "Teras");
   const [area, setArea] = useState("Luar rumah");
   const [icon, setIcon] = useState("Jemuran");
-
-  const [createRoom, { loading: creating }] = useMutation(CREATE_ROOM);
-  const [updateRoom, { loading: updating }] = useMutation(UPDATE_ROOM);
-  const [deleteRoom, { loading: deleting }] = useMutation(DELETE_ROOM);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert("Error", "Nama room wajib diisi");
+      setError("Nama room wajib diisi.");
       return;
     }
 
     try {
-      if (isEdit) {
-        if (!roomId) {
-          Alert.alert("Error", "Room ID tidak ditemukan");
-          return;
-        }
-
-        await updateRoom({
-          variables: {
-            id: roomId,
-            updateRoomInput: { name: name.trim() },
-          },
-        });
-
-        Alert.alert("Sukses", "Room berhasil diperbarui");
-        navigation.goBack();
-        return;
-      }
+      setSaving(true);
+      setError("");
 
       const token = await SecureStore.getItemAsync("token");
-      const homeId = await SecureStore.getItemAsync("activeHomeId");
-
       if (!token) {
-        Alert.alert("Session habis", "Silakan login ulang");
-        navigation.replace("Login");
-        return;
+        throw new Error("Token tidak ditemukan, silakan login ulang.");
       }
 
+      const homeId = await SecureStore.getItemAsync("activeHomeId");
       if (!homeId) {
-        Alert.alert("Error", "Home aktif belum dipilih");
-        return;
+        throw new Error("Home aktif tidak ditemukan.");
       }
 
-      await createRoom({
-        variables: {
-          createRoomInput: { name: name.trim() },
-        },
-        context: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "x-home-id": homeId,
-          },
-        },
-      });
-
-      Alert.alert("Sukses", "Room berhasil ditambahkan");
-      navigation.goBack();
-    } catch (error) {
-      const msg = error?.message || "Gagal menyimpan room";
-      Alert.alert("Error", msg);
-      console.log(error);
-    }
-  };
-
-  const handleDelete = () => {
-    if (!roomId) {
-      Alert.alert("Error", "Room ID tidak ditemukan");
-      return;
-    }
-
-    Alert.alert("Hapus room?", "Room ini akan dihapus permanen.", [
-      { text: "Batal", style: "cancel" },
-      {
-        text: "Hapus",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteRoom({ variables: { id: roomId } });
-            Alert.alert("Sukses", "Room berhasil dihapus");
-            navigation.goBack();
-          } catch (error) {
-            const msg = error?.message || "Gagal menghapus room";
-            Alert.alert("Error", msg);
-            console.log(error);
+      const mutation = isEdit
+        ? `
+          mutation UpdateRoom($id: String!, $updateRoomInput: UpdateRoomInput!) {
+            updateRoom(id: $id, updateRoomInput: $updateRoomInput) {
+              _id
+              name
+            }
           }
-        },
-      },
-    ]);
-  };
+        `
+        : `
+          mutation CreateRoom($createRoomInput: CreateRoomInput!) {
+            createRoom(createRoomInput: $createRoomInput) {
+              _id
+              name
+            }
+          }
+        `;
 
-  const isLoading = creating || updating || deleting;
+      const variables = isEdit
+        ? { id: route.params?.roomId, updateRoomInput: { name: name.trim() } }
+        : { createRoomInput: { name: name.trim() } };
+
+      const response = await postGraphQL(
+        {
+          query: mutation,
+          variables,
+        },
+        {
+          Authorization: `Bearer ${token}`,
+          "x-home-id": homeId,
+        },
+      );
+
+      const result = await response.json();
+      if (!response.ok || result.errors?.length) {
+        throw new Error(result.errors?.[0]?.message || "Gagal menyimpan room");
+      }
+
+      navigation.goBack();
+    } catch (saveError) {
+      setError(saveError.message || "Terjadi kesalahan");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <ScreenShell>
@@ -182,29 +140,24 @@ const AddRoom = ({ navigation, route }) => {
           </View>
         </View>
 
-        <AnimatedPressable
-          style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={isLoading}
-        >
-          <Text style={styles.saveText}>
-            {isLoading
-              ? "Menyimpan..."
-              : isEdit
-              ? "Simpan perubahan"
-              : "Tambah room"}
-          </Text>
-        </AnimatedPressable>
+        {!!error && <Text style={styles.errorText}>{error}</Text>}
 
-        {isEdit && (
-          <AnimatedPressable
-            style={[styles.deleteButton, isLoading && styles.deleteButtonDisabled]}
-            onPress={handleDelete}
-            disabled={isLoading}
-          >
-            <Text style={styles.deleteText}>
-              {deleting ? "Menghapus..." : "Hapus room"}
+        <AnimatedPressable
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.saveText}>
+              {isEdit ? "Simpan perubahan" : "Tambah room"}
             </Text>
+          )}
+        </AnimatedPressable>
+        {isEdit && (
+          <AnimatedPressable style={styles.deleteButton}>
+            <Text style={styles.deleteText}>Hapus room</Text>
           </AnimatedPressable>
         )}
       </ScrollView>
@@ -296,6 +249,12 @@ const styles = StyleSheet.create({
   },
   saveButtonDisabled: { opacity: 0.7 },
   saveText: { color: "#FFFFFF", fontSize: 14, fontWeight: "900" },
+  errorText: {
+    color: "#FF5C7A",
+    fontSize: 12,
+    marginBottom: 10,
+    fontWeight: "800",
+  },
   deleteButton: {
     height: 48,
     borderRadius: 9,
@@ -305,7 +264,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 10,
   },
-  deleteButtonDisabled: { opacity: 0.7 },
   deleteText: { color: "#FF5C7A", fontSize: 14, fontWeight: "900" },
 });
 
