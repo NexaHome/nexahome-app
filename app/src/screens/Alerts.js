@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-nat
 import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
-import { getAntaresLogs } from "../utils/antares";
+import { getAntaresLogs } from "../../utils/antares";
 
 const toneStyle = {
   Critical: { card: "#FFF0F3", border: "#FF5C7A", text: "#FF5C7A" },

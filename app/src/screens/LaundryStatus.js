@@ -4,7 +4,7 @@ import AnimatedPressable from "../components/AnimatedPressable";
 import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
 import Toggle from "../components/Toggle";
-import { getSensorsByHome } from "../utils/antares";
+import { getSensorsByHome } from "../../utils/antares";
 
 const LaundryStatus = ({ navigation, route }) => {
   const [autoMode, setAutoMode] = useState(true);
