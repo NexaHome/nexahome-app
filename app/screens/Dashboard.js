@@ -23,6 +23,7 @@ const CARD_WIDTH = (width - PAGE_PADDING * 2 - CARD_GAP) / 2;
 const Dashboard = ({ navigation }) => {
   const { mode, toggleMode } = useTheme();
   const [user, setUser] = useState({ name: "User", email: "" });
+  const [homes, setHomes] = useState([]);
   const [roomItems, setRoomItems] = useState([
     { roomId: "add", name: "+ Add room", isAdd: true },
   ]);
@@ -30,9 +31,81 @@ const Dashboard = ({ navigation }) => {
     roomsCount: 0,
     activeDevicesCount: 0,
     homeStatus: "No Home",
+    homeName: "Rumah Utama",
   });
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [roomError, setRoomError] = useState("");
+  const [selectedHomeIdState, setSelectedHomeIdState] = useState(null);
+  const [homeResultRaw, setHomeResultRaw] = useState(null);
+
+  const loadRoomsForHome = async (token, homeId) => {
+    const homeResponse = await postGraphQL(
+      {
+        query: `
+          query {
+            home {
+              _id
+              name
+            }
+            roomsByHomeBasic {
+              _id
+              name
+            }
+          }
+        `,
+      },
+      {
+        Authorization: `Bearer ${token}`,
+        "x-home-id": homeId,
+      },
+    );
+
+    const homeResult = await homeResponse.json();
+    console.log("DASHBOARD: homeResult", JSON.stringify(homeResult));
+    setHomeResultRaw(JSON.stringify(homeResult?.data || {}));
+
+    if (homeResult?.errors?.length) {
+      const message =
+        homeResult.errors[0]?.message || "Gagal memuat data dashboard";
+      setRoomError(
+        message.toLowerCase().includes("home not found")
+          ? "Belum ada home untuk akun ini"
+          : message,
+      );
+    }
+
+    if (homeResult?.data?.roomsByHomeBasic?.length) {
+      setRoomItems([
+        ...homeResult.data.roomsByHomeBasic.map((room) => ({
+          roomId: room._id,
+          name: room.name,
+          isAdd: false,
+        })),
+        { roomId: "add", name: "+ Add room", isAdd: true },
+      ]);
+    } else {
+      setRoomItems([{ roomId: "add", name: "+ Add room", isAdd: true }]);
+    }
+
+    const homeData = homeResult?.data?.home;
+    const roomsCount = homeResult?.data?.roomsByHomeBasic?.length ?? 0;
+
+    if (homeData) {
+      setSummary({
+        roomsCount,
+        activeDevicesCount: 0,
+        homeStatus: "Online",
+        homeName: homeData.name,
+      });
+    } else {
+      setSummary({
+        roomsCount: 0,
+        activeDevicesCount: 0,
+        homeStatus: "No Home",
+        homeName: "Rumah Utama",
+      });
+    }
+  };
 
   useEffect(() => {
     loadDashboard();
@@ -100,10 +173,15 @@ const Dashboard = ({ navigation }) => {
       }
 
       const homes = homesResult?.data?.homes || [];
+      setHomes(homes);
       const savedHomeId = await AsyncStorage.getItem("activeHomeId");
-      const savedHomeExists = homes.some((home) => home._id === savedHomeId);
       const selectedHomeId =
-        (savedHomeExists && savedHomeId) || homes[0]?._id || null;
+        homes.find((home) => home._id === savedHomeId)?._id || homes[0]?._id || null;
+      // debug: expose selectedHomeId to UI and logs
+      console.log("DASHBOARD: homes list:", homes);
+      console.log("DASHBOARD: savedHomeId:", savedHomeId);
+      console.log("DASHBOARD: selectedHomeId:", selectedHomeId);
+      setSelectedHomeIdState(selectedHomeId);
 
       if (!selectedHomeId) {
         setRoomItems([{ roomId: "add", name: "+ Add room", isAdd: true }]);
@@ -111,75 +189,14 @@ const Dashboard = ({ navigation }) => {
           roomsCount: 0,
           activeDevicesCount: 0,
           homeStatus: "No Home",
+          homeName: "Rumah Utama",
         });
         setRoomError("Belum ada home untuk akun ini");
         return;
       }
 
       await AsyncStorage.setItem("activeHomeId", selectedHomeId);
-
-      const homeResponse = await postGraphQL(
-        {
-          query: `
-            query {
-              roomsByHome {
-                roomId
-                name
-                subtitle
-                activeDevices
-                totalDevices
-              }
-              dashboardHome {
-                homeId
-                homeName
-                homeStatus
-                roomsCount
-                activeDevicesCount
-              }
-            }
-          `,
-        },
-        {
-          Authorization: `Bearer ${token}`,
-          "x-home-id": selectedHomeId,
-        },
-      );
-
-      const homeResult = await homeResponse.json();
-
-      if (homeResult?.errors?.length) {
-        const message =
-          homeResult.errors[0]?.message || "Gagal memuat data dashboard";
-        setRoomError(
-          message.toLowerCase().includes("home not found")
-            ? "Belum ada home untuk akun ini"
-            : message,
-        );
-      }
-
-      if (homeResult?.data?.roomsByHome?.length) {
-        setRoomItems([
-          ...homeResult.data.roomsByHome,
-          { roomId: "add", name: "+ Add room", isAdd: true },
-        ]);
-      } else {
-        setRoomItems([{ roomId: "add", name: "+ Add room", isAdd: true }]);
-      }
-
-      if (homeResult?.data?.dashboardHome) {
-        setSummary({
-          roomsCount: homeResult.data.dashboardHome.roomsCount ?? 0,
-          activeDevicesCount:
-            homeResult.data.dashboardHome.activeDevicesCount ?? 0,
-          homeStatus: homeResult.data.dashboardHome.homeStatus ?? "No Home",
-        });
-      } else {
-        setSummary({
-          roomsCount: 0,
-          activeDevicesCount: 0,
-          homeStatus: "No Home",
-        });
-      }
+      await loadRoomsForHome(token, selectedHomeId);
     } catch (error) {
       console.log("DASHBOARD ERROR:", error);
       setRoomError(
@@ -192,6 +209,7 @@ const Dashboard = ({ navigation }) => {
         roomsCount: 0,
         activeDevicesCount: 0,
         homeStatus: "No Home",
+        homeName: "Rumah Utama",
       });
     } finally {
       setLoadingRooms(false);
@@ -206,6 +224,26 @@ const Dashboard = ({ navigation }) => {
         .slice(0, 2)
         .toUpperCase()
     : "NH";
+
+  const handleSelectHome = async (homeId) => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        navigation.replace("Login");
+        return;
+      }
+
+      setLoadingRooms(true);
+      setRoomError("");
+      setSelectedHomeIdState(homeId);
+      await AsyncStorage.setItem("activeHomeId", homeId);
+      await loadRoomsForHome(token, homeId);
+    } catch (error) {
+      setRoomError(error?.message || "Gagal memuat home");
+    } finally {
+      setLoadingRooms(false);
+    }
+  };
 
   return (
     <ScreenShell>
@@ -236,7 +274,7 @@ const Dashboard = ({ navigation }) => {
 
         <View style={styles.homeCard}>
           <View style={styles.homeCopy}>
-            <Text style={styles.homeTitle}>Rumah Utama</Text>
+            <Text style={styles.homeTitle}>{summary.homeName}</Text>
             <Text style={styles.muted}>
               {summary.roomsCount} rooms - {summary.activeDevicesCount} devices
               active
@@ -247,7 +285,52 @@ const Dashboard = ({ navigation }) => {
           </View>
         </View>
 
+        {homes.length > 1 && (
+          <View style={styles.homeSelectorWrap}>
+            <Text style={styles.selectorLabel}>Pilih home</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {homes.map((home) => {
+                const isActive = home._id === selectedHomeIdState;
+                return (
+                  <AnimatedPressable
+                    key={home._id}
+                    style={[
+                      styles.homeChip,
+                      isActive && styles.homeChipActive,
+                    ]}
+                    onPress={() => handleSelectHome(home._id)}
+                  >
+                    <Text
+                      style={[
+                        styles.homeChipText,
+                        isActive && styles.homeChipTextActive,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {home.name}
+                    </Text>
+                  </AnimatedPressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
         <Text style={styles.sectionTitle}>Rooms</Text>
+
+        {selectedHomeIdState && (
+          <View style={{ paddingHorizontal: 4, marginBottom: 8 }}>
+            <Text style={{ color: '#94A3B8', fontSize: 12 }}>Debug: selectedHomeId: {selectedHomeIdState}</Text>
+            {homeResultRaw && (
+              <Text
+                style={{ color: '#94A3B8', fontSize: 11, marginTop: 6 }}
+                numberOfLines={4}
+              >
+                Debug: rooms response: {homeResultRaw}
+              </Text>
+            )}
+          </View>
+        )}
 
         {loadingRooms ? (
           <Text style={styles.loadingText}>Loading rooms from server...</Text>
@@ -288,13 +371,11 @@ const Dashboard = ({ navigation }) => {
                         {item.name}
                       </Text>
                       <Text style={styles.muted} numberOfLines={1}>
-                        {item.subtitle || "No description"}
+                        Room
                       </Text>
                     </View>
                     <View style={styles.roomMeta}>
-                      <Text style={styles.roomCount}>
-                        {item.activeDevices ?? 0}/{item.totalDevices ?? 0}
-                      </Text>
+                      <Text style={styles.roomCount}>Open</Text>
                       <View style={styles.openButton}>
                         <Text style={styles.openButtonText}>Open</Text>
                       </View>
@@ -445,6 +526,39 @@ const styles = StyleSheet.create({
     color: "#64748B",
     fontSize: 13.5,
     marginTop: 5,
+  },
+  homeSelectorWrap: {
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  selectorLabel: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  homeChip: {
+    height: 36,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: "#D8DEE9",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  homeChipActive: {
+    borderColor: "#0A0F2C",
+    backgroundColor: "#0A0F2C",
+  },
+  homeChipText: {
+    color: "#0A0F2C",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  homeChipTextActive: {
+    color: "#FFFFFF",
   },
   onlinePill: {
     paddingHorizontal: 14,
