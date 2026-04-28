@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Switch,
@@ -10,6 +9,8 @@ import {
   Alert,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { SafeAreaView } from "react-native-safe-area-context";
+import BottomNav from "../components/BottomNav";
 import { postGraphQL } from "../../utils/api";
 
 export default function Profile({ navigation }) {
@@ -71,13 +72,22 @@ export default function Profile({ navigation }) {
     navigation.navigate("Login");
   };
 
-  const MenuRow = ({ title, value, onPress, rightType = "arrow" }) => (
+  const MenuRow = ({
+    title,
+    value,
+    onPress,
+    rightType = "arrow",
+    subtitle,
+  }) => (
     <TouchableOpacity
       style={styles.menuRow}
       onPress={onPress}
       activeOpacity={0.8}
     >
-      <Text style={styles.menuTitle}>{title}</Text>
+      <View style={styles.menuTextWrap}>
+        <Text style={styles.menuTitle}>{title}</Text>
+        {subtitle ? <Text style={styles.menuSubtitle}>{subtitle}</Text> : null}
+      </View>
 
       {rightType === "switch" ? (
         <Switch
@@ -110,17 +120,20 @@ export default function Profile({ navigation }) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
+        <View style={styles.profileCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+
+          <Text style={styles.name}>{user?.name || "No Name"}</Text>
+          <Text style={styles.email}>{user?.email || "No Email"}</Text>
+
+          <TouchableOpacity style={styles.editButton}>
+            <Text style={styles.editButtonText}>Edit profile</Text>
+          </TouchableOpacity>
         </View>
 
-        <Text style={styles.name}>{user?.name || "No Name"}</Text>
-        <Text style={styles.email}>{user?.email || "No Email"}</Text>
-
-        <TouchableOpacity style={styles.editButton}>
-          <Text style={styles.editButtonText}>Edit profile</Text>
-        </TouchableOpacity>
-
+        <Text style={styles.sectionLabel}>Preferences</Text>
         <View style={styles.menuGroup}>
           <MenuRow
             title="Notifications"
@@ -136,39 +149,19 @@ export default function Profile({ navigation }) {
             onPress={() => setDarkMode(!darkMode)}
           />
 
-          <MenuRow title="Language" value="Indonesia" onPress={() => {}} />
-          <MenuRow title="Change password" onPress={() => {}} />
-          <MenuRow title="Privacy & security" onPress={() => {}} />
-          <MenuRow title="About app" value="v1.0.0" onPress={() => {}} />
+          <MenuRow
+            title="Members"
+            subtitle="Manage home members and permissions"
+            value="Open"
+            onPress={() => navigation.navigate("Members")}
+          />
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
-
-      <View style={styles.bottomNav}>
-        <TouchableOpacity onPress={() => navigation.navigate("Dashboard")}>
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate("SensorMonitor")}>
-          <Text style={styles.navText}>Sensors</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate("Schedule")}>
-          <Text style={styles.navText}>Schedule</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate("Alerts")}>
-          <Text style={styles.navText}>Alerts</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate("Profile")}>
-          <Text style={styles.activeNavText}>Profile</Text>
-          <View style={styles.activeLine} />
-        </TouchableOpacity>
-      </View>
+      <BottomNav active="profile" navigation={navigation} />
     </SafeAreaView>
   );
 }
@@ -180,15 +173,29 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 24,
-    paddingTop: 28,
-    paddingBottom: 100,
+    paddingTop: 40,
+    paddingBottom: 120,
+  },
+  profileCard: {
+    width: "100%",
     alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 24,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    shadowColor: "#0A0F2C",
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
   avatar: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
-    backgroundColor: "#DDF0FF",
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#EAF4FF",
     borderWidth: 2,
     borderColor: "#8CC8FF",
     justifyContent: "center",
@@ -196,34 +203,43 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   avatarText: {
-    fontSize: 32,
+    fontSize: 34,
     color: "#2563EB",
-    fontWeight: "500",
+    fontWeight: "900",
   },
   name: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "800",
     color: "#1F2937",
+    textAlign: "center",
   },
   email: {
-    fontSize: 16,
+    fontSize: 15,
     color: "#9CA3AF",
     marginTop: 4,
     marginBottom: 16,
+    textAlign: "center",
   },
   editButton: {
     borderWidth: 1,
     borderColor: "#D1D5DB",
-    borderRadius: 12,
+    borderRadius: 999,
     paddingHorizontal: 22,
-    paddingVertical: 10,
-    marginBottom: 24,
+    paddingVertical: 11,
     backgroundColor: "#FFFFFF",
   },
   editButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     color: "#4B5563",
-    fontWeight: "500",
+    fontWeight: "700",
+  },
+  sectionLabel: {
+    marginTop: 22,
+    marginBottom: 10,
+    color: "#6B7280",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.8,
   },
   menuGroup: {
     width: "100%",
@@ -234,19 +250,29 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    borderRadius: 14,
+    borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 15,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+  menuTextWrap: {
+    flex: 1,
+    paddingRight: 10,
+  },
   menuTitle: {
-    fontSize: 18,
-    color: "#374151",
+    fontSize: 16,
+    color: "#111827",
+    fontWeight: "800",
+  },
+  menuSubtitle: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 4,
   },
   menuValue: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#9CA3AF",
     marginRight: 6,
   },
@@ -263,45 +289,15 @@ const styles = StyleSheet.create({
     width: "100%",
     borderWidth: 1.5,
     borderColor: "#FCA5A5",
-    borderRadius: 14,
-    paddingVertical: 16,
+    borderRadius: 16,
+    paddingVertical: 15,
     alignItems: "center",
     marginTop: 20,
     backgroundColor: "#FFFFFF",
   },
   logoutButtonText: {
     color: "#EF4444",
-    fontSize: 18,
-    fontWeight: "500",
-  },
-  bottomNav: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 72,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    paddingHorizontal: 8,
-  },
-  navText: {
-    color: "#B0B0B0",
-    fontSize: 14,
-  },
-  activeNavText: {
-    color: "#1F2937",
-    fontSize: 14,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  activeLine: {
-    marginTop: 4,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: "#1F2937",
+    fontSize: 16,
+    fontWeight: "800",
   },
 });
