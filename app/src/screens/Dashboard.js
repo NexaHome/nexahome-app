@@ -440,7 +440,7 @@ const Dashboard = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  content: { padding: PAGE_PADDING, paddingBottom: 26 },
+  content: { padding: PAGE_PADDING, paddingBottom: 60 },
   modeRow: {
     flexDirection: "row",
     justifyContent: "flex-end",

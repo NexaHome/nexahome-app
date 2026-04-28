@@ -329,24 +329,12 @@ const DeviceControl = ({ route, navigation }) => {
           <View style={styles.titleRow}>
             <View>
               <Text style={styles.title}>{deviceName}</Text>
-              <Text style={styles.subtitle}>{deviceType}</Text>
             </View>
             <View style={styles.onlinePill}>
               <Text style={styles.onlineText}>{onlineText}</Text>
             </View>
           </View>
-
-          {!!device?.antares_device_name && (
-            <Text style={styles.infoText}>
-              Antares: {device.antares_device_name}
-            </Text>
-          )}
-          {!!device?.last_value && (
-            <Text style={styles.infoText}>Last value: {device.last_value}</Text>
-          )}
-          {!!device?.createdAt && (
-            <Text style={styles.infoText}>Created: {device.createdAt}</Text>
-          )}
+        
 
           <View style={styles.controlRow}>
             <Text style={styles.controlLabel}>Power</Text>
