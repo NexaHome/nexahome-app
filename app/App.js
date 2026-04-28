@@ -22,6 +22,7 @@ import LaundryStatus from "./src/screens/LaundryStatus";
 import RoomDetail from "./src/screens/RoomDetail";
 import Profile from "./src/screens/Profile";
 import Schedule from "./src/screens/Schedule";
+import CreateSchedule from "./src/screens/CreateSchedule";
 import SensorMonitor from "./src/screens/SensorMonitor";
 import AIRecommendations from "./src/screens/AIRecommendations";
 import { fonts, lightColors, ThemeProvider, useTheme } from "./theme";
@@ -77,6 +78,7 @@ const AppNavigator = () => {
         <Stack.Screen name="DeviceControl" component={DeviceControl} />
         <Stack.Screen name="SensorMonitor" component={SensorMonitor} />
         <Stack.Screen name="Schedule" component={Schedule} />
+        <Stack.Screen name="CreateSchedule" component={CreateSchedule} />
         <Stack.Screen name="Automation" component={Automation} />
         <Stack.Screen name="Alerts" component={Alerts} />
         <Stack.Screen name="Members" component={Members} />
