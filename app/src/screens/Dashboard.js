@@ -61,7 +61,6 @@ const Dashboard = ({ navigation }) => {
     );
 
     const homeResult = await homeResponse.json();
-    console.log("DASHBOARD: homeResult", JSON.stringify(homeResult));
     setHomeResultRaw(JSON.stringify(homeResult?.data || {}));
 
     if (homeResult?.errors?.length) {
@@ -195,10 +194,7 @@ const Dashboard = ({ navigation }) => {
         homes.find((home) => home._id === savedHomeId)?._id ||
         homes[0]?._id ||
         null;
-      // debug: expose selectedHomeId to UI and logs
-      console.log("DASHBOARD: homes list:", homes);
-      console.log("DASHBOARD: savedHomeId:", savedHomeId);
-      console.log("DASHBOARD: selectedHomeId:", selectedHomeId);
+
       setSelectedHomeIdState(selectedHomeId);
 
       if (!selectedHomeId) {
@@ -339,22 +335,6 @@ const Dashboard = ({ navigation }) => {
         )}
 
         <Text style={styles.sectionTitle}>Rooms</Text>
-
-        {selectedHomeIdState && (
-          <View style={{ paddingHorizontal: 4, marginBottom: 8 }}>
-            <Text style={{ color: "#94A3B8", fontSize: 12 }}>
-              Debug: selectedHomeId: {selectedHomeIdState}
-            </Text>
-            {homeResultRaw && (
-              <Text
-                style={{ color: "#94A3B8", fontSize: 11, marginTop: 6 }}
-                numberOfLines={4}
-              >
-                Debug: rooms response: {homeResultRaw}
-              </Text>
-            )}
-          </View>
-        )}
 
         {loadingRooms ? (
           <Text style={styles.loadingText}>Loading rooms from server...</Text>
