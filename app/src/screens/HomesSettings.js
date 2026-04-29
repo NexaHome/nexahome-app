@@ -423,7 +423,6 @@ const HomesSettings = ({ navigation }) => {
                   <Text style={dynamicStyles.homeMeta}>
                     Invite Code: {item.invite_code || "-"}
                   </Text>
-                  <Text style={dynamicStyles.homeMeta}>ID: {item._id}</Text>
                 </View>
                 <AnimatedPressable
                   style={dynamicStyles.smallButton}
