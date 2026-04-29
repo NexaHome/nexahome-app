@@ -97,8 +97,13 @@ const Alerts = ({ navigation }) => {
             _id
             name
             category
+            room_id
           }
-          logsByHome {
+          roomsByHomeBasic {
+            _id
+            name
+          }
+          alertsByHome(limit: 50) {
             _id
             device_id
             value
@@ -119,46 +124,46 @@ const Alerts = ({ navigation }) => {
 
       if (result.data) {
         const dbDevices = result.data.devicesByHome || [];
+        const dbRooms = result.data.roomsByHomeBasic || [];
+        const roomMap = Object.fromEntries(dbRooms.map(r => [r._id, r.name]));
+        
         const deviceMap = {};
-        const categoryMap = {};
+        const deviceMeta = {};
         dbDevices.forEach((d) => {
           deviceMap[d._id] = d.name;
-          categoryMap[d._id] = (d.category || "").toLowerCase();
+          deviceMeta[d._id] = {
+            category: (d.category || "").toLowerCase(),
+            room: roomMap[d.room_id] || "No Room"
+          };
         });
 
-        const logs = result.data.logsByHome || [];
+        const logs = result.data.alertsByHome || [];
 
         const formattedAlerts = logs.map((log) => {
           let parsedValue = {};
           try {
-            if (typeof log.value === "string") {
-              parsedValue = JSON.parse(log.value);
-            } else {
-              parsedValue = log.value || {};
-            }
+            parsedValue = typeof log.value === "string" ? JSON.parse(log.value) : (log.value || {});
           } catch (e) {}
 
           const level = getStatusLevel(parsedValue.status);
-          const category = categoryMap[log.device_id] || "";
-          const icon = ICON_MAP[category] || "📡";
+          const meta = deviceMeta[log.device_id] || { category: "", room: "Unknown" };
+          const icon = ICON_MAP[meta.category] || "📡";
 
           let detail = "";
           if (parsedValue.formatted) {
-            detail = `Nilai: ${parsedValue.formatted}`;
+            detail = parsedValue.formatted;
           } else if (parsedValue.value !== undefined) {
-            detail = `Raw: ${parsedValue.value}`;
-          }
-          if (parsedValue.status) {
-            detail = `Status: ${parsedValue.status}${detail ? " · " + detail : ""}`;
+            detail = `Value: ${parsedValue.value}`;
           }
 
           return {
             id: log._id,
-            title: deviceMap[log.device_id] || "Perangkat",
+            title: deviceMap[log.device_id] || "Unknown Device",
+            room: meta.room,
             level,
             icon,
-            category,
-            detail: detail || "Tidak ada detail",
+            status: parsedValue.status || 'Active',
+            detail,
             createdAt: log.createdAt,
           };
         });
@@ -223,45 +228,61 @@ const Alerts = ({ navigation }) => {
             </Text>
           </View>
         </View>
-
-        {/* Summary Counters */}
         {!loading && alerts.length > 0 && (
           <View style={styles.summaryRow}>
-            <View style={[styles.summaryCard, { borderColor: "#FF5C7A", backgroundColor: "#FFF0F3" }]}>
-              <Text style={[styles.summaryNumber, { color: "#FF5C7A" }]}>
-                {criticalCount}
-              </Text>
+            <AnimatedPressable 
+              onPress={() => { setFilterMode("Critical"); setVisibleCount(PAGE_SIZE); }}
+              style={[styles.summaryCard, { borderColor: "#FF5C7A", backgroundColor: "#FFF1F2" }]}
+            >
+              <Text style={styles.summaryIcon}>🔴</Text>
+              <Text style={[styles.summaryNumber, { color: "#E11D48" }]}>{criticalCount}</Text>
               <Text style={styles.summaryLabel}>Critical</Text>
-            </View>
-            <View style={[styles.summaryCard, { borderColor: "#7B61FF", backgroundColor: "#F0ECFF" }]}>
-              <Text style={[styles.summaryNumber, { color: "#7B61FF" }]}>
-                {warningCount}
-              </Text>
+            </AnimatedPressable>
+            
+            <AnimatedPressable 
+              onPress={() => { setFilterMode("Warning"); setVisibleCount(PAGE_SIZE); }}
+              style={[styles.summaryCard, { borderColor: "#7B61FF", backgroundColor: "#F5F3FF" }]}
+            >
+              <Text style={styles.summaryIcon}>🟡</Text>
+              <Text style={[styles.summaryNumber, { color: "#7B61FF" }]}>{warningCount}</Text>
               <Text style={styles.summaryLabel}>Warning</Text>
-            </View>
-            <View style={[styles.summaryCard, { borderColor: "#D8DEE9", backgroundColor: "#FFFFFF" }]}>
-              <Text style={[styles.summaryNumber, { color: "#64748B" }]}>
-                {alerts.length - criticalCount - warningCount}
-              </Text>
+            </AnimatedPressable>
+
+            <AnimatedPressable 
+              onPress={() => { setFilterMode("All"); setVisibleCount(PAGE_SIZE); }}
+              style={[styles.summaryCard, { borderColor: "#F1F5F9", backgroundColor: "#F8FAFC" }]}
+            >
+              <Text style={styles.summaryIcon}>🟢</Text>
+              <Text style={[styles.summaryNumber, { color: "#475569" }]}>{alerts.length - criticalCount - warningCount}</Text>
               <Text style={styles.summaryLabel}>Normal</Text>
-            </View>
+            </AnimatedPressable>
           </View>
         )}
 
-        {/* Filters */}
+        {/* Filters Title */}
+        <View style={styles.filterHeader}>
+          <Text style={styles.filterTitle}>Filter by Severity</Text>
+          {filterMode !== "All" && (
+            <AnimatedPressable onPress={() => setFilterMode("All")}>
+              <Text style={styles.resetText}>Clear</Text>
+            </AnimatedPressable>
+          )}
+        </View>
+
+        {/* Filter Chips */}
         <View style={styles.filters}>
           {["All", "Critical", "Warning"].map((filter) => {
             const active = filterMode === filter;
             return (
               <AnimatedPressable
                 key={filter}
-                style={[styles.filter, active && styles.filterActive]}
+                style={[styles.filterChip, active && styles.filterChipActive]}
                 onPress={() => { setFilterMode(filter); setVisibleCount(PAGE_SIZE); }}
               >
                 <Text
                   style={[
-                    styles.filterText,
-                    active && styles.filterTextActive,
+                    styles.filterChipText,
+                    active && styles.filterChipTextActive,
                   ]}
                 >
                   {filter}
@@ -296,6 +317,8 @@ const Alerts = ({ navigation }) => {
         {!loading &&
           visibleAlerts.map((item) => {
             const tone = LEVEL_STYLE[item.level] || LEVEL_STYLE.Info;
+            const isCritical = item.level === "Critical";
+
             return (
               <View
                 key={item.id}
@@ -304,35 +327,28 @@ const Alerts = ({ navigation }) => {
                   { backgroundColor: tone.card, borderColor: tone.border },
                 ]}
               >
-                <View style={styles.cardIconRow}>
-                  <Text style={styles.cardIcon}>{item.icon}</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>
-                      {item.title}
-                    </Text>
-                    <Text style={styles.cardTime}>
-                      {formatTime(item.createdAt)}
-                    </Text>
+                <View style={styles.cardHeader}>
+                  <View style={[styles.iconBox, { backgroundColor: isCritical ? "#FFE4E8" : "#F1F5F9" }]}>
+                    <Text style={styles.cardIcon}>{item.icon}</Text>
                   </View>
-                  <View
-                    style={[
-                      styles.badge,
-                      { backgroundColor: tone.badge },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.badgeText,
-                        { color: tone.badgeText },
-                      ]}
-                    >
-                      {item.level}
-                    </Text>
+                  <View style={styles.cardBody}>
+                    <View style={styles.cardTopRow}>
+                      <Text style={styles.cardRoom}>{item.room}</Text>
+                      <Text style={styles.cardTime}>{formatTime(item.createdAt)}</Text>
+                    </View>
+                    <Text style={styles.cardTitle}>{item.title}</Text>
+                    <View style={styles.cardFooter}>
+                      <Text style={[styles.cardStatus, { color: tone.text }]}>
+                        {item.status} • {item.detail}
+                      </Text>
+                      <View style={[styles.badge, { backgroundColor: tone.badge }]}>
+                        <Text style={[styles.badgeText, { color: tone.badgeText }]}>
+                          {item.level}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
-                <Text style={[styles.detail, { color: tone.text }]}>
-                  {item.detail}
-                </Text>
               </View>
             );
           })}
@@ -380,54 +396,76 @@ const styles = StyleSheet.create({
     color: "#64748B",
     marginTop: 2,
   },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16,
-    gap: 8,
-  },
   summaryCard: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderRadius: 20,
+    paddingVertical: 14,
     alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  summaryIcon: {
+    fontSize: 14,
+    marginBottom: 4,
   },
   summaryNumber: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "900",
   },
   summaryLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#64748B",
-    fontWeight: "700",
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
     marginTop: 2,
+  },
+  filterHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  filterTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#0A0F2C",
+  },
+  resetText: {
+    color: "#7B61FF",
+    fontSize: 13,
+    fontWeight: "700",
   },
   filters: {
     flexDirection: "row",
-    marginBottom: 16,
-    gap: 8,
+    marginBottom: 20,
+    gap: 10,
   },
-  filter: {
-    flex: 1,
-    height: 36,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 100,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
     backgroundColor: "#FFFFFF",
+    minWidth: 70,
     alignItems: "center",
-    justifyContent: "center",
   },
-  filterActive: {
+  filterChipActive: {
     backgroundColor: "#0A0F2C",
     borderColor: "#0A0F2C",
   },
-  filterText: {
+  filterChipText: {
     color: "#64748B",
     fontSize: 13,
     fontWeight: "800",
   },
-  filterTextActive: { color: "#FFFFFF" },
+  filterChipTextActive: { color: "#FFFFFF" },
   loadingBox: {
     alignItems: "center",
     marginTop: 40,
@@ -457,42 +495,73 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   card: {
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
+    borderWidth: 1.5,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    elevation: 1,
   },
-  cardIconRow: {
+  cardHeader: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
+    gap: 12,
   },
-  cardIcon: {
-    fontSize: 22,
-    marginRight: 10,
+  iconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardBody: {
+    flex: 1,
+  },
+  cardTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  cardRoom: {
+    color: "#7B61FF",
+    fontSize: 9,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "800",
     color: "#0A0F2C",
+    marginBottom: 6,
   },
   cardTime: {
     fontSize: 11,
     color: "#94A3B8",
-    marginTop: 1,
+    fontWeight: "600",
+  },
+  cardFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  cardStatus: {
+    fontSize: 12,
+    fontWeight: "700",
+    flex: 1,
+    paddingRight: 8,
   },
   badge: {
-    borderRadius: 6,
-    paddingHorizontal: 10,
+    borderRadius: 8,
+    paddingHorizontal: 8,
     paddingVertical: 4,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "900",
-  },
-  detail: {
-    fontSize: 12,
-    marginTop: 2,
+    textTransform: "uppercase",
   },
   showMoreBtn: {
     height: 44,

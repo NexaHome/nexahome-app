@@ -61,9 +61,14 @@ export class LogDeviceService {
       // Auto-update device status if the payload contains a status field
       if (deviceValue && typeof deviceValue === 'object') {
         if (typeof deviceValue.status === 'string') {
-          // Capitalize the first letter for consistency (e.g., 'danger' -> 'Danger', 'on' -> 'On')
-          const statusValue = deviceValue.status;
-          device.status = statusValue.charAt(0).toUpperCase() + statusValue.slice(1).toLowerCase();
+          // Normalize status values for sensors
+          const statusValue = deviceValue.status.toLowerCase();
+          if (device.type === 'sensor' && statusValue === 'on') {
+            device.status = 'Safe';
+          } else {
+            // Capitalize for consistency (e.g., 'danger' -> 'Danger')
+            device.status = statusValue.charAt(0).toUpperCase() + statusValue.slice(1);
+          }
         }
 
         // Format the numeric value based on the device category
@@ -142,6 +147,28 @@ export class LogDeviceService {
     const deviceIds = devices.map((device) => this.toIdString(device._id)).filter((id) => id.length > 0);
 
     return this.logModel.whereIn('device_id', toObjectIds(deviceIds)).orderBy('createdAt', 'desc').limit(50).get();
+  }
+
+  async findAlertsByHome(userId: string, homeId: string, limit: number = 50) {
+    await this.homesService.findOneByMember(homeId, userId);
+
+    const rooms = await this.roomModel.where('home_id', toObjectId(homeId)).get();
+    if (rooms.length === 0) return [];
+
+    const roomIds = rooms.map(r => this.toIdString(r._id)).filter(id => id.length > 0);
+    const devices = await this.deviceModel.whereIn('room_id', toObjectIds(roomIds)).get();
+    if (devices.length === 0) return [];
+
+    const deviceIds = devices.map(d => this.toIdString(d._id)).filter(id => id.length > 0);
+
+    // Filter for statuses that ARE NOT safe/normal/clear
+    // This assumes the value is stored as an object or JSON in MongoDB
+    return this.logModel
+      .whereIn('device_id', toObjectIds(deviceIds))
+      .whereNotIn('value.status', ['safe', 'normal', 'clear', 'Safe', 'Normal', 'Clear'])
+      .orderBy('createdAt', 'desc')
+      .limit(limit)
+      .get();
   }
 
   private async findDeviceInHome(deviceId: string, homeId: string) {

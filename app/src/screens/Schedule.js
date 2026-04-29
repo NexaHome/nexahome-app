@@ -59,9 +59,16 @@ const formatTime = (trigger, remainingMs) => {
 
 const formatRepeat = (trigger) => {
   const parsed = parseAutomationJson(trigger);
-  if (parsed?.type === "schedule") return "daily";
-  if (parsed?.type === "delay") return "once";
-  return "manual";
+  if (parsed?.type === "schedule") {
+    if (parsed.days && parsed.days.length > 0) {
+      if (parsed.days.length === 7) return "Daily";
+      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      return parsed.days.map(d => dayNames[d]).join(", ");
+    }
+    return "Once";
+  }
+  if (parsed?.type === "delay") return "Once";
+  return "Manual";
 };
 
 const formatActionLabel = (action) => {
@@ -497,85 +504,107 @@ const Schedule = ({ navigation }) => {
       >
         <View style={styles.header}>
           <View>
-            <Text style={styles.kicker}>Home automation</Text>
-            <Text style={styles.title}>Schedules</Text>
+            <Text style={styles.kicker}>Automation</Text>
+            <Text style={styles.title}>Routines</Text>
           </View>
           <AnimatedPressable
             style={styles.newButton}
             onPress={() => navigation.navigate("CreateSchedule")}
           >
-            <Text style={styles.newButtonText}>+ New</Text>
+            <View style={styles.newButtonIcon}>
+              <Text style={styles.newButtonIconText}>+</Text>
+            </View>
+            <Text style={styles.newButtonText}>Create</Text>
           </AnimatedPressable>
         </View>
 
-        <View style={styles.hero}>
-          <View style={styles.heroBar} />
-          <Text style={styles.heroTitle}>Manage your daily routines</Text>
-          <Text style={styles.heroText}>
-            Turn schedules on or off, and the backend will queue or cancel the
-            automation for you.
-          </Text>
+        <View style={styles.heroCard}>
+          <View style={styles.heroContent}>
+            <Text style={styles.heroTitle}>Smart Routines</Text>
+            <Text style={styles.heroText}>
+              Manage your automated tasks and schedules. Toggle them on to activate the trigger.
+            </Text>
+          </View>
+          <View style={styles.heroIconBox}>
+            <Text style={{ fontSize: 32 }}>⚡</Text>
+          </View>
         </View>
 
         {loading && (
-          <ActivityIndicator
-            size="small"
-            color="#7B61FF"
-            style={{ marginTop: 20 }}
-          />
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="small" color="#7B61FF" />
+          </View>
         )}
 
         {!loading && items.length === 0 && (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>Belum ada schedules</Text>
+            <View style={styles.emptyIconBox}>
+              <Text style={{ fontSize: 30 }}>📅</Text>
+            </View>
+            <Text style={styles.emptyTitle}>No routines yet</Text>
             <Text style={styles.emptyText}>
-              Buat schedule baru lewat tombol + New, lalu data akan muncul di
-              sini.
+              Your automated schedules will appear here. Tap "Create" to start your first routine.
             </Text>
           </View>
         )}
 
         {!loading &&
-          items.map((item) => (
-            <View
-              key={item.id}
-              {...getPanResponder(item.id).panHandlers}
-              style={[styles.cardContainer, { position: "relative" }]}
-            >
-              <View style={[styles.card, item.active && styles.cardActive]}>
-                <View style={styles.cardCopy}>
-                  <Text style={styles.cardTitle} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  <Text style={styles.meta}>
-                    Turn on - {formatTime(item.trigger, getRemainingMs(item))} -{" "}
-                    {item.repeat}
-                  </Text>
-                  <Text style={styles.actionLabel} numberOfLines={1}>
-                    {item.actionLabel}
-                  </Text>
-                </View>
-                <View style={styles.cardActions}>
-                  <Toggle
-                    active={item.active}
-                    onPress={() => toggleSchedule(item)}
-                  />
-                  {revealedCardId === item.id && (
-                    <AnimatedPressable
-                      style={styles.deleteButton}
-                      onPress={() => deleteSchedule(item)}
-                      disabled={deleting === item.id}
-                    >
-                      <Text style={styles.deleteButtonText}>✕</Text>
-                    </AnimatedPressable>
-                  )}
+          items.map((item) => {
+            const trigger = parseAutomationJson(item.trigger);
+            const isDelay = trigger?.type === "delay";
+            
+            return (
+              <View
+                key={item.id}
+                {...getPanResponder(item.id).panHandlers}
+                style={styles.cardWrapper}
+              >
+                <View style={[styles.card, item.active && styles.cardActive]}>
+                  <View style={styles.cardMain}>
+                    <View style={[styles.typeIcon, item.active && styles.typeIconActive]}>
+                      <Text style={{ fontSize: 18 }}>{isDelay ? "⏱️" : "⏰"}</Text>
+                    </View>
+                    <View style={styles.cardInfo}>
+                      <Text style={styles.cardTitle} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <View style={styles.metaRow}>
+                        <Text style={styles.metaTime}>
+                          {formatTime(item.trigger, getRemainingMs(item))}
+                        </Text>
+                        <View style={styles.dot} />
+                        <Text style={styles.metaRepeat}>{item.repeat}</Text>
+                      </View>
+                      <View style={styles.actionBadge}>
+                        <Text style={styles.actionBadgeText}>{item.actionLabel}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.cardRight}>
+                    <Toggle
+                      active={item.active}
+                      onPress={() => toggleSchedule(item)}
+                    />
+                    {revealedCardId === item.id && (
+                      <AnimatedPressable
+                        style={styles.deleteAction}
+                        onPress={() => deleteSchedule(item)}
+                        disabled={deleting === item.id}
+                      >
+                        <Text style={styles.deleteActionText}>Delete</Text>
+                      </AnimatedPressable>
+                    )}
+                  </View>
                 </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
 
         {!loading && items.length > 0 && (
-          <Text style={styles.hint}>Swipe left to delete</Text>
+          <View style={styles.hintBox}>
+            <Text style={styles.hintText}>Swipe left on a card to delete</Text>
+          </View>
         )}
       </ScrollView>
       <BottomNav active="schedule" navigation={navigation} />
@@ -585,145 +614,239 @@ const Schedule = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  content: { padding: 18, paddingBottom: 26 },
+  content: { padding: 20, paddingBottom: 100 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 14,
+    alignItems: "center",
+    marginBottom: 20,
   },
   kicker: {
-    color: "#64748B",
-    fontSize: 12,
-    fontWeight: "800",
+    color: "#7B61FF",
+    fontSize: 11,
+    fontWeight: "900",
     textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: 4,
+    letterSpacing: 1.5,
+    marginBottom: 2,
   },
   title: {
-    fontSize: 25,
+    fontSize: 32,
     fontWeight: "900",
     color: "#0A0F2C",
+    letterSpacing: -0.5,
   },
   newButton: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#0A0F2C",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingLeft: 8,
+    paddingRight: 16,
+    paddingVertical: 8,
+    borderRadius: 100,
+    shadowColor: "#0A0F2C",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  newButtonIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  newButtonIconText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "600",
   },
   newButtonText: {
     color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "900",
+    fontSize: 14,
+    fontWeight: "800",
   },
-  hero: {
-    backgroundColor: "#F8FAFC",
+  heroCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 24,
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 16,
+    borderColor: "#F1F5F9",
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 2,
   },
-  heroBar: {
-    width: 48,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: "#0A0F2C",
-    opacity: 0.12,
-    marginBottom: 12,
+  heroContent: {
+    flex: 1,
+    paddingRight: 16,
   },
   heroTitle: {
     color: "#0A0F2C",
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "900",
+    marginBottom: 6,
   },
   heroText: {
     color: "#64748B",
-    fontSize: 12.5,
-    lineHeight: 18,
-    marginTop: 6,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: "500",
   },
-  emptyCard: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 8,
-  },
-  emptyTitle: {
-    color: "#0A0F2C",
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  emptyText: {
-    color: "#64748B",
-    fontSize: 12.5,
-    lineHeight: 18,
-    marginTop: 6,
-  },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  cardContainer: {
-    marginBottom: 0,
-  },
-  cardActive: {
-    borderColor: "#C9F0D6",
-    backgroundColor: "#F7FFF9",
-  },
-  cardCopy: {
-    flex: 1,
-    paddingRight: 12,
-  },
-  cardTitle: {
-    color: "#0A0F2C",
-    fontSize: 16,
-    fontWeight: "900",
-  },
-  meta: {
-    color: "#64748B",
-    fontSize: 12.5,
-    marginTop: 4,
-    fontWeight: "700",
-  },
-  actionLabel: {
-    color: "#0F766E",
-    fontSize: 12,
-    marginTop: 4,
-    fontWeight: "700",
-  },
-  cardActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  deleteButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#FF5C7A",
+  heroIconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    backgroundColor: "#F8FAFC",
     alignItems: "center",
     justifyContent: "center",
   },
-  deleteButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "900",
+  loadingBox: {
+    padding: 40,
+    alignItems: "center",
   },
-  hint: {
+  emptyCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 30,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+    marginTop: 10,
+  },
+  emptyIconBox: {
+    width: 70,
+    height: 70,
+    borderRadius: 25,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    color: "#0A0F2C",
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: 8,
+  },
+  emptyText: {
+    color: "#64748B",
+    fontSize: 14,
     textAlign: "center",
+    lineHeight: 20,
+    paddingHorizontal: 20,
+  },
+  cardWrapper: {
+    marginBottom: 16,
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  cardActive: {
+    borderColor: "#7B61FF",
+    backgroundColor: "#F9F8FF",
+    elevation: 4,
+    shadowOpacity: 0.1,
+  },
+  cardMain: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  typeIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: "#F8FAFC",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+  },
+  typeIconActive: {
+    backgroundColor: "#EEF2FF",
+  },
+  cardInfo: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  cardTitle: {
+    color: "#0A0F2C",
+    fontSize: 17,
+    fontWeight: "900",
+    marginBottom: 4,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  metaTime: {
+    color: "#7B61FF",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#CBD5E1",
+    marginHorizontal: 8,
+  },
+  metaRepeat: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  actionBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  actionBadgeText: {
+    color: "#475569",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  cardRight: {
+    alignItems: "flex-end",
+    gap: 8,
+  },
+  deleteAction: {
+    backgroundColor: "#FFF1F2",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  deleteActionText: {
+    color: "#E11D48",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  hintBox: {
+    paddingVertical: 20,
+    alignItems: "center",
+  },
+  hintText: {
     color: "#94A3B8",
     fontSize: 12,
-    marginTop: 8,
+    fontWeight: "600",
   },
 });
 
