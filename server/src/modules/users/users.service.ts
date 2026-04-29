@@ -28,4 +28,19 @@ export class UsersService {
     await user.save();
     return user;
   }
+
+  async updatePushToken(userId: string, token: string) {
+    const user = await this.userModel.find(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const currentTokens = user.pushTokens || [];
+    if (!currentTokens.includes(token)) {
+      user.pushTokens = [...currentTokens, token];
+      await user.save();
+    }
+
+    return user;
+  }
 }

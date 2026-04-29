@@ -15,6 +15,7 @@ import BottomNav from "../components/BottomNav";
 import ScreenShell from "../components/ScreenShell";
 import { useTheme } from "../../theme";
 import { postGraphQL } from "../../utils/api";
+import { registerForPushNotificationsAsync } from "../../utils/notifications";
 
 const { width } = Dimensions.get("window");
 const PAGE_PADDING = 22;
@@ -42,6 +43,34 @@ const Dashboard = ({ navigation }) => {
     const unsubscribe = navigation.addListener("focus", () => {
       loadDashboard();
     });
+    
+    // Register for push notifications
+    const setupNotifications = async () => {
+      try {
+        const token = await registerForPushNotificationsAsync();
+        if (token) {
+          const authToken = await SecureStore.getItemAsync("token");
+          if (authToken) {
+            const mutation = `
+              mutation UpdatePushToken($input: UpdatePushTokenInput!) {
+                updatePushToken(input: $input) { _id }
+              }
+            `;
+            await postGraphQL(
+              { 
+                query: mutation, 
+                variables: { input: { token } } 
+              },
+              { Authorization: `Bearer ${authToken}` }
+            );
+          }
+        }
+      } catch (err) {
+        console.log("Failed to register push token:", err);
+      }
+    };
+    setupNotifications();
+
     return unsubscribe;
   }, [navigation]);
 
@@ -183,7 +212,7 @@ const Dashboard = ({ navigation }) => {
                 <View style={styles.onlinePulse} />
                 <Text style={styles.onlineText}>{summary.homeStatus}</Text>
               </View>
-              <ActivityIndicator size="small" color="#FF6B00" />
+              {loadingRooms && <ActivityIndicator size="small" color="#FF6B00" />}
               <AnimatedPressable onPress={() => navigation.navigate("HomesSettings")} style={styles.settingsIconBtn}>
                 <Text style={{ fontSize: 18 }}>⚙️</Text>
               </AnimatedPressable>

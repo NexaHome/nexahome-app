@@ -7,6 +7,8 @@ import { HomesService } from '../homes/homes.service';
 import { CreateLogDeviceInput } from './dto/create-log-device.input';
 import { DeviceNotFoundException, RoomNotFoundException } from '../../common/exceptions/app.exceptions';
 import { toIdString, toObjectId, toObjectIds } from '../../common/utils/object-id.util';
+import { HomeUser } from '../../models/home-user.model';
+import { PushNotificationService } from '../push-notification/push-notification.service';
 
 @Injectable()
 export class LogDeviceService {
@@ -14,8 +16,10 @@ export class LogDeviceService {
     @InjectModel(LogDevice) private readonly logModel: typeof LogDevice,
     @InjectModel(Device) private readonly deviceModel: typeof Device,
     @InjectModel(Room) private readonly roomModel: typeof Room,
+    @InjectModel(HomeUser) private readonly homeUserModel: typeof HomeUser,
     @Inject(forwardRef(() => HomesService))
     private readonly homesService: HomesService,
+    private readonly pushNotificationService: PushNotificationService,
   ) {}
 
   async create(userId: string, homeId: string, input: CreateLogDeviceInput) {
@@ -113,9 +117,13 @@ export class LogDeviceService {
       log.device_id = toObjectId(this.toIdString(device._id));
       log.value = deviceValue;
       log.createdAt = new Date();
-      await log.save();
-      
       createdLogs.push(log);
+
+      // Trigger Push Notification if status is NOT safe
+      const status = device.status?.toLowerCase();
+      if (status && !['safe', 'normal', 'clear'].includes(status)) {
+        await this.sendPushAlert(device, deviceValue);
+      }
     }
 
     return createdLogs;
@@ -194,5 +202,39 @@ export class LogDeviceService {
 
   private toIdString(value: unknown) {
     return toIdString(value);
+  }
+
+  private async sendPushAlert(device: Device, deviceValue: any) {
+    try {
+      const room = await this.roomModel.find(this.toIdString(device.room_id));
+      if (!room) return;
+
+      const members = await this.homeUserModel
+        .where('home_id', toObjectId(this.toIdString(room.home_id)))
+        .with('user')
+        .get();
+
+      const pushTokens: string[] = [];
+      for (const member of members) {
+        const user = (member as any).user;
+        if (user && user.pushTokens && user.pushTokens.length > 0) {
+          pushTokens.push(...user.pushTokens);
+        }
+      }
+
+      if (pushTokens.length > 0) {
+        const title = `🚨 NEXAHOME ALERT: ${device.category?.toUpperCase()}`;
+        const body = `${device.name} in ${room.name} detected ${deviceValue.status}! (${deviceValue.formatted || deviceValue.value})`;
+        
+        await this.pushNotificationService.sendNotification(
+          pushTokens,
+          title,
+          body,
+          { deviceId: this.toIdString(device._id), homeId: this.toIdString(room.home_id) }
+        );
+      }
+    } catch (error) {
+      console.error('Failed to send push alert:', error);
+    }
   }
 }
