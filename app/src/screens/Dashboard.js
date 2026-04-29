@@ -30,7 +30,7 @@ const Dashboard = ({ navigation }) => {
     roomsCount: 0,
     activeDevicesCount: 0,
     homeStatus: "No Home",
-    homeName: "Rumah Utama",
+    homeName: "Main Home",
   });
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [roomError, setRoomError] = useState("");
@@ -71,7 +71,7 @@ const Dashboard = ({ navigation }) => {
     const data = result?.data || {};
 
     if (result?.errors?.length) {
-      const message = result.errors[0]?.message || "Gagal memuat data dashboard";
+      const message = result.errors[0]?.message || "Failed to load dashboard data";
       if (!message.toLowerCase().includes("home not found")) {
         setRoomError(message);
       }
@@ -152,7 +152,7 @@ const Dashboard = ({ navigation }) => {
         roomsCount: 0,
         activeDevicesCount: 0,
         homeStatus: "No Home",
-        homeName: "Rumah Utama",
+        homeName: "Main Home",
       });
       setRealSensors([]);
     }
@@ -225,7 +225,7 @@ const Dashboard = ({ navigation }) => {
 
       if (homesResult?.errors?.length) {
         const homesMessage =
-          homesResult.errors[0]?.message || "Gagal memuat daftar home";
+          homesResult.errors[0]?.message || "Failed to load home list";
         throw new Error(homesMessage);
       }
 
@@ -272,7 +272,7 @@ const Dashboard = ({ navigation }) => {
       setRoomError(
         error?.message?.toLowerCase().includes("home")
           ? ""
-          : "Gagal memuat data dashboard",
+          : "Failed to load dashboard data",
       );
       setRoomItems([{ roomId: "add", name: "+ Add room", isAdd: true }]);
       setSummary({
@@ -309,7 +309,7 @@ const Dashboard = ({ navigation }) => {
       await SecureStore.setItemAsync("activeHomeId", homeId);
       await loadRoomsForHome(token, homeId);
     } catch (error) {
-      setRoomError(error?.message || "Gagal memuat home");
+      setRoomError(error?.message || "Failed to load home");
     } finally {
       setLoadingRooms(false);
     }
@@ -364,7 +364,7 @@ const Dashboard = ({ navigation }) => {
 
         {homes.length > 1 && (
           <View style={styles.homeSelectorWrap}>
-            <Text style={styles.selectorLabel}>Pilih home</Text>
+            <Text style={styles.selectorLabel}>Select home</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {homes.map((home) => {
                 const isActive = home._id === selectedHomeIdState;
@@ -396,11 +396,13 @@ const Dashboard = ({ navigation }) => {
           onPress={() => navigation.navigate("AIRecommendations")}
         >
           <View style={styles.aiCardRow}>
-            <Text style={styles.aiIcon}>✨</Text>
+            <View style={styles.aiIconBox}>
+              <Text style={{ fontSize: 20 }}>✨</Text>
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.aiTitle}>AI Insights</Text>
               <Text style={styles.aiDesc}>
-                Dapatkan rekomendasi cerdas dari data sensor
+                Get smart recommendations from sensor data
               </Text>
             </View>
             <Text style={styles.aiArrow}>→</Text>
@@ -573,29 +575,39 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#EEF2F7",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
   },
   avatarText: {
-    color: "#64748B",
+    color: "#0F172A",
+    fontSize: 16,
     fontWeight: "900",
   },
   homeCard: {
-    minHeight: 92,
+    minHeight: 110,
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: 20,
+    padding: 20,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.8)",
   },
   homeCopy: {
     flex: 1,
@@ -732,13 +744,18 @@ const styles = StyleSheet.create({
   },
   roomCard: {
     width: CARD_WIDTH,
-    minHeight: 124,
+    minHeight: 140,
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 20,
+    padding: 16,
     justifyContent: "space-between",
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
   },
   addRoomCard: {
     borderStyle: "dashed",
@@ -763,17 +780,17 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   openButton: {
-    width: 72,
-    height: 30,
-    borderRadius: 7,
-    backgroundColor: "#0A0F2C",
+    width: 60,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
   },
   openButtonText: {
-    color: "#FFFFFF",
-    fontSize: 12.5,
-    fontWeight: "900",
+    color: "#0F172A",
+    fontSize: 12,
+    fontWeight: "800",
   },
   addRoomText: {
     color: "#7B61FF",
@@ -857,34 +874,44 @@ const styles = StyleSheet.create({
     color: "#6D4DFF",
   },
   aiCard: {
-    marginTop: 16,
-    backgroundColor: "#F0ECFF",
-    borderWidth: 1,
-    borderColor: "#7B61FF",
-    borderRadius: 14,
+    marginTop: 20,
+    backgroundColor: "#F5F3FF",
+    borderRadius: 20,
     padding: 16,
+    borderWidth: 1,
+    borderColor: "#E9E5FF",
+    shadowColor: "#7C3AED",
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    elevation: 2,
   },
   aiCardRow: {
     flexDirection: "row",
     alignItems: "center",
   },
-  aiIcon: {
-    fontSize: 24,
-    marginRight: 12,
+  aiIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#EDE9FE",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
   },
   aiTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "900",
-    color: "#0A0F2C",
+    color: "#4C1D95",
   },
   aiDesc: {
     fontSize: 12,
-    color: "#64748B",
+    color: "#7C3AED",
     marginTop: 2,
+    fontWeight: "600",
   },
   aiArrow: {
-    fontSize: 20,
-    color: "#7B61FF",
+    fontSize: 18,
+    color: "#7C3AED",
     fontWeight: "900",
     marginLeft: 8,
   },

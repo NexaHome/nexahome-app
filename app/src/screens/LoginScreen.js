@@ -31,7 +31,7 @@ export default function LoginScreen({ navigation }) {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Error", "Email dan password wajib diisi");
+      Alert.alert("Error", "Email and password are required");
       return;
     }
 
@@ -47,14 +47,14 @@ export default function LoginScreen({ navigation }) {
 
       const loginData = data?.login;
       if (!loginData) {
-        Alert.alert("Login gagal", "Email atau password salah");
+        Alert.alert("Login failed", "Incorrect email or password");
         return;
       }
       await SecureStore.setItemAsync("token", loginData.accessToken);
-      Alert.alert("Sukses", `Selamat datang, ${loginData.name}`);
+      Alert.alert("Success", `Welcome, ${loginData.name}`);
       navigation.replace("Dashboard");
     } catch (error) {
-      const msg = error?.message || "Gagal terhubung ke server";
+      const msg = error?.message || "Failed to connect to server";
       Alert.alert("Error", msg);
       console.log(error);
     }

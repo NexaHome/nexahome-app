@@ -1,6 +1,8 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver, ResolveField, Parent } from '@nestjs/graphql';
+import { InjectModel } from '@mongoloquent/nestjs';
 import { Device } from '../../models/device.model';
+import { Room } from '../../models/room.model';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
 import { CurrentHomeId, CurrentRoomId, CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
@@ -11,7 +13,10 @@ import { DevicesService } from './devices.service';
 @Resolver(() => Device)
 @UseGuards(GqlAuthGuard)
 export class DevicesResolver {
-  constructor(private readonly devicesService: DevicesService) {}
+  constructor(
+    private readonly devicesService: DevicesService,
+    @InjectModel(Room) private readonly roomModel: typeof Room,
+  ) {}
 
   @Mutation(() => Device)
   createDevice(
@@ -90,5 +95,11 @@ export class DevicesResolver {
   last_value(@Parent() device: Device) {
     if (!device.last_value) return null;
     return typeof device.last_value === 'object' ? JSON.stringify(device.last_value) : String(device.last_value);
+  }
+
+  @ResolveField(() => Room, { nullable: true })
+  room(@Parent() device: Device) {
+    if (!device.room_id) return null;
+    return this.roomModel.find(device.room_id);
   }
 }

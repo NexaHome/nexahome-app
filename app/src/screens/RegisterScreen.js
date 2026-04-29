@@ -34,12 +34,12 @@ export default function RegisterScreen({ navigation }) {
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {
-      Alert.alert("Error", "Semua field wajib diisi");
+      Alert.alert("Error", "All fields are required");
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Error", "Password dan confirm password tidak sama");
+      Alert.alert("Error", "Passwords do not match");
       return;
     }
 
@@ -53,14 +53,14 @@ export default function RegisterScreen({ navigation }) {
       });
 
       if (!data?.register) {
-        Alert.alert("Register gagal", "Terjadi kesalahan");
+        Alert.alert("Registration failed", "An error occurred");
         return;
       }
 
-      Alert.alert("Sukses", "Akun berhasil dibuat, silakan login");
+      Alert.alert("Success", "Account created successfully, please log in");
       navigation.navigate("Login");
     } catch (error) {
-      const msg = error?.message || "Gagal terhubung ke server";
+      const msg = error?.message || "Failed to connect to server";
       Alert.alert("Error", msg);
       console.log(error);
     }

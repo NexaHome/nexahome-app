@@ -1,5 +1,14 @@
 import React, { useCallback, useState, useRef, useEffect } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Alert, Animated, PanResponder } from "react-native";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  Alert,
+  Animated,
+  PanResponder,
+} from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { useFocusEffect } from "@react-navigation/native";
 import AnimatedPressable from "../components/AnimatedPressable";
@@ -9,7 +18,6 @@ import Toggle from "../components/Toggle";
 import { postGraphQL } from "../../utils/api";
 
 const ACTIVE_KEY = "schedule.active.map";
-const QUEUED_TIMES_KEY = "schedule.queued.times";
 
 const parseAutomationJson = (value) => {
   if (!value) return null;
@@ -35,11 +43,11 @@ const formatTime = (trigger, remainingMs) => {
     // Use remainingMs if provided (for live countdown), otherwise use static format
     const ms = remainingMs !== undefined ? remainingMs : parsed.delayMs;
     if (ms <= 0) return "Executing...";
-    
+
     const totalSeconds = Math.floor(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-    
+
     if (minutes > 0) {
       return `${minutes}m ${seconds}s`;
     }
@@ -89,7 +97,8 @@ const hasExecutedAfterQueue = (queuedAt, lastExecutedAt) => {
   const queuedTime = new Date(queuedAt).getTime();
   const executedTime = new Date(lastExecutedAt).getTime();
 
-  if (!Number.isFinite(queuedTime) || !Number.isFinite(executedTime)) return false;
+  if (!Number.isFinite(queuedTime) || !Number.isFinite(executedTime))
+    return false;
   return executedTime > queuedTime;
 };
 
@@ -172,7 +181,7 @@ const Schedule = ({ navigation }) => {
       );
 
       setItems(normalized);
-      
+
       // items include queuedAt/lastExecutedAt — remaining is derived from queuedAt + delayMs
 
       const nextMap = Object.fromEntries(
@@ -201,9 +210,10 @@ const Schedule = ({ navigation }) => {
 
   const getRemainingMs = (item) => {
     const trigger = parseAutomationJson(item.trigger);
-    const delayMs = trigger?.type === 'delay' && typeof trigger.delayMs === 'number'
-      ? Math.max(0, Math.floor(trigger.delayMs))
-      : getQueueDelayMs(item.trigger);
+    const delayMs =
+      trigger?.type === "delay" && typeof trigger.delayMs === "number"
+        ? Math.max(0, Math.floor(trigger.delayMs))
+        : getQueueDelayMs(item.trigger);
 
     if (!item.queuedAt) return delayMs;
     const queuedTime = new Date(item.queuedAt).getTime();
@@ -243,7 +253,8 @@ const Schedule = ({ navigation }) => {
 
       setItems((current) => {
         const updated = current.map((item) => {
-          const justExecuted = executionMap[item.id] && !item.executedAfterQueue;
+          const justExecuted =
+            executionMap[item.id] && !item.executedAfterQueue;
           if (justExecuted) {
             return { ...item, active: false, executedAfterQueue: true };
           }
@@ -290,14 +301,15 @@ const Schedule = ({ navigation }) => {
             if (!homeId) continue;
 
             // Execute allDevicesOn or allDevicesOff based on action command
-            const mutation = action?.command === 'allDevicesOn'
-              ? `mutation AllDevicesOn($homeId: String!) {
+            const mutation =
+              action?.command === "allDevicesOn"
+                ? `mutation AllDevicesOn($homeId: String!) {
                   allDevicesOn(homeId: $homeId) {
                     affectedDevices
                     message
                   }
                 }`
-              : `mutation AllDevicesOff($homeId: String!) {
+                : `mutation AllDevicesOff($homeId: String!) {
                   allDevicesOff(homeId: $homeId) {
                     affectedDevices
                     message
@@ -317,7 +329,9 @@ const Schedule = ({ navigation }) => {
               // Toggle OFF after successful execution
               setItems((current) =>
                 current.map((currentItem) =>
-                  currentItem.id === item.id ? { ...currentItem, active: false } : currentItem,
+                  currentItem.id === item.id
+                    ? { ...currentItem, active: false }
+                    : currentItem,
                 ),
               );
 
@@ -375,7 +389,9 @@ const Schedule = ({ navigation }) => {
       const result = await response.json();
 
       if (result.errors?.length) {
-        throw new Error(result.errors[0]?.message || "Gagal mengubah status schedule");
+        throw new Error(
+          result.errors[0]?.message || "Gagal mengubah status schedule",
+        );
       }
 
       if (nextActive) {
@@ -391,14 +407,19 @@ const Schedule = ({ navigation }) => {
             ? {
                 ...currentItem,
                 active: nextActive,
-                queuedAt: nextActive ? new Date().toISOString() : currentItem.queuedAt,
+                queuedAt: nextActive
+                  ? new Date().toISOString()
+                  : currentItem.queuedAt,
               }
             : currentItem,
         ),
       );
 
       const nextMap = Object.fromEntries(
-        items.map((currentItem) => [currentItem.id, currentItem.id === item.id ? nextActive : currentItem.active]),
+        items.map((currentItem) => [
+          currentItem.id,
+          currentItem.id === item.id ? nextActive : currentItem.active,
+        ]),
       );
       await updateLocalActiveMap(nextMap);
     } catch (error) {
@@ -419,11 +440,15 @@ const Schedule = ({ navigation }) => {
             if (!token) throw new Error("Token tidak ditemukan.");
 
             const response = await postGraphQL(
-              { query: `mutation DeleteAutomation($id: String!) { deleteAutomation(id: $id) }`, variables: { id: item.id } },
+              {
+                query: `mutation DeleteAutomation($id: String!) { deleteAutomation(id: $id) }`,
+                variables: { id: item.id },
+              },
               { Authorization: `Bearer ${token}` },
             );
             const result = await response.json();
-            if (result.errors?.length) throw new Error(result.errors[0]?.message || "Gagal menghapus");
+            if (result.errors?.length)
+              throw new Error(result.errors[0]?.message || "Gagal menghapus");
 
             fetchSchedules();
           } catch (error) {
@@ -464,7 +489,12 @@ const Schedule = ({ navigation }) => {
 
   return (
     <ScreenShell>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} onScroll={() => setRevealedCardId(null)} scrollEventThrottle={16}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        onScroll={() => setRevealedCardId(null)}
+        scrollEventThrottle={16}
+      >
         <View style={styles.header}>
           <View>
             <Text style={styles.kicker}>Home automation</Text>
@@ -482,19 +512,25 @@ const Schedule = ({ navigation }) => {
           <View style={styles.heroBar} />
           <Text style={styles.heroTitle}>Manage your daily routines</Text>
           <Text style={styles.heroText}>
-            Turn schedules on or off, and the backend will queue or cancel the automation for you.
+            Turn schedules on or off, and the backend will queue or cancel the
+            automation for you.
           </Text>
         </View>
 
         {loading && (
-          <ActivityIndicator size="small" color="#7B61FF" style={{ marginTop: 20 }} />
+          <ActivityIndicator
+            size="small"
+            color="#7B61FF"
+            style={{ marginTop: 20 }}
+          />
         )}
 
         {!loading && items.length === 0 && (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>Belum ada schedules</Text>
             <Text style={styles.emptyText}>
-              Buat schedule baru lewat tombol + New, lalu data akan muncul di sini.
+              Buat schedule baru lewat tombol + New, lalu data akan muncul di
+              sini.
             </Text>
           </View>
         )}
@@ -504,7 +540,7 @@ const Schedule = ({ navigation }) => {
             <View
               key={item.id}
               {...getPanResponder(item.id).panHandlers}
-              style={[styles.cardContainer, { position: 'relative' }]}
+              style={[styles.cardContainer, { position: "relative" }]}
             >
               <View style={[styles.card, item.active && styles.cardActive]}>
                 <View style={styles.cardCopy}>
@@ -512,14 +548,18 @@ const Schedule = ({ navigation }) => {
                     {item.name}
                   </Text>
                   <Text style={styles.meta}>
-                    Turn on - {formatTime(item.trigger, getRemainingMs(item))} - {item.repeat}
+                    Turn on - {formatTime(item.trigger, getRemainingMs(item))} -{" "}
+                    {item.repeat}
                   </Text>
                   <Text style={styles.actionLabel} numberOfLines={1}>
                     {item.actionLabel}
                   </Text>
                 </View>
                 <View style={styles.cardActions}>
-                  <Toggle active={item.active} onPress={() => toggleSchedule(item)} />
+                  <Toggle
+                    active={item.active}
+                    onPress={() => toggleSchedule(item)}
+                  />
                   {revealedCardId === item.id && (
                     <AnimatedPressable
                       style={styles.deleteButton}

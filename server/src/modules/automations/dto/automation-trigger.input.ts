@@ -19,4 +19,28 @@ export class AutomationTriggerInput {
     description: 'Waktu eksekusi ISO string. Wajib untuk trigger type schedule.',
   })
   runAt?: string;
+
+  @Field({
+    nullable: true,
+    description: 'Tanggal berakhir automation (ISO string).',
+  })
+  endDate?: string;
+
+  @Field({
+    nullable: true,
+    description: 'Waktu berakhir automation (HH:mm).',
+  })
+  endTime?: string;
+
+  @Field({
+    nullable: true,
+    description: 'Apakah automation akan diulang.',
+  })
+  repeat?: boolean;
+
+  @Field(() => [Int], {
+    nullable: true,
+    description: 'Hari pengulangan (0-6, 0=Minggu).',
+  })
+  days?: number[];
 }

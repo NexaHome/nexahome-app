@@ -13,4 +13,10 @@ export class AutomationActionInput {
     description: 'Opsional. Hanya dipakai oleh action tertentu seperti setAwayMode.',
   })
   enabled?: boolean;
+
+  @Field({
+    nullable: true,
+    description: 'Opsional. Status target perangkat (ON/OFF).',
+  })
+  state?: string;
 }

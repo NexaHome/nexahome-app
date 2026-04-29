@@ -25,7 +25,7 @@ const DeviceControl = ({ route, navigation }) => {
   useEffect(() => {
     const fetchDevice = async () => {
       if (!deviceId) {
-        setError("Device ID tidak ditemukan.");
+        setError("Device ID not found.");
         setLoading(false);
         return;
       }
@@ -36,12 +36,12 @@ const DeviceControl = ({ route, navigation }) => {
 
         const token = await SecureStore.getItemAsync("token");
         if (!token) {
-          throw new Error("Token tidak ditemukan, silakan login ulang.");
+          throw new Error("Token not found, please log in again.");
         }
 
         const homeId = await SecureStore.getItemAsync("activeHomeId");
         if (!homeId) {
-          throw new Error("Home aktif tidak ditemukan.");
+          throw new Error("Active home not found.");
         }
 
         const query = `
@@ -76,7 +76,7 @@ const DeviceControl = ({ route, navigation }) => {
         const result = await response.json();
         if (!response.ok || result.errors?.length) {
           throw new Error(
-            result.errors?.[0]?.message || "Gagal mengambil device",
+            result.errors?.[0]?.message || "Failed to fetch device",
           );
         }
 
@@ -87,7 +87,7 @@ const DeviceControl = ({ route, navigation }) => {
         const numericValue = Number(deviceData?.last_value);
         setBrightness(Number.isFinite(numericValue) ? numericValue : 50);
       } catch (fetchError) {
-        setError(fetchError.message || "Terjadi kesalahan");
+        setError(fetchError.message || "An error occurred");
         setDevice(null);
       } finally {
         setLoading(false);
@@ -123,7 +123,7 @@ const DeviceControl = ({ route, navigation }) => {
 
   const fetchLogs = async () => {
     if (!deviceId) {
-      setLogsError("Device ID tidak ditemukan.");
+      setLogsError("Device ID not found.");
       return;
     }
 
@@ -133,12 +133,12 @@ const DeviceControl = ({ route, navigation }) => {
 
       const token = await SecureStore.getItemAsync("token");
       if (!token) {
-        throw new Error("Token tidak ditemukan, silakan login ulang.");
+        throw new Error("Token not found, please log in again.");
       }
 
       const homeId = await SecureStore.getItemAsync("activeHomeId");
       if (!homeId) {
-        throw new Error("Home aktif tidak ditemukan.");
+        throw new Error("Active home not found.");
       }
 
       const query = `
@@ -166,12 +166,12 @@ const DeviceControl = ({ route, navigation }) => {
 
       const result = await response.json();
       if (!response.ok || result.errors?.length) {
-        throw new Error(result.errors?.[0]?.message || "Gagal memuat log");
+        throw new Error(result.errors?.[0]?.message || "Failed to load logs");
       }
 
       setLogs(result.data?.logsByDevice || []);
     } catch (logError) {
-      setLogsError(logError.message || "Terjadi kesalahan");
+      setLogsError(logError.message || "An error occurred");
     } finally {
       setLogsLoading(false);
     }
@@ -182,10 +182,10 @@ const DeviceControl = ({ route, navigation }) => {
     try {
       setActionError("");
       const token = await SecureStore.getItemAsync("token");
-      if (!token) throw new Error("Token tidak ditemukan, silakan login ulang.");
+      if (!token) throw new Error("Token not found, please log in again.");
 
       const homeId = await SecureStore.getItemAsync("activeHomeId");
-      if (!homeId) throw new Error("Home aktif tidak ditemukan.");
+      if (!homeId) throw new Error("Active home not found.");
 
       const mutation = `
         mutation UpdateDevice($id: String!, $input: UpdateDeviceInput!) {
@@ -217,13 +217,13 @@ const DeviceControl = ({ route, navigation }) => {
 
       const result = await response.json();
       if (!response.ok || result.errors?.length) {
-        throw new Error(result.errors?.[0]?.message || "Gagal update status");
+        throw new Error(result.errors?.[0]?.message || "Failed to update status");
       }
 
       setPower(nextPower);
       if (showLogs) fetchLogs();
     } catch (toggleError) {
-      setActionError(toggleError.message || "Terjadi kesalahan");
+      setActionError(toggleError.message || "An error occurred");
     }
   };
 
@@ -237,7 +237,7 @@ const DeviceControl = ({ route, navigation }) => {
 
   const handleDeleteDevice = async () => {
     if (!deviceId) {
-      setActionError("Device ID tidak ditemukan.");
+      setActionError("Device ID not found.");
       return;
     }
 
@@ -247,12 +247,12 @@ const DeviceControl = ({ route, navigation }) => {
 
       const token = await SecureStore.getItemAsync("token");
       if (!token) {
-        throw new Error("Token tidak ditemukan, silakan login ulang.");
+        throw new Error("Token not found, please log in again.");
       }
 
       const homeId = await SecureStore.getItemAsync("activeHomeId");
       if (!homeId) {
-        throw new Error("Home aktif tidak ditemukan.");
+        throw new Error("Active home not found.");
       }
 
       const mutation = `
@@ -276,13 +276,13 @@ const DeviceControl = ({ route, navigation }) => {
       const result = await response.json();
       if (!response.ok || result.errors?.length) {
         throw new Error(
-          result.errors?.[0]?.message || "Gagal menghapus device",
+          result.errors?.[0]?.message || "Failed to remove device",
         );
       }
 
       navigation.goBack();
     } catch (deleteError) {
-      setActionError(deleteError.message || "Terjadi kesalahan");
+      setActionError(deleteError.message || "An error occurred");
     } finally {
       setDeleting(false);
     }
@@ -363,7 +363,15 @@ const DeviceControl = ({ route, navigation }) => {
           </View>
 
           <View style={styles.buttonGrid}>
-            <AnimatedPressable style={styles.secondaryButton}>
+            <AnimatedPressable
+              style={styles.secondaryButton}
+              onPress={() =>
+                navigation.navigate("CreateSchedule", {
+                  deviceId: device?._id,
+                  deviceName: device?.name,
+                })
+              }
+            >
               <Text style={styles.secondaryText}>Add schedule</Text>
             </AnimatedPressable>
             <AnimatedPressable style={styles.secondaryButton}>
@@ -380,7 +388,7 @@ const DeviceControl = ({ route, navigation }) => {
                 <Text style={styles.errorText}>{logsError}</Text>
               )}
               {!logsLoading && !logsError && !logs.length && (
-                <Text style={styles.infoText}>Belum ada log.</Text>
+                <Text style={styles.infoText}>No logs available.</Text>
               )}
               {!!logs.length &&
                 logs.map((log) => (
