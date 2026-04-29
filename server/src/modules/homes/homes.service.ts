@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@mongoloquent/nestjs';
 import { Home } from '../../models/home.model';
 import { Room } from '../../models/room.model';
@@ -28,6 +28,8 @@ import {
 
 @Injectable()
 export class HomesService {
+  private readonly logger = new Logger(HomesService.name);
+
   constructor(
     @InjectModel(Home) private readonly homeModel: typeof Home,
     @InjectModel(Room) private readonly roomModel: typeof Room,
@@ -335,12 +337,18 @@ export class HomesService {
     status: string,
     message: string,
   ): Promise<QuickActionResult> {
+    this.logger.log(`setAllDevicesStatus START: userId=${userId} homeId=${homeId} status=${status}`);
+
     await this.findOneByMember(homeId, userId);
+    this.logger.log(`User member access verified for homeId=${homeId}`);
 
     const rooms = await this.roomModel
       .where('home_id', toObjectId(homeId))
       .get();
+    this.logger.log(`Found ${rooms.length} room(s) for homeId=${homeId}`);
+
     if (rooms.length === 0) {
+      this.logger.log(`No rooms found for homeId=${homeId}, returning early`);
       return {
         success: true,
         affectedDevices: 0,
@@ -351,17 +359,23 @@ export class HomesService {
     const roomIds = rooms
       .map((room) => this.toIdString(room._id))
       .filter((id) => id.length > 0);
+    this.logger.log(`Room IDs: ${roomIds.join(', ')}`);
 
     // Avoid whereIn(ObjectId) update path because it can miss matches in this ORM setup.
     const allDevices = await this.deviceModel.get();
+    this.logger.log(`Total devices in DB: ${allDevices.length}`);
+
     const targetDevices = allDevices.filter((device) =>
       roomIds.includes(this.toIdString(device.room_id)),
     );
+    this.logger.log(`Target devices to update: ${targetDevices.length} (room_ids matching: ${roomIds.join(', ')})`);
 
     let affectedDevices = 0;
     for (const device of targetDevices) {
       const deviceId = this.toIdString(device._id);
       if (!deviceId) continue;
+
+      this.logger.debug(`Updating device ${deviceId} (name=${device.name}) to status=${status}`);
 
       await this.deviceModel
         .where('_id', toObjectId(deviceId))
@@ -370,23 +384,32 @@ export class HomesService {
           is_active: status === 'ON',
         });
       affectedDevices += 1;
+      this.logger.log(`Device updated: ${deviceId} → status=${status}, is_active=${status === 'ON'}`);
     }
+
+    this.logger.log(`Affected devices count: ${affectedDevices}`);
 
     // Trigger Antares for each affected device
     const devices = await this.deviceModel
       .whereIn('room_id', toObjectIds(roomIds))
       .get();
+    this.logger.log(`Fetched ${devices.length} devices for Antares commands`);
 
     for (const device of devices) {
       if (device.antares_device_name) {
         const payload = this.getCommandPayload(device.category, status);
+        this.logger.log(`Sending Antares command for device ${device.antares_device_name}: ${JSON.stringify(payload)}`);
         try {
           await this.antaresService.sendData(payload, undefined, device.antares_device_name);
-        } catch (err) {
+          this.logger.log(`Antares command sent successfully for ${device.antares_device_name}`);
+        } catch (err: any) {
+          this.logger.warn(`Antares command failed for ${device.antares_device_name}: ${err?.message || String(err)}`);
           // Continue with other devices even if one fails
         }
       }
     }
+
+    this.logger.log(`setAllDevicesStatus COMPLETE: ${affectedDevices} device(s) updated`);
 
     return {
       success: true,
