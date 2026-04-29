@@ -109,14 +109,36 @@ const RoomDetail = ({ route, navigation }) => {
   };
 
   const formatLogValue = (val) => {
-    if (!val) return "-";
+    if (!val) return "No data";
     try {
-      const p = typeof val === "string" ? JSON.parse(val) : val;
-      if (p.formatted) return p.formatted;
-      if (p.value !== undefined) return String(p.value);
-      return typeof p === "object" ? JSON.stringify(p) : String(p);
+      // Handle potential double stringification
+      let parsed = typeof val === "string" ? JSON.parse(val) : val;
+      if (typeof parsed === "string") parsed = JSON.parse(parsed);
+      
+      if (parsed.status) {
+        const sensorType = (parsed.sensor || "").toLowerCase();
+        if (sensorType === "fire" || sensorType === "water" || sensorType === "gas" || sensorType === "rain") {
+          return `Status: ${parsed.status.toUpperCase()}`;
+        }
+        if (parsed.formatted && parsed.formatted !== "0 %") {
+          return `${parsed.status.toUpperCase()} (${parsed.formatted})`;
+        }
+        return `Status: ${parsed.status.toUpperCase()}`;
+      }
+
+      if (typeof parsed !== 'object') {
+        const s = String(parsed).toUpperCase();
+        if (s === "1" || s === "ON" || s === "TRUE") return "Turned ON";
+        if (s === "0" || s === "OFF" || s === "FALSE") return "Turned OFF";
+        return s;
+      }
+
+      return "Device Updated";
     } catch {
-      return String(val);
+      const s = String(val).toUpperCase();
+      if (s === "1" || s === "ON") return "Turned ON";
+      if (s === "0" || s === "OFF") return "Turned OFF";
+      return s;
     }
   };
 

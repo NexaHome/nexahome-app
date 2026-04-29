@@ -166,6 +166,45 @@ const DeviceControl = ({ route, navigation }) => {
     }
   };
 
+  const formatLogValue = (val) => {
+    if (!val) return "No data";
+    try {
+      // Handle potential double stringification
+      let parsed = typeof val === "string" ? JSON.parse(val) : val;
+      if (typeof parsed === "string") parsed = JSON.parse(parsed);
+      
+      // Handle sensor specific JSON
+      if (parsed.status) {
+        // Special case for binary/digital sensors (Fire, Water, etc.)
+        const sensorType = (parsed.sensor || "").toLowerCase();
+        if (sensorType === "fire" || sensorType === "water" || sensorType === "gas" || sensorType === "rain") {
+          return `Status: ${parsed.status.toUpperCase()}`;
+        }
+        
+        // General formatted status
+        if (parsed.formatted && parsed.formatted !== "0 %") {
+          return `${parsed.status.toUpperCase()} (${parsed.formatted})`;
+        }
+        return `Status: ${parsed.status.toUpperCase()}`;
+      }
+
+      // Handle simple numeric/boolean
+      if (typeof parsed !== 'object') {
+        const s = String(parsed).toUpperCase();
+        if (s === "1" || s === "ON" || s === "TRUE") return "Turned ON";
+        if (s === "0" || s === "OFF" || s === "FALSE") return "Turned OFF";
+        return s;
+      }
+
+      return "Device Updated";
+    } catch {
+      const s = String(val).toUpperCase();
+      if (s === "1" || s === "ON") return "Turned ON";
+      if (s === "0" || s === "OFF") return "Turned OFF";
+      return s;
+    }
+  };
+
   const getEmoji = () => {
     if (category === 'lamp') return "💡";
     if (category === 'fan') return "🌬️";
@@ -234,35 +273,62 @@ const DeviceControl = ({ route, navigation }) => {
 
           <View style={styles.actionGrid}>
             <AnimatedPressable 
-              style={[styles.actionBtn, { borderColor: theme.border }]}
+              style={[styles.primaryActionBtn, { backgroundColor: mode === 'dark' ? "rgba(123, 97, 255, 0.15)" : "#F1EEFF" }]}
               onPress={() => navigation.navigate("CreateSchedule", { deviceId, deviceName })}
             >
-              <Text style={[styles.actionBtnText, { color: theme.text }]}>Schedule</Text>
-            </AnimatedPressable>
-            <AnimatedPressable style={[styles.actionBtn, { borderColor: theme.border }]}>
-              <Text style={[styles.actionBtnText, { color: theme.text }]}>Automation</Text>
+              <Text style={styles.primaryActionEmoji}>⏰</Text>
+              <Text style={styles.primaryActionText}>Manage Schedule</Text>
             </AnimatedPressable>
           </View>
 
           <View style={styles.divider} />
 
-          <AnimatedPressable style={styles.logToggle} onPress={() => { setShowLogs(!showLogs); if(!showLogs) fetchLogs(); }}>
-            <Text style={styles.logToggleText}>{showLogs ? "Hide History" : "View History"}</Text>
-          </AnimatedPressable>
+          <View style={styles.historyHeader}>
+            <Text style={[styles.sectionLabel, { color: theme.text, marginBottom: 0 }]}>Recent Activity</Text>
+            <AnimatedPressable onPress={() => { setShowLogs(!showLogs); if(!showLogs) fetchLogs(); }}>
+              <Text style={styles.logToggleText}>{showLogs ? "Hide" : "Show"}</Text>
+            </AnimatedPressable>
+          </View>
 
           {showLogs && (
             <View style={styles.logContent}>
               {logsLoading ? (
-                <ActivityIndicator size="small" color="#7B61FF" />
+                <ActivityIndicator size="small" color="#7B61FF" style={{ marginVertical: 20 }} />
               ) : logs.length === 0 ? (
-                <Text style={styles.emptyLogs}>No recent activity</Text>
+                <View style={styles.emptyLogsContainer}>
+                  <Text style={styles.emptyLogs}>No recent activity detected.</Text>
+                </View>
               ) : (
-                logs.slice(0, 5).map(log => (
-                  <View key={log._id} style={styles.logItem}>
-                    <Text style={[styles.logVal, { color: theme.text }]}>{log.value}</Text>
-                    <Text style={styles.logTime}>{new Date(log.createdAt).toLocaleTimeString()}</Text>
-                  </View>
-                ))
+                <View style={styles.timelineContainer}>
+                  {logs.slice(0, 5).map((log, index) => {
+                    const isLast = index === Math.min(logs.length, 5) - 1;
+                    const val = String(log.value).toUpperCase();
+                    const isOff = val.includes("OFF") || val === "0";
+                    const isOn = val.includes("ON") || val === "1";
+                    
+                    let dotColor = "#7B61FF";
+                    if (isOn) dotColor = "#22C55E";
+                    if (isOff) dotColor = "#EF4444";
+
+                    return (
+                      <View key={log._id} style={styles.timelineItem}>
+                        <View style={styles.timelineLeft}>
+                          <View style={[styles.timelineDot, { backgroundColor: dotColor }]} />
+                          {!isLast && <View style={[styles.timelineLine, { backgroundColor: theme.border }]} />}
+                        </View>
+                        <View style={styles.timelineRight}>
+                          <View style={styles.logMainRow}>
+                            <Text style={[styles.logVal, { color: theme.text }]}>
+                              {formatLogValue(log.value)}
+                            </Text>
+                            <Text style={styles.logTime}>{new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                          </View>
+                          <Text style={styles.logDate}>{new Date(log.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
               )}
             </View>
           )}
@@ -312,17 +378,33 @@ const styles = StyleSheet.create({
   stepBtnActive: { backgroundColor: "#0A0F2C", borderColor: "#0A0F2C" },
   stepText: { fontSize: 13, fontWeight: "800", color: "#64748B" },
   stepTextActive: { color: "#FFFFFF" },
-  actionGrid: { flexDirection: "row", gap: 12, marginBottom: 24 },
-  actionBtn: { flex: 1, height: 50, borderRadius: 16, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  actionBtnText: { fontSize: 14, fontWeight: "800" },
+  actionGrid: { marginBottom: 24 },
+  primaryActionBtn: { 
+    height: 56, 
+    borderRadius: 18, 
+    flexDirection: "row", 
+    alignItems: "center", 
+    justifyContent: "center",
+    gap: 10
+  },
+  primaryActionEmoji: { fontSize: 18 },
+  primaryActionText: { fontSize: 15, fontWeight: "800", color: "#7B61FF" },
   divider: { height: 1, backgroundColor: "#F1F5F9", marginBottom: 24 },
-  logToggle: { alignSelf: "center", padding: 10 },
+  historyHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
   logToggleText: { color: "#7B61FF", fontSize: 14, fontWeight: "800" },
-  logContent: { marginTop: 12, marginBottom: 20 },
-  logItem: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" },
+  logContent: { marginBottom: 10 },
+  timelineContainer: { paddingLeft: 4 },
+  timelineItem: { flexDirection: "row", minHeight: 60 },
+  timelineLeft: { alignItems: "center", width: 20, marginRight: 12 },
+  timelineDot: { width: 10, height: 10, borderRadius: 5, marginTop: 6, zIndex: 1 },
+  timelineLine: { width: 2, flex: 1, marginTop: -2, marginBottom: -4 },
+  timelineRight: { flex: 1, paddingBottom: 20 },
+  logMainRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   logVal: { fontSize: 14, fontWeight: "700" },
-  logTime: { fontSize: 12, color: "#94A3B8" },
-  emptyLogs: { textAlign: "center", color: "#94A3B8", fontSize: 13, marginVertical: 10 },
+  logTime: { fontSize: 11, color: "#64748B", fontWeight: "600" },
+  logDate: { fontSize: 11, color: "#94A3B8", marginTop: 2, fontWeight: "600" },
+  emptyLogsContainer: { paddingVertical: 20, alignItems: "center", backgroundColor: "rgba(0,0,0,0.02)", borderRadius: 16 },
+  emptyLogs: { color: "#94A3B8", fontSize: 13, fontWeight: "600" },
   removeBtn: { marginTop: 20, height: 54, borderRadius: 18, backgroundColor: "#FFF1F2", alignItems: "center", justifyContent: "center" },
   removeText: { color: "#E11D48", fontSize: 15, fontWeight: "800" },
 });
