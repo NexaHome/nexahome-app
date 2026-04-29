@@ -332,7 +332,11 @@ const Dashboard = ({ navigation }) => {
 
         <View style={styles.header}>
           <View style={styles.headerCopy}>
-            <Text style={styles.greeting}>Good morning,</Text>
+            <Text style={styles.greeting}>
+              {new Date().getHours() < 12 ? "Good morning," : 
+               new Date().getHours() < 17 ? "Good afternoon," : 
+               "Good evening,"}
+            </Text>
             <Text style={styles.name} numberOfLines={1}>
               {user.name}
             </Text>
@@ -342,25 +346,26 @@ const Dashboard = ({ navigation }) => {
           </View>
         </View>
 
-        <View style={styles.homeCard}>
-          <View style={styles.homeCopy}>
+        <View style={styles.mainActionRow}>
+          <View style={styles.homeCard}>
+            <View style={styles.homeCardHeader}>
+              <View style={styles.onlineStatus}>
+                <View style={styles.onlinePulse} />
+                <Text style={styles.onlineText}>{summary.homeStatus}</Text>
+              </View>
+              <AnimatedPressable 
+                onPress={() => navigation.navigate("HomesSettings")}
+                style={styles.settingsIconBtn}
+              >
+                <Text style={{ fontSize: 18 }}>⚙️</Text>
+              </AnimatedPressable>
+            </View>
             <Text style={styles.homeTitle}>{summary.homeName}</Text>
-            <Text style={styles.muted}>
-              {summary.roomsCount} rooms - {summary.activeDevicesCount} devices
-              active
+            <Text style={styles.homeSubtitle}>
+              {summary.roomsCount} rooms • {summary.activeDevicesCount} active
             </Text>
           </View>
-          <View style={styles.onlinePill}>
-            <Text style={styles.onlineText}>{summary.homeStatus}</Text>
-          </View>
         </View>
-
-        <AnimatedPressable
-          style={styles.addHomeButton}
-          onPress={() => navigation.navigate("HomesSettings")}
-        >
-          <Text style={styles.addHomeButtonText}>Settings</Text>
-        </AnimatedPressable>
 
         {homes.length > 1 && (
           <View style={styles.homeSelectorWrap}>
@@ -395,17 +400,19 @@ const Dashboard = ({ navigation }) => {
           style={styles.aiCard}
           onPress={() => navigation.navigate("AIRecommendations")}
         >
-          <View style={styles.aiCardRow}>
-            <View style={styles.aiIconBox}>
-              <Text style={{ fontSize: 20 }}>✨</Text>
+          <View style={styles.aiCardContent}>
+            <View style={styles.aiIconWrapper}>
+              <Text style={{ fontSize: 22 }}>✨</Text>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.aiTitle}>AI Insights</Text>
+            <View style={styles.aiTextContainer}>
+              <Text style={styles.aiTitle}>AI Recommendations</Text>
               <Text style={styles.aiDesc}>
-                Get smart recommendations from sensor data
+                Personalized safety & energy saving tips
               </Text>
             </View>
-            <Text style={styles.aiArrow}>→</Text>
+            <View style={styles.aiArrowCircle}>
+              <Text style={styles.aiArrowText}>→</Text>
+            </View>
           </View>
         </AnimatedPressable>
 
@@ -445,18 +452,18 @@ const Dashboard = ({ navigation }) => {
                       })
                     }
                   >
+                    <View style={styles.roomIconBox}>
+                      <Text style={styles.roomIconEmoji}>🏠</Text>
+                    </View>
                     <View>
                       <Text style={styles.roomName} numberOfLines={1}>
                         {item.name}
                       </Text>
-                      <Text style={styles.muted} numberOfLines={1}>
-                        Room
-                      </Text>
+                      <Text style={styles.roomLabel}>Living Area</Text>
                     </View>
-                    <View style={styles.roomMeta}>
-                      <Text style={styles.roomCount}>Open</Text>
-                      <View style={styles.openButton}>
-                        <Text style={styles.openButtonText}>Open</Text>
+                    <View style={styles.roomFooter}>
+                      <View style={styles.viewBtn}>
+                        <Text style={styles.viewBtnText}>Manage</Text>
                       </View>
                     </View>
                   </AnimatedPressable>
@@ -593,55 +600,67 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "900",
   },
+  mainActionRow: {
+    marginBottom: 20,
+  },
   homeCard: {
-    minHeight: 110,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 20,
+    minHeight: 140,
+    backgroundColor: "#0A0F2C",
+    borderRadius: 24,
+    padding: 22,
+    justifyContent: "space-between",
+    shadowColor: "#0A0F2C",
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
+  },
+  homeCardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    shadowColor: "#0F172A",
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.8)",
+    marginBottom: 10,
   },
-  homeCopy: {
-    flex: 1,
-    paddingRight: 12,
+  onlineStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(0, 212, 255, 0.15)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 100,
   },
-  homeTitle: {
-    fontSize: 20,
+  onlinePulse: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#00D4FF",
+  },
+  onlineText: {
+    color: "#00D4FF",
+    fontSize: 12,
     fontWeight: "900",
-    color: "#0A0F2C",
+    textTransform: "uppercase",
   },
-  muted: {
-    color: "#64748B",
-    fontSize: 13.5,
-    marginTop: 5,
-  },
-  homeSelectorWrap: {
-    marginTop: 14,
-    marginBottom: 6,
-  },
-  addHomeButton: {
-    height: 46,
+  settingsIconBtn: {
+    width: 38,
+    height: 38,
     borderRadius: 12,
-    backgroundColor: "#EEF2FF",
-    borderWidth: 1,
-    borderColor: "#C7D2FE",
+    backgroundColor: "rgba(255,255,255,0.1)",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 12,
-    marginBottom: 4,
   },
-  addHomeButtonText: {
-    color: "#4338CA",
-    fontSize: 14,
+  homeTitle: {
+    fontSize: 24,
     fontWeight: "900",
+    color: "#FFFFFF",
+    marginTop: 8,
+  },
+  homeSubtitle: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 4,
   },
   emptyText: {
     color: "#64748B",
@@ -731,9 +750,59 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "900",
   },
+  aiCard: {
+    backgroundColor: "#7B61FF",
+    borderRadius: 22,
+    padding: 18,
+    marginTop: 8,
+    shadowColor: "#7B61FF",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  aiCardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  aiIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  aiTextContainer: {
+    flex: 1,
+  },
+  aiTitle: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  aiDesc: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  aiArrowCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  aiArrowText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "900",
+  },
   sectionTitle: {
-    marginTop: 24,
-    marginBottom: 12,
+    marginTop: 28,
+    marginBottom: 14,
     fontSize: 20,
     fontWeight: "900",
     color: "#0A0F2C",
@@ -744,57 +813,67 @@ const styles = StyleSheet.create({
   },
   roomCard: {
     width: CARD_WIDTH,
-    minHeight: 140,
+    minHeight: 165,
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 24,
+    padding: 18,
     justifyContent: "space-between",
     shadowColor: "#0F172A",
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.05,
     shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
     elevation: 3,
     borderWidth: 1,
     borderColor: "#F1F5F9",
   },
-  addRoomCard: {
-    borderStyle: "dashed",
+  roomIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#F8FAFC",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#EEF2F7",
+    marginBottom: 12,
+  },
+  roomIconEmoji: {
+    fontSize: 20,
   },
   roomName: {
     color: "#0A0F2C",
     fontSize: 16,
     fontWeight: "900",
   },
-  roomMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 12,
-  },
-  roomCount: {
+  roomLabel: {
     color: "#64748B",
-    fontSize: 13,
-    fontWeight: "800",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
   },
-  openButton: {
-    width: 60,
-    height: 32,
+  roomFooter: {
+    marginTop: 14,
+  },
+  viewBtn: {
+    width: "100%",
+    height: 34,
     borderRadius: 10,
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
   },
-  openButtonText: {
+  viewBtnText: {
     color: "#0F172A",
     fontSize: 12,
     fontWeight: "800",
   },
+  addRoomCard: {
+    borderStyle: "dashed",
+    borderColor: "#CBD5E1",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F8FAFC",
+  },
   addRoomText: {
     color: "#7B61FF",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "900",
   },
   actions: {

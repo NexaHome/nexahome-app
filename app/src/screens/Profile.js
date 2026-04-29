@@ -4,18 +4,19 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TouchableOpacity,
   View,
   Alert,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import { SafeAreaView } from "react-native-safe-area-context";
 import BottomNav from "../components/BottomNav";
+import ScreenShell from "../components/ScreenShell";
+import { useTheme } from "../../theme";
+import AnimatedPressable from "../components/AnimatedPressable";
 import { postGraphQL } from "../../utils/api";
 
 export default function Profile({ navigation }) {
+  const { mode, toggleMode } = useTheme();
   const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
   const [user, setUser] = useState({ name: "Loading...", email: "Loading..." });
 
   useEffect(() => {
@@ -79,10 +80,9 @@ export default function Profile({ navigation }) {
     rightType = "arrow",
     subtitle,
   }) => (
-    <TouchableOpacity
+    <AnimatedPressable
       style={styles.menuRow}
       onPress={onPress}
-      activeOpacity={0.8}
     >
       <View style={styles.menuTextWrap}>
         <Text style={styles.menuTitle}>{title}</Text>
@@ -99,10 +99,10 @@ export default function Profile({ navigation }) {
       ) : (
         <View style={styles.rightSide}>
           {value ? <Text style={styles.menuValue}>{value}</Text> : null}
-          <Text style={styles.arrow}>›</Text>
+          <Text style={styles.arrow}>→</Text>
         </View>
       )}
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 
   const initials = user?.name
@@ -115,131 +115,134 @@ export default function Profile({ navigation }) {
     : "NH";
 
   return (
-    <SafeAreaView style={styles.container}>
+    <ScreenShell>
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Account Settings</Text>
+        </View>
+
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
-
-          <Text style={styles.name}>{user?.name || "No Name"}</Text>
-          <Text style={styles.email}>{user?.email || "No Email"}</Text>
-
-          <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.editButtonText}>Edit profile</Text>
-          </TouchableOpacity>
+          <View style={styles.profileInfo}>
+            <Text style={styles.name}>{user?.name || "No Name"}</Text>
+            <Text style={styles.email}>{user?.email || "No Email"}</Text>
+          </View>
+          <AnimatedPressable style={styles.editButton}>
+            <Text style={styles.editButtonText}>Edit</Text>
+          </AnimatedPressable>
         </View>
 
-        <Text style={styles.sectionLabel}>Preferences</Text>
+        <Text style={styles.sectionLabel}>PREFERENCES</Text>
         <View style={styles.menuGroup}>
           <MenuRow
-            title="Notifications"
+            title="Dark Mode"
+            value={mode === "dark"}
+            rightType="switch"
+            onPress={toggleMode}
+          />
+          <MenuRow
+            title="Push Notifications"
             value={notifications}
             rightType="switch"
             onPress={() => setNotifications(!notifications)}
           />
-
           <MenuRow
-            title="Dark mode"
-            value={darkMode}
-            rightType="switch"
-            onPress={() => setDarkMode(!darkMode)}
-          />
-
-          <MenuRow
-            title="Members"
-            subtitle="Manage home members and permissions"
-            value="Open"
+            title="Members & Access"
+            subtitle="Manage people in your home"
             onPress={() => navigation.navigate("Members")}
           />
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Logout</Text>
-        </TouchableOpacity>
+        <Text style={styles.sectionLabel}>DANGER ZONE</Text>
+        <AnimatedPressable style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Sign Out</Text>
+        </AnimatedPressable>
       </ScrollView>
       <BottomNav active="profile" navigation={navigation} />
-    </SafeAreaView>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scroll: {
     flex: 1,
-    backgroundColor: "#F8F8F8",
   },
   content: {
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 80,
+    padding: 22,
+    paddingBottom: 100,
+  },
+  header: {
+    marginBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 25,
+    fontWeight: "900",
+    color: "#0A0F2C",
   },
   profileCard: {
     width: "100%",
+    flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
     borderRadius: 24,
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    shadowColor: "#0A0F2C",
-    shadowOpacity: 0.06,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
+    padding: 20,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
   },
   avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: "#EAF4FF",
-    borderWidth: 2,
-    borderColor: "#8CC8FF",
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    backgroundColor: "#EEF2FF",
+    borderWidth: 1.5,
+    borderColor: "#C7D2FE",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
   },
   avatarText: {
-    fontSize: 34,
-    color: "#2563EB",
+    fontSize: 22,
+    color: "#4338CA",
     fontWeight: "900",
   },
+  profileInfo: {
+    flex: 1,
+    marginLeft: 16,
+  },
   name: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: "800",
-    color: "#1F2937",
-    textAlign: "center",
+    color: "#0A0F2C",
   },
   email: {
-    fontSize: 15,
-    color: "#9CA3AF",
-    marginTop: 4,
-    marginBottom: 16,
-    textAlign: "center",
+    fontSize: 13,
+    color: "#64748B",
+    marginTop: 2,
   },
   editButton: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 999,
-    paddingHorizontal: 22,
-    paddingVertical: 11,
-    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: "#F1F5F9",
   },
   editButtonText: {
-    fontSize: 15,
-    color: "#4B5563",
-    fontWeight: "700",
+    fontSize: 12,
+    color: "#0A0F2C",
+    fontWeight: "900",
   },
   sectionLabel: {
-    marginTop: 22,
-    marginBottom: 10,
-    color: "#6B7280",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.8,
+    marginTop: 24,
+    marginBottom: 12,
+    color: "#94A3B8",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1,
   },
   menuGroup: {
     width: "100%",
@@ -248,32 +251,31 @@ const styles = StyleSheet.create({
   menuRow: {
     width: "100%",
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
+    borderRadius: 20,
+    padding: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
   },
   menuTextWrap: {
     flex: 1,
     paddingRight: 10,
   },
   menuTitle: {
-    fontSize: 16,
-    color: "#111827",
+    fontSize: 15,
+    color: "#0A0F2C",
     fontWeight: "800",
   },
   menuSubtitle: {
     fontSize: 12,
-    color: "#6B7280",
-    marginTop: 4,
+    color: "#64748B",
+    marginTop: 2,
   },
   menuValue: {
-    fontSize: 14,
-    color: "#9CA3AF",
+    fontSize: 13,
+    color: "#94A3B8",
     marginRight: 6,
   },
   rightSide: {
@@ -281,23 +283,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   arrow: {
-    fontSize: 22,
-    color: "#BDBDBD",
-    marginTop: -2,
+    fontSize: 18,
+    color: "#CBD5E1",
+    fontWeight: "900",
   },
   logoutButton: {
     width: "100%",
-    borderWidth: 1.5,
-    borderColor: "#FCA5A5",
-    borderRadius: 16,
-    paddingVertical: 15,
+    borderRadius: 20,
+    paddingVertical: 16,
     alignItems: "center",
-    marginTop: 20,
-    backgroundColor: "#FFFFFF",
+    marginTop: 4,
+    backgroundColor: "#FFF1F2",
+    borderWidth: 1.5,
+    borderColor: "#FECACA",
   },
   logoutButtonText: {
-    color: "#EF4444",
-    fontSize: 16,
-    fontWeight: "800",
+    color: "#E11D48",
+    fontSize: 15,
+    fontWeight: "900",
   },
 });

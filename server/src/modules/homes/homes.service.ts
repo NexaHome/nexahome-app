@@ -19,6 +19,7 @@ import { QuickActionResult } from './dto/quick-action-result.type';
 import { RoomSummary } from './dto/room-summary.type';
 import { AddHomeMemberInput } from './dto/add-home-member.input';
 import { HomeMember } from './dto/home-member.type';
+import { UpdateMemberPermissionsInput } from './dto/update-member-permissions.input';
 import { AntaresService } from '../antares/antares.service';
 import {
   toIdString,
@@ -177,6 +178,34 @@ export class HomesService {
     return home;
   }
 
+  async updateMemberPermissions(
+    homeId: string,
+    targetUserId: string,
+    actorUserId: string,
+    input: UpdateMemberPermissionsInput,
+  ) {
+    await this.assertHomeOwner(homeId, actorUserId);
+
+    const membership = await this.homeUserModel
+      .where('home_id', toObjectId(homeId))
+      .where('user_id', toObjectId(targetUserId))
+      .first();
+
+    if (!membership) {
+      throw new ValidationException('Member not found in this home');
+    }
+
+    await this.homeUserModel
+      .where('_id', membership._id)
+      .update({
+        can_control_devices: input.can_control_devices,
+        can_manage_schedules: input.can_manage_schedules,
+        can_invite_members: input.can_invite_members,
+      });
+
+    return true;
+  }
+
   async getMembers(homeId: string, userId: string): Promise<HomeMember[]> {
     await this.assertMemberAccess(homeId, userId);
 
@@ -209,6 +238,9 @@ export class HomesService {
           userId: memberUserId,
           name: memberUser.name,
           email: memberUser.email,
+          can_control_devices: !!membership.can_control_devices,
+          can_manage_schedules: !!membership.can_manage_schedules,
+          can_invite_members: !!membership.can_invite_members,
         };
       })
       .filter((item): item is HomeMember => item !== null);

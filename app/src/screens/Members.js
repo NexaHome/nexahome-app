@@ -21,9 +21,13 @@ const Members = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [inviting, setInviting] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [control, setControl] = useState(true);
-  const [schedule, setSchedule] = useState(false);
-  const [invite, setInvite] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [permissions, setPermissions] = useState({
+    control: true,
+    schedule: false,
+    invite: false,
+  });
+  const [saving, setSaving] = useState(false);
 
   const initialsFromName = useCallback((name = "") => {
     const text = String(name).trim();
@@ -84,7 +88,17 @@ const Members = ({ navigation }) => {
       }
 
       setHome(result.data?.home || null);
-      setMembers(result.data?.membersByHome || []);
+      const memberList = result.data?.membersByHome || [];
+      setMembers(memberList);
+
+      // Select first non-owner member by default if none selected
+      if (!selectedMember && memberList.length > 0) {
+        const ownerIdStr = String(result.data?.home?.owner_id);
+        const firstMember = memberList.find(m => String(m.userId) !== ownerIdStr);
+        if (firstMember) {
+          handleSelectMember(firstMember);
+        }
+      }
     } catch (error) {
       Alert.alert("Error", error.message || "Gagal memuat members");
     } finally {
@@ -155,6 +169,72 @@ const Members = ({ navigation }) => {
     }
   };
 
+  const handleSelectMember = (member) => {
+    setSelectedMember(member);
+    setPermissions({
+      control: member.can_control_devices,
+      schedule: member.can_manage_schedules,
+      invite: member.can_invite_members,
+    });
+  };
+
+  const updatePermission = async (key, value) => {
+    if (!selectedMember || saving) return;
+
+    const newPermissions = { ...permissions, [key]: value };
+    setPermissions(newPermissions);
+
+    try {
+      setSaving(true);
+      const token = await SecureStore.getItemAsync("token");
+      const homeId = await SecureStore.getItemAsync("activeHomeId");
+
+      const response = await postGraphQL(
+        {
+          query: `
+            mutation UpdatePermissions($homeId: String!, $targetUserId: String!, $input: UpdateMemberPermissionsInput!) {
+              updateMemberPermissions(homeId: $homeId, targetUserId: $targetUserId, input: $input)
+            }
+          `,
+          variables: {
+            homeId,
+            targetUserId: selectedMember.userId,
+            input: {
+              can_control_devices: newPermissions.control,
+              can_manage_schedules: newPermissions.schedule,
+              can_invite_members: newPermissions.invite,
+            },
+          },
+        },
+        {
+          Authorization: `Bearer ${token}`,
+          "x-home-id": homeId,
+        },
+      );
+
+      const result = await response.json();
+      if (result.errors?.length) throw new Error(result.errors[0].message);
+
+      // Update local members list to keep it in sync
+      setMembers(prev => prev.map(m => 
+        m.userId === selectedMember.userId 
+          ? { 
+              ...m, 
+              can_control_devices: newPermissions.control,
+              can_manage_schedules: newPermissions.schedule,
+              can_invite_members: newPermissions.invite 
+            } 
+          : m
+      ));
+    } catch (error) {
+      Alert.alert("Error", "Failed to update permissions");
+      // Rollback on error
+      setPermissions(permissions);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const ownerId = home?.owner_id ? String(home.owner_id) : "";
   const memberCount = members.length;
 
@@ -171,17 +251,20 @@ const Members = ({ navigation }) => {
     <ScreenShell>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <View>
+          <AnimatedPressable 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backIcon}>←</Text>
+          </AnimatedPressable>
+          <View style={styles.headerTitleWrap}>
             <Text style={styles.title}>Members</Text>
             <Text style={styles.subtitle}>
               {home?.name
-                ? `Kelola member untuk ${home.name}`
-                : "Pilih home dulu untuk melihat member"}
+                ? `Manage members for ${home.name}`
+                : "Select a home to view members"}
             </Text>
           </View>
-          <AnimatedPressable style={styles.refreshButton} onPress={loadMembers}>
-            <Text style={styles.refreshText}>Refresh</Text>
-          </AnimatedPressable>
         </View>
 
         <View style={styles.summaryCard}>
@@ -238,8 +321,16 @@ const Members = ({ navigation }) => {
         ) : (
           sortedMembers.map((member) => {
             const isOwner = String(member.userId) === ownerId;
+            const isSelected = selectedMember?.userId === member.userId;
             return (
-              <View key={member.userId} style={styles.memberCard}>
+              <AnimatedPressable
+                key={member.userId}
+                style={[
+                  styles.memberCard,
+                  isSelected && styles.memberCardSelected,
+                ]}
+                onPress={() => !isOwner && handleSelectMember(member)}
+              >
                 <View style={styles.memberAvatar}>
                   <Text style={styles.initials}>
                     {initialsFromName(member.name)}
@@ -260,50 +351,62 @@ const Members = ({ navigation }) => {
                     {isOwner ? "Owner" : "Member"}
                   </Text>
                 </View>
-              </View>
+              </AnimatedPressable>
             );
           })
         )}
 
-        <Text style={styles.sectionTitle}>Permissions</Text>
-        <View style={styles.permissionCard}>
-          <View style={styles.permissionRow}>
-            <View style={styles.permissionCopy}>
-              <Text style={styles.permissionText}>Control devices</Text>
-              <Text style={styles.permissionSub}>
-                Allow members to control devices
+        {selectedMember && (
+          <>
+            <View style={styles.permissionHeader}>
+              <Text style={styles.sectionTitle}>Permissions</Text>
+              <Text style={styles.editingFor}>
+                Editing for: <Text style={{ fontWeight: "900", color: "#7B61FF" }}>{selectedMember.name}</Text>
               </Text>
             </View>
-            <Toggle
-              active={control}
-              onPress={() => setControl((value) => !value)}
-            />
-          </View>
-          <View style={styles.permissionRow}>
-            <View style={styles.permissionCopy}>
-              <Text style={styles.permissionText}>Manage schedules</Text>
-              <Text style={styles.permissionSub}>
-                Allow schedule management
-              </Text>
+            <View style={styles.permissionCard}>
+              <View style={styles.permissionRow}>
+                <View style={styles.permissionCopy}>
+                  <Text style={styles.permissionText}>Control devices</Text>
+                  <Text style={styles.permissionSub}>
+                    Allow member to control devices
+                  </Text>
+                </View>
+                <Toggle
+                  active={permissions.control}
+                  onPress={() => updatePermission("control", !permissions.control)}
+                  disabled={saving}
+                />
+              </View>
+              <View style={styles.permissionRow}>
+                <View style={styles.permissionCopy}>
+                  <Text style={styles.permissionText}>Manage schedules</Text>
+                  <Text style={styles.permissionSub}>
+                    Allow schedule management
+                  </Text>
+                </View>
+                <Toggle
+                  active={permissions.schedule}
+                  onPress={() => updatePermission("schedule", !permissions.schedule)}
+                  disabled={saving}
+                />
+              </View>
+              <View style={styles.permissionRowLast}>
+                <View style={styles.permissionCopy}>
+                  <Text style={styles.permissionText}>Invite members</Text>
+                  <Text style={styles.permissionSub}>
+                    Allow inviting new members
+                  </Text>
+                </View>
+                <Toggle
+                  active={permissions.invite}
+                  onPress={() => updatePermission("invite", !permissions.invite)}
+                  disabled={saving}
+                />
+              </View>
             </View>
-            <Toggle
-              active={schedule}
-              onPress={() => setSchedule((value) => !value)}
-            />
-          </View>
-          <View style={styles.permissionRowLast}>
-            <View style={styles.permissionCopy}>
-              <Text style={styles.permissionText}>Invite members</Text>
-              <Text style={styles.permissionSub}>
-                Allow inviting new members
-              </Text>
-            </View>
-            <Toggle
-              active={invite}
-              onPress={() => setInvite((value) => !value)}
-            />
-          </View>
-        </View>
+          </>
+        )}
       </ScrollView>
       <BottomNav active="members" navigation={navigation} />
     </ScreenShell>
@@ -315,20 +418,30 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 60 },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 14,
-    gap: 12,
+    alignItems: "center",
+    marginBottom: 20,
+    gap: 16,
   },
-  title: { fontSize: 26, fontWeight: "900", color: "#0A0F2C" },
-  subtitle: { color: "#64748B", marginTop: 6, fontSize: 13, lineHeight: 18 },
-  refreshButton: {
-    backgroundColor: "#0A0F2C",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
   },
-  refreshText: { color: "#FFFFFF", fontSize: 12, fontWeight: "900" },
+  backIcon: {
+    fontSize: 22,
+    color: "#0A0F2C",
+    fontWeight: "900",
+  },
+  headerTitleWrap: {
+    flex: 1,
+  },
+  title: { fontSize: 24, fontWeight: "900", color: "#0A0F2C" },
+  subtitle: { color: "#64748B", marginTop: 2, fontSize: 13, lineHeight: 18 },
   summaryCard: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
@@ -411,13 +524,17 @@ const styles = StyleSheet.create({
   memberCard: {
     minHeight: 76,
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 16,
-    padding: 12,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 20,
+    padding: 14,
     marginBottom: 10,
     flexDirection: "row",
     alignItems: "center",
+  },
+  memberCardSelected: {
+    borderColor: "#7B61FF",
+    backgroundColor: "#F5F3FF",
   },
   memberAvatar: {
     width: 44,
@@ -448,38 +565,53 @@ const styles = StyleSheet.create({
   badgeText: { color: "#036B82", fontSize: 11, fontWeight: "900" },
   badgeOwner: { borderColor: "#7B61FF", backgroundColor: "#F0ECFF" },
   badgeOwnerText: { color: "#6D4DFF" },
+  permissionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    marginTop: 18,
+    marginBottom: 10,
+  },
+  editingFor: {
+    fontSize: 11,
+    color: "#64748B",
+    fontWeight: "800",
+    marginBottom: 2,
+  },
   permissionCard: {
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 22,
     overflow: "hidden",
+    marginBottom: 40,
   },
   permissionRow: {
-    minHeight: 62,
-    paddingHorizontal: 14,
+    minHeight: 70,
+    paddingHorizontal: 16,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#EEF2F7",
+    borderBottomWidth: 1.5,
+    borderBottomColor: "#F1F5F9",
     gap: 12,
   },
   permissionRowLast: {
-    minHeight: 62,
-    paddingHorizontal: 14,
+    minHeight: 70,
+    paddingHorizontal: 16,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     gap: 12,
   },
   permissionCopy: { flex: 1, paddingRight: 10 },
-  permissionText: { color: "#0A0F2C", fontSize: 14, fontWeight: "800" },
+  permissionText: { color: "#0A0F2C", fontSize: 15, fontWeight: "900" },
   permissionSub: {
     color: "#64748B",
     fontSize: 12,
     marginTop: 3,
     lineHeight: 16,
+    fontWeight: "600",
   },
 });
 

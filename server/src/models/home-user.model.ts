@@ -18,6 +18,15 @@ export class HomeUser extends Model {
   @Field(() => ID)
   home_id!: ObjectId; // references homes.id
 
+  @Field({ defaultValue: true })
+  can_control_devices: boolean = true;
+
+  @Field({ defaultValue: false })
+  can_manage_schedules: boolean = false;
+
+  @Field({ defaultValue: false })
+  can_invite_members: boolean = false;
+
   @Field()
   createdAt!: Date;
 

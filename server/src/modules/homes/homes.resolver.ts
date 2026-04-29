@@ -12,6 +12,7 @@ import { RoomSummary } from './dto/room-summary.type';
 import { QuickActionResult } from './dto/quick-action-result.type';
 import { AddHomeMemberInput } from './dto/add-home-member.input';
 import { HomeMember } from './dto/home-member.type';
+import { UpdateMemberPermissionsInput } from './dto/update-member-permissions.input';
 import { HomeUser } from '../../models/home-user.model';
 
 @Resolver(() => Home)
@@ -98,6 +99,21 @@ export class HomesResolver {
   @Query(() => [HomeMember])
   membersByHome(@CurrentUser() user: AuthenticatedUser, @Args('homeId') homeId: string) {
     return this.homesService.getMembers(homeId, user.userId);
+  }
+
+  @Mutation(() => Boolean)
+  updateMemberPermissions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Args('homeId') homeId: string,
+    @Args('targetUserId') targetUserId: string,
+    @Args('input') input: UpdateMemberPermissionsInput,
+  ) {
+    return this.homesService.updateMemberPermissions(
+      homeId,
+      targetUserId,
+      user.userId,
+      input,
+    );
   }
 
   @Mutation(() => Home)

@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
   digitalStatus: {
     fontSize: 18,
     fontWeight: "900",
-    color: "#475569",
+    color: "#64748B",
     textTransform: "uppercase",
     letterSpacing: 1,
   },
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: "rgba(0,0,0,0.05)",
+    backgroundColor: "rgba(255,255,255,0.05)",
   },
   statusPillAmber: { backgroundColor: "#FEF3C7" },
   statusPillBlue: { backgroundColor: "#DBEAFE" },
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingRight: 12,
     borderRightWidth: 1,
-    borderRightColor: "#F1F5F9",
+    borderRightColor: "#E2E8F0",
   },
   axisText: {
     color: "#94A3B8",

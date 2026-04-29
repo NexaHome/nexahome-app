@@ -87,6 +87,8 @@ const colorRoles = {
   "#F8FAFC": "background",
   "#FFFFFF": "surface",
   "#EEF2F7": "surfaceMuted",
+  "#F1F5F9": "surfaceMuted",
+  "#F8FAFC": "background",
   "#D8DEE9": "border",
   "#0A0F2C": "text",
   "#64748B": "textMuted",
@@ -97,9 +99,18 @@ const colorRoles = {
   "#036B82": "successText",
   "#E6FAFF": "accentSoft",
   "#F0ECFF": "secondarySoft",
+  "#F5F3FF": "secondarySoft",
   "#FF5C7A": "danger",
   "#FF6F8A": "danger",
   "#FFF0F3": "dangerSoft",
+  "#FFF1F2": "dangerSoft",
+  "#FECACA": "danger",
+  "#DCFCE7": "successText",
+  "#F0FDF4": "accentSoft",
+  "#DBEAFE": "accent",
+  "#EFF6FF": "accentSoft",
+  "#FEF3C7": "secondary",
+  "#FFFBEB": "secondarySoft",
 };
 
 const textProps = new Set(["color", "textDecorationColor"]);
@@ -148,7 +159,9 @@ const mapColor = (value, propName, theme, mode) => {
 
   if (surfaceProps.has(propName)) {
     if (role === "text")
-      return mode === "dark" ? theme.secondary : theme.primary;
+      return mode === "dark" ? theme.surface : theme.primary;
+    if (role === "surface")
+      return mode === "dark" ? theme.surfaceMuted : theme.surface;
     return theme[role] || value;
   }
 

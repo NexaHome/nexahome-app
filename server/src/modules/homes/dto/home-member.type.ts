@@ -10,4 +10,13 @@ export class HomeMember {
 
   @Field()
   email!: string;
+
+  @Field()
+  can_control_devices!: boolean;
+
+  @Field()
+  can_manage_schedules!: boolean;
+
+  @Field()
+  can_invite_members!: boolean;
 }
