@@ -90,7 +90,7 @@ const hasExecutedAfterQueue = (queuedAt, lastExecutedAt) => {
   const executedTime = new Date(lastExecutedAt).getTime();
 
   if (!Number.isFinite(queuedTime) || !Number.isFinite(executedTime)) return false;
-  return executedTime >= queuedTime;
+  return executedTime > queuedTime;
 };
 
 const Schedule = ({ navigation }) => {
@@ -98,7 +98,7 @@ const Schedule = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
   const [revealedCardId, setRevealedCardId] = useState(null);
-  const [remainingTimes, setRemainingTimes] = useState({});
+  const [now, setNow] = useState(Date.now());
   const panResponderRef = useRef({});
   const countdownIntervalRef = useRef(null);
 
@@ -152,9 +152,12 @@ const Schedule = ({ navigation }) => {
             automation.queuedAt,
             automation.lastExecutedAt,
           ),
+          queuedAt: automation.queuedAt,
+          lastExecutedAt: automation.lastExecutedAt,
           id: automation._id,
           name: automation.name,
           trigger: automation.trigger,
+          action: automation.action,
           time: formatTime(automation.trigger),
           repeat: formatRepeat(automation.trigger),
           actionLabel: formatActionLabel(automation.action),
@@ -170,16 +173,7 @@ const Schedule = ({ navigation }) => {
 
       setItems(normalized);
       
-      // Initialize remaining times for active delay automations
-      const parsed = parseAutomationJson;
-      const newRemainingTimes = {};
-      normalized.forEach((item) => {
-        const trigger = parsed(item.trigger);
-        if (trigger?.type === "delay" && item.active && trigger.delayMs) {
-          newRemainingTimes[item.id] = Math.max(0, trigger.delayMs);
-        }
-      });
-      setRemainingTimes(newRemainingTimes);
+      // items include queuedAt/lastExecutedAt — remaining is derived from queuedAt + delayMs
 
       const nextMap = Object.fromEntries(
         normalized.map((item) => [item.id, item.active]),
@@ -199,24 +193,23 @@ const Schedule = ({ navigation }) => {
     }, [fetchSchedules]),
   );
 
-  // Countdown timer for delay automations
+  // Ticking `now` to derive remaining times from `queuedAt + delayMs` so re-mounts don't reset countdown
   useEffect(() => {
-    countdownIntervalRef.current = setInterval(() => {
-      setRemainingTimes((prev) => {
-        const updated = { ...prev };
-        Object.keys(updated).forEach((id) => {
-          updated[id] = Math.max(0, updated[id] - 1000);
-        });
-        return updated;
-      });
-    }, 1000);
-
-    return () => {
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-      }
-    };
+    countdownIntervalRef.current = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(countdownIntervalRef.current);
   }, []);
+
+  const getRemainingMs = (item) => {
+    const trigger = parseAutomationJson(item.trigger);
+    const delayMs = trigger?.type === 'delay' && typeof trigger.delayMs === 'number'
+      ? Math.max(0, Math.floor(trigger.delayMs))
+      : getQueueDelayMs(item.trigger);
+
+    if (!item.queuedAt) return delayMs;
+    const queuedTime = new Date(item.queuedAt).getTime();
+    if (!Number.isFinite(queuedTime)) return delayMs;
+    return Math.max(0, queuedTime + (delayMs || 0) - now);
+  };
 
   const checkExecutionStatus = useCallback(async () => {
     try {
@@ -280,6 +273,69 @@ const Schedule = ({ navigation }) => {
     return () => clearInterval(interval);
   }, [items, checkExecutionStatus]);
 
+  // Auto-execute action when countdown reaches 0
+  useEffect(() => {
+    const executeCountdownActions = async () => {
+      for (const item of items) {
+        if (!item.active) continue;
+
+        const remaining = getRemainingMs(item);
+        if (remaining <= 0) {
+          try {
+            const token = await SecureStore.getItemAsync("token");
+            if (!token) continue;
+
+            const action = parseAutomationJson(item.action);
+            const homeId = action?.homeId;
+            if (!homeId) continue;
+
+            // Execute allDevicesOn or allDevicesOff based on action command
+            const mutation = action?.command === 'allDevicesOn'
+              ? `mutation AllDevicesOn($homeId: String!) {
+                  allDevicesOn(homeId: $homeId) {
+                    affectedDevices
+                    message
+                  }
+                }`
+              : `mutation AllDevicesOff($homeId: String!) {
+                  allDevicesOff(homeId: $homeId) {
+                    affectedDevices
+                    message
+                  }
+                }`;
+
+            const response = await postGraphQL(
+              { query: mutation, variables: { homeId } },
+              {
+                Authorization: `Bearer ${token}`,
+                "x-home-id": homeId,
+              },
+            );
+
+            const result = await response.json();
+            if (!result.errors?.length) {
+              // Toggle OFF after successful execution
+              setItems((current) =>
+                current.map((currentItem) =>
+                  currentItem.id === item.id ? { ...currentItem, active: false } : currentItem,
+                ),
+              );
+
+              const nextMap = Object.fromEntries(
+                items.map((i) => [i.id, i.id === item.id ? false : i.active]),
+              );
+              await updateLocalActiveMap(nextMap);
+            }
+          } catch (error) {
+            console.error("Gagal execute countdown action", error);
+          }
+        }
+      }
+    };
+
+    executeCountdownActions();
+  }, [now, items]);
+
   const updateLocalActiveMap = async (nextMap) => {
     await SecureStore.setItemAsync(ACTIVE_KEY, JSON.stringify(nextMap));
   };
@@ -331,32 +387,18 @@ const Schedule = ({ navigation }) => {
 
       setItems((current) =>
         current.map((currentItem) =>
-          currentItem.id === item.id ? { ...currentItem, active: nextActive } : currentItem,
+          currentItem.id === item.id
+            ? {
+                ...currentItem,
+                active: nextActive,
+                queuedAt: nextActive ? new Date().toISOString() : currentItem.queuedAt,
+              }
+            : currentItem,
         ),
       );
 
-      // Update remaining times for delay automations
-      if (nextActive) {
-        const trigger = parseAutomationJson(item.trigger);
-        if (trigger?.type === "delay" && trigger.delayMs) {
-          setRemainingTimes((prev) => ({
-            ...prev,
-            [item.id]: trigger.delayMs,
-          }));
-        }
-      } else {
-        setRemainingTimes((prev) => {
-          const updated = { ...prev };
-          delete updated[item.id];
-          return updated;
-        });
-      }
-
       const nextMap = Object.fromEntries(
-        items.map((currentItem) => [
-          currentItem.id,
-          currentItem.id === item.id ? nextActive : currentItem.active,
-        ]),
+        items.map((currentItem) => [currentItem.id, currentItem.id === item.id ? nextActive : currentItem.active]),
       );
       await updateLocalActiveMap(nextMap);
     } catch (error) {
@@ -470,7 +512,7 @@ const Schedule = ({ navigation }) => {
                     {item.name}
                   </Text>
                   <Text style={styles.meta}>
-                    Turn on - {formatTime(item.trigger, remainingTimes[item.id])} - {item.repeat}
+                    Turn on - {formatTime(item.trigger, getRemainingMs(item))} - {item.repeat}
                   </Text>
                   <Text style={styles.actionLabel} numberOfLines={1}>
                     {item.actionLabel}

@@ -59,8 +59,10 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
     this.worker = new Worker<AutomationExecutionData, AutomationExecutionResult>(
       'automations',
       async (job: Job<AutomationExecutionData, AutomationExecutionResult>) => {
+        this.logger.log(`Processing automation job ${job.id} (automationId=${job.data.automationId})`);
         const automation = await this.automationModel.find(job.data.automationId);
         if (!automation) {
+          this.logger.warn(`Automation not found for job ${job.id} (automationId=${job.data.automationId})`);
           return {
             queued: false,
             automationId: job.data.automationId,
@@ -74,7 +76,9 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
         const action = this.parseAutomationAction(automation.action);
 
         if (action?.command === 'allDevicesOn' && action.homeId) {
+          this.logger.log(`Executing allDevicesOn for home ${action.homeId} (automation=${automationId})`);
           const result = await this.homesService.allDevicesOn(userId, action.homeId);
+          this.logger.log(`allDevicesOn result: ${result?.message} (automation=${automationId})`);
           await this.markAutomationExecuted(automationId);
           return {
             queued: true,
@@ -86,7 +90,9 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
         }
 
         if (action?.command === 'allDevicesOff' && action.homeId) {
+          this.logger.log(`Executing allDevicesOff for home ${action.homeId} (automation=${automationId})`);
           const result = await this.homesService.allDevicesOff(userId, action.homeId);
+          this.logger.log(`allDevicesOff result: ${result?.message} (automation=${automationId})`);
           await this.markAutomationExecuted(automationId);
           return {
             queued: true,
@@ -98,11 +104,13 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
         }
 
         if (action?.command === 'setAwayMode' && action.homeId) {
+          this.logger.log(`Executing setAwayMode for home ${action.homeId} (enabled=${action.enabled}) (automation=${automationId})`);
           const result = await this.homesService.setAwayMode(
             userId,
             action.homeId,
             action.enabled ?? true,
           );
+          this.logger.log(`setAwayMode result: ${result?.message} (automation=${automationId})`);
           await this.markAutomationExecuted(automationId);
           return {
             queued: true,
@@ -126,8 +134,22 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
       { connection: { url: redisUrl, skipCheck: true } as any },
     );
 
+    this.logger.log(`Automation worker initialized for queue 'automations' (redis=${redisUrl})`);
+
+    this.worker.on('active', (job) => {
+      this.logger.log(`Automation job active ${job?.id} (automationId=${job?.data?.automationId})`);
+    });
+
+    this.worker.on('completed', (job, result) => {
+      this.logger.log(`Automation job completed ${job?.id} (automationId=${job?.data?.automationId}) result=${JSON.stringify(result)}`);
+    });
+
+    this.worker.on('error', (err) => {
+      this.logger.error('Automation worker error', err?.stack || err?.message || String(err));
+    });
+
     this.worker.on('failed', (job, err) => {
-      this.logger.error(`Automation job failed for ${job?.id}`, err?.stack || err?.message || String(err));
+      this.logger.error(`Automation job failed for ${job?.id} (automationId=${job?.data?.automationId})`, err?.stack || err?.message || String(err));
     });
   }
 
@@ -157,6 +179,8 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
       },
     );
 
+    this.logger.log(`Enqueued automation ${automationId} as job ${job.id} (delay=${normalizedDelay}ms)`);
+
     await this.automationModel
       .where('_id', automationId)
       .update({ queuedAt: new Date() });
@@ -177,6 +201,7 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
 
     try {
       await this.queue.remove(`automation-${automationId}`);
+      this.logger.log(`Cancelled queued automation automation-${automationId}`);
     } catch (error) {
       this.logger.warn(`Unable to remove queued automation ${automationId}: ${String(error)}`);
     }
