@@ -7,7 +7,7 @@ import { Home } from './home.model';
 
 @ObjectType()
 export class HomeUser extends Model {
-  static collectionName = 'home_users';
+  static collectionName = 'homeusers';
 
   @Field(() => ID)
   _id?: string;

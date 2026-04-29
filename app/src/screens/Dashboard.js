@@ -38,6 +38,7 @@ const Dashboard = ({ navigation }) => {
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [roomError, setRoomError] = useState("");
   const [selectedHomeIdState, setSelectedHomeIdState] = useState(null);
+  const [pushToken, setPushToken] = useState(null);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
@@ -49,6 +50,8 @@ const Dashboard = ({ navigation }) => {
       try {
         const token = await registerForPushNotificationsAsync();
         if (token) {
+          setPushToken(token);
+          console.log("🚀 Expo Push Token:", token);
           const authToken = await SecureStore.getItemAsync("token");
           if (authToken) {
             const mutation = `
