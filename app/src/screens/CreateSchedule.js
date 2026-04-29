@@ -347,8 +347,8 @@ const CreateSchedule = ({ navigation, route }) => {
   };
 
   const activeChipStyle = (isActive) => ({
-    backgroundColor: isActive ? "#7B61FF" : "#F8FAFC",
-    borderColor: isActive ? "#7B61FF" : "#F1F5F9",
+    backgroundColor: isActive ? "#FF6B00" : "#F8FAFC",
+    borderColor: isActive ? "#FF6B00" : "#F1F5F9",
   });
 
   const activeChipTextStyle = (isActive) => ({
@@ -870,7 +870,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 14,
   },
-  commandCardActive: { borderColor: "#7B61FF", backgroundColor: "#F5F3FF" },
+  commandCardActive: { borderColor: "#FF6B00", backgroundColor: "#FFF4ED" },
   commandIconBox: {
     width: 44,
     height: 44,
@@ -880,12 +880,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 14,
   },
-  commandIconBoxActive: { backgroundColor: "#E0DBFF" },
+  commandIconBoxActive: { backgroundColor: "#FFD8BF" },
   commandLabel: { fontSize: 15, fontWeight: "900", color: "#0A0F2C" },
-  commandLabelActive: { color: "#4C1D95" },
+  commandLabelActive: { color: "#B24B00" },
   commandDesc: { fontSize: 12, color: "#64748B", marginTop: 2, fontWeight: "600" },
-  commandDescActive: { color: "#7B61FF" },
-  checkIcon: { color: "#7B61FF", fontSize: 18, fontWeight: "900" },
+  commandDescActive: { color: "#FF6B00" },
+  checkIcon: { color: "#FF6B00", fontSize: 18, fontWeight: "900" },
   previewRow: {
     minHeight: 52,
     borderWidth: 1.5,
@@ -909,9 +909,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#F1F5F9",
   },
-  toggleBoxOn: { backgroundColor: "#E6FAFF", borderColor: "#00D4FF" },
+  toggleBoxOn: { backgroundColor: "#FFF4ED", borderColor: "#FF6B00" },
   toggleText: { color: "#64748B", fontSize: 12, fontWeight: "900" },
-  toggleTextOn: { color: "#036B82" },
+  toggleTextOn: { color: "#B24B00" },
   saveButton: {
     height: 54,
     borderRadius: 16,
@@ -932,7 +932,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1.5,
     borderColor: "#F1F5F9",
   },
-  modalButtonText: { color: "#7B61FF", fontSize: 16, fontWeight: "900" },
+  modalButtonText: { color: "#FF6B00", fontSize: 16, fontWeight: "900" },
   timeRangeRow: { flexDirection: "row", gap: 12, marginTop: 20, marginBottom: 0 },
   timeBox: { flex: 1 },
   labelSmall: {
@@ -956,8 +956,8 @@ const styles = StyleSheet.create({
   },
   previewTitle: { fontSize: 16, fontWeight: "900", color: "#0A0F2C" },
   previewMeta: { fontSize: 12, color: "#64748B", marginTop: 4 },
-  previewBadge: { backgroundColor: "#F0ECFF", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  previewBadgeText: { color: "#7B61FF", fontSize: 12, fontWeight: "900" },
+  previewBadge: { backgroundColor: "#FFF4ED", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  previewBadgeText: { color: "#FF6B00", fontSize: 12, fontWeight: "900" },
   deviceListScroll: { marginTop: 8, marginBottom: 16, marginHorizontal: -4 },
   deviceCard: {
     width: 120,
@@ -969,7 +969,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginHorizontal: 6,
   },
-  deviceCardActive: { backgroundColor: "#7B61FF", borderColor: "#7B61FF" },
+  deviceCardActive: { backgroundColor: "#FF6B00", borderColor: "#FF6B00" },
   deviceIconBox: {
     width: 44,
     height: 44,
@@ -991,7 +991,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#00D4FF",
+    backgroundColor: "#FF6B00",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  dayCircleActive: { backgroundColor: "#7B61FF", borderColor: "#7B61FF" },
+  dayCircleActive: { backgroundColor: "#FF6B00", borderColor: "#FF6B00" },
   dayText: { color: "#64748B", fontSize: 13, fontWeight: "900" },
   dayTextActive: { color: "#FFFFFF" },
   errorText: { color: "#FF5C7A", fontSize: 13, fontWeight: "700", textAlign: "center", marginTop: 10 },

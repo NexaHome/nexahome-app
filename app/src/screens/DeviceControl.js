@@ -84,7 +84,7 @@ const DeviceControl = ({ route, navigation }) => {
 
   const heroBg = heroAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [mode === 'dark' ? "#1E293B" : "#F1F5F9", mode === 'dark' ? "#4338CA" : "#7B61FF"],
+    outputRange: [mode === 'dark' ? "#1E293B" : "#F1F5F9", mode === 'dark' ? "#B24B00" : "#FF6B00"],
   });
 
   const knobX = heroAnim.interpolate({
@@ -293,7 +293,7 @@ const DeviceControl = ({ route, navigation }) => {
           {showLogs && (
             <View style={styles.logContent}>
               {logsLoading ? (
-                <ActivityIndicator size="small" color="#7B61FF" style={{ marginVertical: 20 }} />
+                <ActivityIndicator size="small" color="#FF6B00" style={{ marginVertical: 20 }} />
               ) : logs.length === 0 ? (
                 <View style={styles.emptyLogsContainer}>
                   <Text style={styles.emptyLogs}>No recent activity detected.</Text>
@@ -306,7 +306,7 @@ const DeviceControl = ({ route, navigation }) => {
                     const isOff = val.includes("OFF") || val === "0";
                     const isOn = val.includes("ON") || val === "1";
                     
-                    let dotColor = "#7B61FF";
+                    let dotColor = "#FF6B00";
                     if (isOn) dotColor = "#22C55E";
                     if (isOff) dotColor = "#EF4444";
 
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   dimmerSection: { marginBottom: 24 },
   sectionLabel: { fontSize: 15, fontWeight: "800", marginBottom: 12 },
   sliderTrack: { height: 8, borderRadius: 4, backgroundColor: "#E2E8F0", overflow: "hidden" },
-  sliderFill: { height: "100%", backgroundColor: "#7B61FF" },
+  sliderFill: { height: "100%", backgroundColor: "#FF6B00" },
   stepperRow: { flexDirection: "row", gap: 10, marginTop: 14 },
   stepBtn: { flex: 1, height: 40, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   stepBtnActive: { backgroundColor: "#0A0F2C", borderColor: "#0A0F2C" },
@@ -388,10 +388,10 @@ const styles = StyleSheet.create({
     gap: 10
   },
   primaryActionEmoji: { fontSize: 18 },
-  primaryActionText: { fontSize: 15, fontWeight: "800", color: "#7B61FF" },
+  primaryActionText: { fontSize: 15, fontWeight: "800", color: "#FF6B00" },
   divider: { height: 1, backgroundColor: "#F1F5F9", marginBottom: 24 },
   historyHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  logToggleText: { color: "#7B61FF", fontSize: 14, fontWeight: "800" },
+  logToggleText: { color: "#FF6B00", fontSize: 14, fontWeight: "800" },
   logContent: { marginBottom: 10 },
   timelineContainer: { paddingLeft: 4 },
   timelineItem: { flexDirection: "row", minHeight: 60 },

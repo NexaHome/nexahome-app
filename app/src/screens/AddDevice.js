@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 26 },
   backButton: { paddingVertical: 8, paddingRight: 16, alignSelf: "flex-start" },
-  backText: { color: "#7B61FF", fontSize: 14, fontWeight: "900" },
+  backText: { color: "#FF6B00", fontSize: 14, fontWeight: "900" },
   title: { color: "#0A0F2C", fontSize: 27, fontWeight: "900", letterSpacing: 0, marginTop: 4 },
   subtitle: { color: "#64748B", fontSize: 13, marginTop: 5, marginBottom: 16 },
   sectionTitle: { color: "#0A0F2C", fontSize: 18, fontWeight: "900", marginBottom: 10, marginTop: 4 },
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  templateActive: { borderColor: "#00D4FF", backgroundColor: "#F0ECFF" },
+  templateActive: { borderColor: "#FF6B00", backgroundColor: "#FFF4ED" },
   templateTitle: { color: "#0A0F2C", fontSize: 16, fontWeight: "900" },
   templateMeta: { color: "#64748B", fontSize: 12.5, marginTop: 4 },
   radio: {
@@ -160,8 +160,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  radioActive: { borderColor: "#7B61FF" },
-  radioDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: "#7B61FF" },
+  radioActive: { borderColor: "#FF6B00" },
+  radioDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: "#FF6B00" },
   saveButton: { height: 48, borderRadius: 9, backgroundColor: "#0A0F2C", alignItems: "center", justifyContent: "center", marginTop: 20 },
   saveText: { color: "#FFFFFF", fontSize: 14, fontWeight: "900" },
 });

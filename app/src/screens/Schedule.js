@@ -532,7 +532,7 @@ const Schedule = ({ navigation }) => {
 
         {loading && (
           <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color="#7B61FF" />
+            <ActivityIndicator size="small" color="#FF6B00" />
           </View>
         )}
 
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   kicker: {
-    color: "#7B61FF",
+    color: "#FF6B00",
     fontSize: 11,
     fontWeight: "900",
     textTransform: "uppercase",
@@ -758,8 +758,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardActive: {
-    borderColor: "#7B61FF",
-    backgroundColor: "#F9F8FF",
+    borderColor: "#FF6B00",
+    backgroundColor: "#FFF4ED",
     elevation: 4,
     shadowOpacity: 0.1,
   },
@@ -778,7 +778,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   typeIconActive: {
-    backgroundColor: "#EEF2FF",
+    backgroundColor: "#FFF4ED",
   },
   cardInfo: {
     flex: 1,
@@ -796,7 +796,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   metaTime: {
-    color: "#7B61FF",
+    color: "#FF6B00",
     fontSize: 13,
     fontWeight: "800",
   },

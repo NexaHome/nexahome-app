@@ -9,6 +9,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { gql } from "@apollo/client/core";
@@ -82,11 +83,20 @@ export default function RegisterScreen({ navigation }) {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Logo Section */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require("../../assets/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+
           {/* Title */}
-          <Text style={styles.title}>Create account</Text>
+          <Text style={styles.title}>NexaHome</Text>
           <Text style={styles.subtitle}>
-            Fill in your details below to{"\n"}
-            <Text style={styles.subtitleAccent}>get started</Text>
+            Create your account to start{"\n"}
+            <Text style={styles.subtitleAccent}>smarter living</Text>
           </Text>
 
           {/* Full Name Input */}
@@ -251,6 +261,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 32,
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  logo: {
+    width: 140,
+    height: 140,
   },
   backButton: {
     width: 48,

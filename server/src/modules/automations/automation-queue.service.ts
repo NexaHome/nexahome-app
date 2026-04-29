@@ -11,6 +11,7 @@ import { toIdString, toObjectId } from '../../common/utils/object-id.util';
 
 type AutomationExecutionData = {
   automationId: string;
+  isInverse?: boolean;
 };
 
 type AutomationExecutionResult = {
@@ -84,102 +85,73 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
 
         const automationId = toIdString(automation._id);
         const userId = toIdString(automation.user_id);
-        const action = this.parseAutomationAction(automation.action);
+        const trigger = this.parseAutomationTrigger(automation.trigger);
+        const originalAction = this.parseAutomationAction(automation.action);
+        const isInverse = !!job.data.isInverse;
+
+        // If it's an inverse job, we flip the command
+        let action = originalAction;
+        if (isInverse && originalAction) {
+          if (originalAction.command === 'allDevicesOn') {
+            action = { ...originalAction, command: 'allDevicesOff' };
+          } else if (originalAction.command === 'allDevicesOff') {
+            action = { ...originalAction, command: 'allDevicesOn' };
+          } else if (originalAction.command === 'toggleDevices') {
+            action = { ...originalAction, state: originalAction.state === 'ON' ? 'OFF' : 'ON' };
+          }
+        }
 
         if (action?.command === 'allDevicesOn' && action.homeId) {
-          this.logger.log(`Executing allDevicesOn for home ${action.homeId} (automation=${automationId})`);
+          this.logger.log(`Executing allDevicesOn for home ${action.homeId} (automation=${automationId}, inverse=${isInverse})`);
           const result = await this.homesService.allDevicesOn(userId, action.homeId);
           this.logger.log(`allDevicesOn result: ${result?.message} (automation=${automationId})`);
-          await this.markAutomationExecuted(automationId);
-          return {
-            queued: true,
-            automationId,
-            jobId: job.id?.toString(),
-            message: result.message,
-            delayMs: action.delayMs,
-          };
-        }
-
-        if (action?.command === 'allDevicesOff' && action.homeId) {
-          this.logger.log(`Executing allDevicesOff for home ${action.homeId} (automation=${automationId})`);
+        } else if (action?.command === 'allDevicesOff' && action.homeId) {
+          this.logger.log(`Executing allDevicesOff for home ${action.homeId} (automation=${automationId}, inverse=${isInverse})`);
           const result = await this.homesService.allDevicesOff(userId, action.homeId);
           this.logger.log(`allDevicesOff result: ${result?.message} (automation=${automationId})`);
-          await this.markAutomationExecuted(automationId);
-          return {
-            queued: true,
-            automationId,
-            jobId: job.id?.toString(),
-            message: result.message,
-            delayMs: action.delayMs,
-          };
-        }
-
-        if (action?.command === 'setAwayMode' && action.homeId) {
+        } else if (action?.command === 'setAwayMode' && action.homeId) {
           this.logger.log(`Executing setAwayMode for home ${action.homeId} (enabled=${action.enabled}) (automation=${automationId})`);
-          const result = await this.homesService.setAwayMode(
-            userId,
-            action.homeId,
-            action.enabled ?? true,
-          );
-          this.logger.log(`setAwayMode result: ${result?.message} (automation=${automationId})`);
-          await this.markAutomationExecuted(automationId);
-          return {
-            queued: true,
-            automationId,
-            jobId: job.id?.toString(),
-            message: result.message,
-            delayMs: action.delayMs,
-          };
-        }
+          const result = await this.homesService.setAwayMode(userId, action.homeId, action.enabled ?? true);
+        } else {
+          // Handle device-specific automations
+          const devicesRelations = await this.deviceAutomationModel
+            .where('automation_id', toObjectId(automationId))
+            .get();
 
-        // Handle device-specific automations if command is toggleDevices or if there are linked devices
-        const devicesRelations = await this.deviceAutomationModel
-          .where('automation_id', toObjectId(automationId))
-          .get();
-
-        if (action?.command === 'toggleDevices' || devicesRelations.length > 0) {
-          this.logger.log(`Executing device-specific automation for ${devicesRelations.length} devices (automation=${automationId})`);
-          
-          for (const relation of devicesRelations) {
-            const deviceId = toIdString(relation.device_id);
+          if (action?.command === 'toggleDevices' || devicesRelations.length > 0) {
             const state = action?.state || 'ON';
-            
-            try {
-              const device = await this.deviceModel.find(deviceId);
-              if (device) {
-                const homeId = action?.homeId || ''; 
-                const roomId = toIdString(device.room_id);
-                
-                await this.devicesService.update(userId, homeId, roomId, deviceId, {
-                  status: state,
-                  is_active: state === 'ON',
-                });
-                this.logger.log(`Updated device ${deviceId} to ${state} (automation=${automationId})`);
+            for (const relation of devicesRelations) {
+              const deviceId = toIdString(relation.device_id);
+              try {
+                const device = await this.deviceModel.find(deviceId);
+                if (device) {
+                  const homeId = action?.homeId || ''; 
+                  const roomId = toIdString(device.room_id);
+                  await this.devicesService.update(userId, homeId, roomId, deviceId, {
+                    status: state,
+                    is_active: state === 'ON',
+                  });
+                }
+              } catch (err) {
+                this.logger.error(`Failed to update device ${deviceId} in automation: ${String(err)}`);
               }
-            } catch (err) {
-              this.logger.error(`Failed to update device ${deviceId} in automation: ${String(err)}`);
             }
           }
         }
 
         await this.markAutomationExecuted(automationId);
 
-        // Re-queue if it's a repeating schedule
-        const trigger = this.parseAutomationTrigger(automation.trigger);
-        
-        // Handle Auto-Off if endTime is provided
-        if (trigger?.endTime && (action?.command === 'toggleDevices' || action?.command === 'allDevicesOn')) {
+        // Logic for Scheduling the Inverse/End Action
+        if (!isInverse && trigger?.endTime) {
           const offDelay = this.resolveEndTimeDelay(trigger);
           if (offDelay > 0) {
-            this.logger.log(`Scheduling automatic turn-off for ${automationId} in ${Math.round(offDelay / 1000)}s`);
-            // We can reuse the queue with a special flag or just a custom job name
-            // For simplicity, let's just use the current job to trigger the main action,
-            // and if we need an auto-off, we can't easily do it without changing the worker
-            // unless we use a separate service or a specific "auto-off" job.
+            this.logger.log(`Scheduling inverse action for ${automationId} in ${Math.round(offDelay / 1000)}s`);
+            await this.enqueueAutomation(automationId, offDelay, true);
           }
         }
 
-        if (trigger?.type === 'schedule' && trigger.repeat) {
+        // Re-queue if it's a repeating schedule (Primary action only)
+        if (!isInverse && trigger?.type === 'schedule' && trigger.repeat) {
           const nextDelay = this.resolveNextOccurrenceDelay(trigger);
           if (nextDelay > 0) {
             this.logger.log(`Re-queueing repeating schedule ${automationId} (delay=${nextDelay}ms)`);
@@ -222,7 +194,7 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
     await this.queue?.close();
   }
 
-  async enqueueAutomation(automationId: string, delayMs = 0) {
+  async enqueueAutomation(automationId: string, delayMs = 0, isInverse = false) {
     if (!this.queue) {
       return {
         queued: false,
@@ -234,20 +206,22 @@ export class AutomationQueueService implements OnModuleInit, OnModuleDestroy {
     const normalizedDelay = Number.isFinite(delayMs) ? Math.max(0, Math.floor(delayMs)) : 0;
     const job = await this.queue.add(
       'automation.execute',
-      { automationId },
+      { automationId, isInverse },
       {
-        jobId: `automation-${automationId}`,
+        jobId: isInverse ? `automation-${automationId}-inverse` : `automation-${automationId}`,
         delay: normalizedDelay,
         removeOnComplete: true,
         removeOnFail: 50,
       },
     );
 
-    this.logger.log(`Enqueued automation ${automationId} as job ${job.id} (delay=${normalizedDelay}ms)`);
+    this.logger.log(`Enqueued automation ${automationId} (inverse=${isInverse}) as job ${job.id} (delay=${normalizedDelay}ms)`);
 
-    await this.automationModel
-      .where('_id', automationId)
-      .update({ queuedAt: new Date() });
+    if (!isInverse) {
+      await this.automationModel
+        .where('_id', automationId)
+        .update({ queuedAt: new Date() });
+    }
 
     return {
       queued: true,

@@ -140,7 +140,7 @@ const SensorMonitor = ({ navigation }) => {
               <Text style={styles.subtitle}>{homeName} • Real-time Monitoring</Text>
             </View>
           </View>
-          {loading && <ActivityIndicator color="#7B61FF" />}
+          {loading && <ActivityIndicator color="#FF6B00" />}
         </View>
 
         <View style={styles.grid}>
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   cardBlue: { borderColor: "#DBEAFE", backgroundColor: "#EFF6FF" },
   cardAmber: { borderColor: "#FEF3C7", backgroundColor: "#FFFBEB" },
   cardTop: { flexDirection: "row", justifyContent: "space-between" },
-  cardRoom: { color: "#7B61FF", fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
+  cardRoom: { color: "#FF6B00", fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
   cardLabel: { color: "#0A0F2C", fontSize: 14, fontWeight: "800", marginTop: 2 },
   cardIcon: { fontSize: 24 },
   digitalText: { fontSize: 20, fontWeight: "900", color: "#64748B", textAlign: "center", textTransform: "uppercase" },
@@ -254,11 +254,11 @@ const styles = StyleSheet.create({
   chartArea: { flex: 1, paddingLeft: 16, justifyContent: "flex-end" },
   bars: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", height: "100%" },
   barWrap: { flex: 1, height: "100%", justifyContent: "flex-end", alignItems: "center", paddingHorizontal: 2 },
-  bar: { width: "100%", backgroundColor: "#7B61FF", borderRadius: 10, opacity: 0.8 },
+  bar: { width: "100%", backgroundColor: "#FF6B00", borderRadius: 10, opacity: 0.8 },
   emptyChart: { color: "#94A3B8", fontSize: 13, textAlign: "center", marginTop: 60 },
   autoCard: { borderRadius: 20, padding: 18, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#F1F5F9", marginBottom: 12 },
   autoTop: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
-  autoIndicator: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#00D4FF" },
+  autoIndicator: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF6B00" },
   autoName: { fontSize: 15, fontWeight: "800", color: "#0A0F2C" },
   autoPath: { flexDirection: "row", alignItems: "center", gap: 10 },
   tag: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: "#F1F5F9" },

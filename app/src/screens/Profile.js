@@ -133,9 +133,6 @@ export default function Profile({ navigation }) {
             <Text style={styles.name}>{user?.name || "No Name"}</Text>
             <Text style={styles.email}>{user?.email || "No Email"}</Text>
           </View>
-          <AnimatedPressable style={styles.editButton}>
-            <Text style={styles.editButtonText}>Edit</Text>
-          </AnimatedPressable>
         </View>
 
         <Text style={styles.sectionLabel}>PREFERENCES</Text>
@@ -193,23 +190,16 @@ const styles = StyleSheet.create({
     width: 66,
     height: 66,
     borderRadius: 22,
-    backgroundColor: "#EEF2FF",
+    backgroundColor: "#FFF4ED",
     borderWidth: 1.5,
-    borderColor: "#C7D2FE",
+    borderColor: "#FF6B00",
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarText: { fontSize: 24, color: "#4338CA", fontWeight: "900" },
+  avatarText: { fontSize: 24, color: "#B24B00", fontWeight: "900" },
   profileInfo: { flex: 1, marginLeft: 16 },
   name: { fontSize: 20, fontWeight: "800", color: "#0A0F2C" },
   email: { fontSize: 13, color: "#64748B", marginTop: 2, fontWeight: "600" },
-  editButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: "#F1F5F9",
-  },
-  editButtonText: { fontSize: 13, color: "#0A0F2C", fontWeight: "900" },
   sectionLabel: {
     marginTop: 28,
     marginBottom: 12,

@@ -76,7 +76,7 @@ const LaundryStatus = ({ navigation, route }) => {
           <View>
             <Text style={styles.infoLabel}>Rain sensor</Text>
             {loading ? (
-              <ActivityIndicator size="small" color="#7B61FF" style={{ marginTop: 4, alignSelf: "flex-start" }} />
+              <ActivityIndicator size="small" color="#FF6B00" style={{ marginTop: 4, alignSelf: "flex-start" }} />
             ) : (
               <>
                 <Text style={styles.infoTitle}>{rainSensor ? rainSensor.name : "Rain Sensor"}</Text>
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 26 },
   topBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   backButton: { paddingVertical: 8, paddingRight: 16 },
-  backText: { color: "#7B61FF", fontSize: 14, fontWeight: "900" },
+  backText: { color: "#FF6B00", fontSize: 14, fontWeight: "900" },
   roomText: { color: "#64748B", fontSize: 13, fontWeight: "700" },
   title: { color: "#0A0F2C", fontSize: 25, fontWeight: "900", letterSpacing: 0, marginBottom: 12 },
   railCard: {
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   safePill: { borderColor: "#00D4FF", backgroundColor: "#E6FAFF" },
-  modeText: { color: "#7B61FF", fontSize: 12, fontWeight: "900" },
+  modeText: { color: "#FF6B00", fontSize: 12, fontWeight: "900" },
   safeText: { color: "#036B82" },
   infoCard: {
     backgroundColor: "#FFFFFF",
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 7,
     borderWidth: 1,
-    borderColor: "#7B61FF",
+    borderColor: "#FF6B00",
     backgroundColor: "#F0ECFF",
     alignItems: "center",
     justifyContent: "center",
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  secondaryText: { color: "#7B61FF", fontSize: 13, fontWeight: "900" },
+  secondaryText: { color: "#FF6B00", fontSize: 13, fontWeight: "900" },
 });
 
 export default LaundryStatus;

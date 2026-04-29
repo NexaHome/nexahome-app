@@ -30,10 +30,10 @@ const LEVEL_STYLE = {
     badgeText: "#FFFFFF",
   },
   Warning: {
-    card: "#F0ECFF",
-    border: "#7B61FF",
-    text: "#6D4DFF",
-    badge: "#7B61FF",
+    card: "#FFF4ED",
+    border: "#FF6B00",
+    text: "#B24B00",
+    badge: "#FF6B00",
     badgeText: "#FFFFFF",
   },
   Info: {
@@ -212,8 +212,8 @@ const Alerts = ({ navigation }) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#7B61FF"
-            colors={["#7B61FF"]}
+            tintColor="#FF6B00"
+            colors={["#FF6B00"]}
           />
         }
       >
@@ -241,10 +241,10 @@ const Alerts = ({ navigation }) => {
             
             <AnimatedPressable 
               onPress={() => { setFilterMode("Warning"); setVisibleCount(PAGE_SIZE); }}
-              style={[styles.summaryCard, { borderColor: "#7B61FF", backgroundColor: "#F5F3FF" }]}
+              style={[styles.summaryCard, { borderColor: "#FF6B00", backgroundColor: "#FFF4ED" }]}
             >
               <Text style={styles.summaryIcon}>🟡</Text>
-              <Text style={[styles.summaryNumber, { color: "#7B61FF" }]}>{warningCount}</Text>
+              <Text style={[styles.summaryNumber, { color: "#FF6B00" }]}>{warningCount}</Text>
               <Text style={styles.summaryLabel}>Warning</Text>
             </AnimatedPressable>
 
@@ -295,7 +295,7 @@ const Alerts = ({ navigation }) => {
         {/* Loading */}
         {loading && (
           <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color="#7B61FF" />
+            <ActivityIndicator size="small" color="#FF6B00" />
             <Text style={styles.loadingText}>Loading alerts...</Text>
           </View>
         )}
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     color: "#0A0F2C",
   },
   resetText: {
-    color: "#7B61FF",
+    color: "#FF6B00",
     fontSize: 13,
     fontWeight: "700",
   },
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   cardRoom: {
-    color: "#7B61FF",
+    color: "#FF6B00",
     fontSize: 9,
     fontWeight: "900",
     textTransform: "uppercase",
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   showMoreText: {
-    color: "#7B61FF",
+    color: "#FF6B00",
     fontSize: 13,
     fontWeight: "800",
   },

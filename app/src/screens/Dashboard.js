@@ -6,6 +6,8 @@ import {
   StyleSheet,
   Text,
   View,
+  Image,
+  ActivityIndicator,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import AnimatedPressable from "../components/AnimatedPressable";
@@ -181,6 +183,7 @@ const Dashboard = ({ navigation }) => {
                 <View style={styles.onlinePulse} />
                 <Text style={styles.onlineText}>{summary.homeStatus}</Text>
               </View>
+              <ActivityIndicator size="small" color="#FF6B00" />
               <AnimatedPressable onPress={() => navigation.navigate("HomesSettings")} style={styles.settingsIconBtn}>
                 <Text style={{ fontSize: 18 }}>⚙️</Text>
               </AnimatedPressable>
@@ -266,7 +269,8 @@ const styles = StyleSheet.create({
   headerCopy: { flex: 1 },
   greeting: { fontSize: 14, color: "#64748B", fontWeight: "600" },
   name: { fontSize: 26, fontWeight: "900", color: "#0A0F2C", marginTop: 2 },
-  avatar: { width: 54, height: 54, borderRadius: 18, backgroundColor: "#7B61FF", alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#FFFFFF" },
+  name: { fontSize: 26, fontWeight: "900", color: "#0A0F2C", marginTop: 2 },
+  avatar: { width: 54, height: 54, borderRadius: 18, backgroundColor: "#FF6B00", alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#FFFFFF" },
   avatarText: { color: "#FFFFFF", fontSize: 20, fontWeight: "900" },
   mainActionRow: { marginBottom: 24 },
   homeCard: { backgroundColor: "#0A0F2C", borderRadius: 28, padding: 24, shadowColor: "#0A0F2C", shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },
@@ -280,10 +284,10 @@ const styles = StyleSheet.create({
   homeSelectorWrap: { marginBottom: 24 },
   selectorLabel: { color: "#64748B", fontSize: 12, fontWeight: "800", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 },
   homeChip: { height: 42, borderRadius: 14, paddingHorizontal: 16, marginRight: 12, borderWidth: 1.5, borderColor: "#F1F5F9", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
-  homeChipActive: { borderColor: "#7B61FF", backgroundColor: "#7B61FF" },
+  homeChipActive: { borderColor: "#FF6B00", backgroundColor: "#FF6B00" },
   homeChipText: { color: "#0A0F2C", fontSize: 14, fontWeight: "800" },
   homeChipTextActive: { color: "#FFFFFF" },
-  aiCard: { backgroundColor: "#7B61FF", borderRadius: 24, padding: 20, marginBottom: 28, shadowColor: "#7B61FF", shadowOpacity: 0.3, shadowRadius: 15, elevation: 8 },
+  aiCard: { backgroundColor: "#FF6B00", borderRadius: 24, padding: 20, marginBottom: 28, shadowColor: "#FF6B00", shadowOpacity: 0.3, shadowRadius: 15, elevation: 8 },
   aiCardContent: { flexDirection: "row", alignItems: "center" },
   aiIconWrapper: { width: 48, height: 48, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.25)", alignItems: "center", justifyContent: "center", marginRight: 16 },
   aiTextContainer: { flex: 1 },
@@ -302,7 +306,7 @@ const styles = StyleSheet.create({
   viewBtn: { width: "100%", height: 36, borderRadius: 12, backgroundColor: "#F1F5F9", alignItems: "center", justifyContent: "center" },
   viewBtnText: { color: "#64748B", fontSize: 12, fontWeight: "900" },
   addRoomCard: { width: CARD_WIDTH, minHeight: 170, borderRadius: 26, borderWidth: 2, borderStyle: "dashed", borderColor: "#CBD5E1", alignItems: "center", justifyContent: "center", backgroundColor: "transparent" },
-  addRoomText: { color: "#7B61FF", fontSize: 15, fontWeight: "900" },
+  addRoomText: { color: "#FF6B00", fontSize: 15, fontWeight: "900" },
   loadingText: { textAlign: "center", color: "#64748B", marginTop: 20, fontSize: 14, fontWeight: "600" },
   errorText: { textAlign: "center", color: "#FF5C7A", marginBottom: 10, fontSize: 13, fontWeight: "700" },
 });

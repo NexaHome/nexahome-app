@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   settingText: { color: "#0A0F2C", fontSize: 14, fontWeight: "800" },
   warning: {
     borderWidth: 1,
-    borderColor: "#7B61FF",
+    borderColor: "#FF6B00",
     backgroundColor: "#F0ECFF",
     borderRadius: 9,
     padding: 12,

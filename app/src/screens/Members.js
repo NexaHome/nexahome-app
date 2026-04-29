@@ -308,7 +308,7 @@ const Members = ({ navigation }) => {
         <Text style={styles.sectionTitle}>Member list</Text>
         {loading ? (
           <View style={styles.loadingBox}>
-            <ActivityIndicator />
+            <ActivityIndicator color="#FF6B00" />
             <Text style={styles.loadingText}>Loading members...</Text>
           </View>
         ) : sortedMembers.length === 0 ? (
@@ -361,7 +361,7 @@ const Members = ({ navigation }) => {
             <View style={styles.permissionHeader}>
               <Text style={styles.sectionTitle}>Permissions</Text>
               <Text style={styles.editingFor}>
-                Editing for: <Text style={{ fontWeight: "900", color: "#7B61FF" }}>{selectedMember.name}</Text>
+                Editing for: <Text style={{ fontWeight: "900", color: "#FF6B00" }}>{selectedMember.name}</Text>
               </Text>
             </View>
             <View style={styles.permissionCard}>
@@ -539,21 +539,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   memberCardSelected: {
-    borderColor: "#7B61FF",
-    backgroundColor: "#F5F3FF",
+    borderColor: "#FF6B00",
+    backgroundColor: "#FFF4ED",
   },
   memberAvatar: {
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: "#E6FAFF",
+    backgroundColor: "#FFF4ED",
     borderWidth: 1.5,
-    borderColor: "#00D4FF",
+    borderColor: "#FF6B00",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
   },
-  initials: { color: "#036B82", fontSize: 14, fontWeight: "900" },
+  initials: { color: "#B24B00", fontSize: 14, fontWeight: "900" },
   memberCopy: { flex: 1, paddingRight: 8 },
   memberName: { color: "#0A0F2C", fontSize: 16, fontWeight: "900" },
   role: { color: "#64748B", fontSize: 12, marginTop: 4, fontWeight: "600" },
@@ -562,15 +562,15 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: "#00D4FF",
-    backgroundColor: "#E6FAFF",
+    borderColor: "#FF6B00",
+    backgroundColor: "#FFF4ED",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 12,
   },
-  badgeText: { color: "#036B82", fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
-  badgeOwner: { borderColor: "#7B61FF", backgroundColor: "#F0ECFF" },
-  badgeOwnerText: { color: "#6D4DFF" },
+  badgeText: { color: "#B24B00", fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
+  badgeOwner: { borderColor: "#FF6B00", backgroundColor: "#FFF4ED" },
+  badgeOwnerText: { color: "#B24B00" },
   permissionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",

@@ -9,6 +9,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as SecureStore from "expo-secure-store";
@@ -75,14 +76,20 @@ export default function LoginScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Background Gradient Effect */}
-          <View pointerEvents="none" style={styles.gradientBackground} />
+          {/* Logo Section */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require("../../assets/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
 
           {/* Title */}
-          <Text style={styles.title}>Welcome back</Text>
+          <Text style={styles.title}>NexaHome</Text>
           <Text style={styles.subtitle}>
-            Login to your account and{"\n"}continue{" "}
-            <Text style={styles.subtitleAccent}>your journey</Text>
+            Welcome back! Experience smarter{"\n"}living with{" "}
+            <Text style={styles.subtitleAccent}>Comfort & Style</Text>
           </Text>
 
           {/* Email Input */}
@@ -156,23 +163,6 @@ export default function LoginScreen({ navigation }) {
             />
           </TouchableOpacity>
 
-          {/* Divider */}
-          <View style={styles.orRow}>
-            <View style={styles.line} />
-            <Text style={styles.orText}>or</Text>
-            <View style={styles.line} />
-          </View>
-
-          {/* Google Button */}
-          <TouchableOpacity style={styles.googleButton}>
-            <Ionicons
-              name="logo-google"
-              size={20}
-              color="#4285F4"
-              style={styles.googleIcon}
-            />
-            <Text style={styles.googleButtonText}>Continue with Google</Text>
-          </TouchableOpacity>
 
           {/* Register Link */}
           <View style={styles.bottomRow}>
@@ -196,6 +186,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 20,
     paddingBottom: 32,
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginTop: 40,
+    marginBottom: 20,
+  },
+  logo: {
+    width: 140,
+    height: 140,
   },
   gradientBackground: {
     position: "absolute",
@@ -288,45 +287,6 @@ const styles = StyleSheet.create({
   },
   loginButtonIcon: {
     marginLeft: 10,
-  },
-  orRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E5E7EB",
-  },
-  orText: {
-    marginHorizontal: 12,
-    color: "#9CA3AF",
-    fontSize: 14,
-  },
-  googleButton: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  googleIcon: {
-    marginRight: 12,
-  },
-  googleButtonText: {
-    color: "#111827",
-    fontSize: 15,
-    fontWeight: "600",
   },
   bottomRow: {
     flexDirection: "row",

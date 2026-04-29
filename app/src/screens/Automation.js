@@ -69,7 +69,7 @@ const Automation = ({ navigation }) => {
           </AnimatedPressable>
         </View>
 
-        {loading && <ActivityIndicator size="small" color="#7B61FF" style={{ marginTop: 20 }} />}
+        {loading && <ActivityIndicator size="small" color="#FF6B00" style={{ marginTop: 20 }} />}
         
         {!loading && automations.length === 0 && (
           <Text style={{ color: "#64748B", marginTop: 20 }}>No automation rules created yet.</Text>
@@ -182,16 +182,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
-    backgroundColor: "#E6FAFF",
+    backgroundColor: "#FFF4ED",
     borderWidth: 1,
-    borderColor: "#00D4FF",
+    borderColor: "#FF6B00",
   },
   statusPillOff: {
     backgroundColor: "#F1F5F9",
     borderColor: "#CBD5E1",
   },
   statusPillText: {
-    color: "#036B82",
+    color: "#B24B00",
     fontSize: 10,
     fontWeight: "900",
   },

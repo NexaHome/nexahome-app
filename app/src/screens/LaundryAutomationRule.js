@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 26 },
   backButton: { paddingVertical: 8, paddingRight: 16, alignSelf: "flex-start" },
-  backText: { color: "#7B61FF", fontSize: 14, fontWeight: "900" },
+  backText: { color: "#FF6B00", fontSize: 14, fontWeight: "900" },
   title: { color: "#0A0F2C", fontSize: 25, fontWeight: "900", letterSpacing: 0, marginBottom: 16 },
   section: { color: "#64748B", fontSize: 12, fontWeight: "900", textTransform: "uppercase", marginBottom: 8 },
   ruleRow: {
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   },
   rowLabel: { color: "#64748B", fontSize: 12, fontWeight: "700" },
   rowValue: { color: "#0A0F2C", fontSize: 14, fontWeight: "900", marginTop: 4 },
-  changeText: { color: "#7B61FF", fontSize: 12, fontWeight: "900" },
+  changeText: { color: "#FF6B00", fontSize: 12, fontWeight: "900" },
   arrow: { textAlign: "center", color: "#94A3B8", fontSize: 24, marginBottom: 8 },
   toggleRow: {
     minHeight: 54,

@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     width: "100%",
-    backgroundColor: "#111827",
+    backgroundColor: "#FF6B00",
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: "center",
@@ -98,13 +98,13 @@ const styles = StyleSheet.create({
   secondaryButton: {
     width: "100%",
     borderWidth: 1.5,
-    borderColor: "#111827",
+    borderColor: "#FF6B00",
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: "center",
   },
   secondaryButtonText: {
-    color: "#111827",
+    color: "#FF6B00",
     fontSize: 16,
     fontWeight: "600",
   },

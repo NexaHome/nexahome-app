@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 26 },
   backButton: { paddingVertical: 8, paddingRight: 16, alignSelf: "flex-start" },
-  backText: { color: "#7B61FF", fontSize: 14, fontWeight: "900" },
+  backText: { color: "#FF6B00", fontSize: 14, fontWeight: "900" },
   title: {
     color: "#0A0F2C",
     fontSize: 27,
@@ -236,10 +236,10 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 7,
     borderWidth: 1,
-    borderColor: "#00D4FF",
-    backgroundColor: "#E6FAFF",
+    borderColor: "#FF6B00",
+    backgroundColor: "#FFF4ED",
   },
-  previewBadgeText: { color: "#036B82", fontSize: 12, fontWeight: "900" },
+  previewBadgeText: { color: "#B24B00", fontSize: 12, fontWeight: "900" },
   saveButton: {
     height: 48,
     borderRadius: 9,
