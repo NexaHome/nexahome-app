@@ -160,12 +160,12 @@ const HomesSettings = ({ navigation }) => {
 
       const result = await response.json();
       if (result.errors?.length) {
-        throw new Error(result.errors[0].message || "Gagal memuat homes");
+        throw new Error(result.errors[0].message || "Failed to load homes");
       }
 
       setHomes(result.data?.homes || []);
     } catch (err) {
-      Alert.alert("Error", err.message || "Gagal memuat homes");
+      Alert.alert("Error", err.message || "Failed to load homes");
     } finally {
       setLoading(false);
     }
@@ -177,7 +177,7 @@ const HomesSettings = ({ navigation }) => {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert("Error", "Nama home tidak boleh kosong");
+      Alert.alert("Error", "Home name cannot be empty");
       return;
     }
 
@@ -202,7 +202,7 @@ const HomesSettings = ({ navigation }) => {
         );
         const r = await res.json();
         if (r.errors)
-          throw new Error(r.errors[0].message || "Gagal update home");
+          throw new Error(r.errors[0].message || "Failed to update home");
         setEditingId(null);
         setName("");
         await loadHomes();
@@ -221,7 +221,7 @@ const HomesSettings = ({ navigation }) => {
       );
       const r = await res.json();
       if (r.errors)
-        throw new Error(r.errors[0].message || "Gagal membuat home");
+        throw new Error(r.errors[0].message || "Failed to create home");
 
       const newHomeId = r.data?.createHome?._id;
       if (newHomeId) {
@@ -231,7 +231,7 @@ const HomesSettings = ({ navigation }) => {
       setName("");
       await loadHomes();
     } catch (err) {
-      Alert.alert("Error", err.message || "Gagal menyimpan home");
+      Alert.alert("Error", err.message || "Failed to save home");
     } finally {
       setSaving(false);
     }
@@ -248,10 +248,10 @@ const HomesSettings = ({ navigation }) => {
   };
 
   const handleDelete = (home) => {
-    Alert.alert("Hapus home", `Hapus home \"${home.name}\"?`, [
-      { text: "Batal", style: "cancel" },
+    Alert.alert("Delete home", `Delete home "${home.name}"?`, [
+      { text: "Cancel", style: "cancel" },
       {
-        text: "Hapus",
+        text: "Delete",
         style: "destructive",
         onPress: async () => {
           try {
@@ -269,7 +269,7 @@ const HomesSettings = ({ navigation }) => {
             );
             const r = await res.json();
             if (r.errors)
-              throw new Error(r.errors[0].message || "Gagal menghapus home");
+              throw new Error(r.errors[0].message || "Failed to delete home");
 
             // if deleted home was active, clear activeHomeId
             const activeHomeId = await SecureStore.getItemAsync("activeHomeId");
@@ -279,7 +279,7 @@ const HomesSettings = ({ navigation }) => {
 
             await loadHomes();
           } catch (err) {
-            Alert.alert("Error", err.message || "Gagal menghapus home");
+            Alert.alert("Error", err.message || "Failed to delete home");
           }
         },
       },
@@ -288,7 +288,7 @@ const HomesSettings = ({ navigation }) => {
 
   const handleJoin = async () => {
     if (!inviteCode.trim()) {
-      Alert.alert("Error", "Kode invite tidak boleh kosong");
+      Alert.alert("Error", "Invite code cannot be empty");
       return;
     }
 
@@ -313,17 +313,17 @@ const HomesSettings = ({ navigation }) => {
 
       const r = await res.json();
       if (r.errors) {
-        throw new Error(r.errors[0].message || "Gagal join home");
+        throw new Error(r.errors[0].message || "Failed to join home");
       }
 
       Alert.alert(
-        "Sukses",
-        `Berhasil bergabung dengan ${r.data?.joinHomeByCode?.name}`,
+        "Success",
+        `Successfully joined ${r.data?.joinHomeByCode?.name}`,
       );
       setInviteCode("");
       await loadHomes();
     } catch (err) {
-      Alert.alert("Error", err.message || "Gagal join home");
+      Alert.alert("Error", err.message || "Failed to join home");
     } finally {
       setJoining(false);
     }
@@ -341,7 +341,7 @@ const HomesSettings = ({ navigation }) => {
           <TextInput
             value={name}
             onChangeText={setName}
-            placeholder="Nama home"
+            placeholder="Home name"
             placeholderTextColor={theme.textSoft}
             style={dynamicStyles.input}
             selectionColor={theme.secondary}
@@ -382,7 +382,7 @@ const HomesSettings = ({ navigation }) => {
           <TextInput
             value={inviteCode}
             onChangeText={setInviteCode}
-            placeholder="Masukkan Invite Code (misal: A1B2C3)"
+            placeholder="Enter Invite Code (e.g. A1B2C3)"
             placeholderTextColor={theme.textSoft}
             style={dynamicStyles.input}
             selectionColor={theme.secondary}

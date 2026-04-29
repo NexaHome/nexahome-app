@@ -96,7 +96,7 @@ Fokus pada:
 
 Hanya output JSON array yang valid, tanpa teks tambahan.`;
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`;
       const body = {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
@@ -107,7 +107,7 @@ Hanya output JSON array yang valid, tanpa teks tambahan.`;
 
       const res = await axios.post(url, body, {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 15000,
+        timeout: 30000,
       });
 
       if (res.status >= 200 && res.status < 300) {
@@ -174,18 +174,34 @@ Hanya output JSON array yang valid, tanpa teks tambahan.`;
     const recommendations: any[] = [];
 
     for (const sensor of sensors) {
+      const val = parseFloat(sensor.value) || 0;
       const st = sensor.rawStatus.toLowerCase();
       let rec: any = null;
 
-      if (['danger', 'high', 'abnormal', 'detected'].includes(st)) {
+      // Logika Penentuan Bahaya Berdasarkan Threshold Baru
+      const isCritical = 
+        ['danger', 'urgent', 'emergency', 'critical'].includes(st) ||
+        (sensor.category === 'gas' && val > 2500) ||
+        (sensor.category === 'water' && val > 4000) ||
+        (sensor.category === 'fire' && (val === 0 || (val > 1 && val < 500)));
+
+      if (isCritical) {
         rec = {
-          title: `⚠️ Peringatan: ${sensor.name}`,
-          description: `Sensor ${sensor.name} di ${sensor.room} mendeteksi kondisi ${sensor.rawStatus} (${sensor.value} ${sensor.unit}). Segera periksa!`,
+          title: `🚨 BAHAYA: ${sensor.name}`,
+          description: `Terdeteksi kondisi KRITIS di ${sensor.room} (${sensor.value} ${sensor.unit}). Segera ambil tindakan pencegahan!`,
           priority: 'high',
           category: 'safety',
           icon: '🚨',
         };
-      } else if (['warning', 'medium', 'rainy', 'low'].includes(st)) {
+      } else if (sensor.category === 'rain' && val < 300) {
+        rec = {
+          title: `🌧️ Hujan Lebat Terdeteksi`,
+          description: `Sensor di ${sensor.room} mendeteksi hujan lebat. Pastikan jemuran dan jendela sudah aman.`,
+          priority: 'medium',
+          category: 'comfort',
+          icon: '🌧️',
+        };
+      } else if (['warning', 'medium'].includes(st)) {
         rec = {
           title: `⚡ Perhatian: ${sensor.name}`,
           description: `Sensor ${sensor.name} di ${sensor.room} menunjukkan status ${sensor.rawStatus} (${sensor.value} ${sensor.unit}). Pantau secara berkala.`,

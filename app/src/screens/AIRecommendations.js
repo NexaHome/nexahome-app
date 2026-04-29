@@ -19,21 +19,21 @@ const PRIORITY_STYLE = {
     text: "#FF5C7A",
     badge: "#FF5C7A",
     badgeText: "#FFFFFF",
-    label: "Prioritas Tinggi",
+    label: "High Priority",
   },
   medium: {
-    card: "#F0ECFF",
-    border: "#7B61FF",
-    text: "#6D4DFF",
-    badge: "#7B61FF",
+    card: "#FFF4ED",
+    border: "#FF6B00",
+    text: "#B24B00",
+    badge: "#FF6B00",
     badgeText: "#FFFFFF",
-    label: "Prioritas Sedang",
+    label: "Medium Priority",
   },
   low: {
-    card: "#E6FAFF",
-    border: "#00D4FF",
-    text: "#036B82",
-    badge: "#00D4FF",
+    card: "#FFFBF2",
+    border: "#FF914D",
+    text: "#8B4513",
+    badge: "#FF914D",
     badgeText: "#FFFFFF",
     label: "Info",
   },
@@ -104,7 +104,7 @@ const AIRecommendations = ({ navigation }) => {
         setRecommendations(parseRecs(result.data.generateHomeRecommendations));
       }
     } catch (err) {
-      console.error("Gagal memuat rekomendasi:", err);
+      console.error("Failed to load recommendations:", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -129,28 +129,28 @@ const AIRecommendations = ({ navigation }) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#7B61FF"
-            colors={["#7B61FF"]}
+            tintColor="#FF6B00"
+            colors={["#FF6B00"]}
           />
         }
       >
         {/* Header */}
         <View style={styles.header}>
           <AnimatedPressable onPress={() => navigation.goBack()}>
-            <Text style={styles.backBtn}>← Kembali</Text>
+            <Text style={styles.backBtn}>← Back</Text>
           </AnimatedPressable>
           <Text style={styles.title}>✨ AI Insights</Text>
           <Text style={styles.subtitle}>
-            Rekomendasi otomatis berdasarkan kondisi sensor saat ini
+            Automated recommendations based on current sensor conditions
           </Text>
         </View>
 
         {/* Loading */}
         {loading && (
           <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color="#7B61FF" />
+            <ActivityIndicator size="small" color="#FF6B00" />
             <Text style={styles.loadingText}>
-              Menganalisis data sensor...
+              Analyzing sensor data...
             </Text>
           </View>
         )}
@@ -159,9 +159,9 @@ const AIRecommendations = ({ navigation }) => {
         {!loading && recommendations.length === 0 && (
           <View style={styles.emptyBox}>
             <Text style={styles.emptyIcon}>🤖</Text>
-            <Text style={styles.emptyTitle}>Tidak ada rekomendasi</Text>
+            <Text style={styles.emptyTitle}>No recommendations</Text>
             <Text style={styles.emptySubtitle}>
-              Tarik ke bawah untuk memperbarui analisis sensor.
+              Pull down to refresh sensor analysis.
             </Text>
           </View>
         )}
@@ -197,11 +197,11 @@ const AIRecommendations = ({ navigation }) => {
                 </Text>
                 <View style={styles.cardFooter}>
                   <Text style={styles.sourceTag}>
-                    {item.source === "ai" ? "🤖 AI" : "📊 Analisis"}
+                    {item.source === "ai" ? "🤖 AI" : "📊 Analysis"}
                   </Text>
                   {item.confidence != null && (
                     <Text style={styles.confidence}>
-                      Keyakinan: {Math.round(item.confidence * 100)}%
+                      Confidence: {Math.round(item.confidence * 100)}%
                     </Text>
                   )}
                 </View>
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     fontSize: 14,
-    color: "#7B61FF",
+    color: "#FF6B00",
     fontWeight: "800",
     marginBottom: 12,
   },

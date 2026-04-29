@@ -9,6 +9,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { gql } from "@apollo/client/core";
@@ -39,12 +40,12 @@ export default function RegisterScreen({ navigation }) {
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {
-      Alert.alert("Error", "Semua field wajib diisi");
+      Alert.alert("Error", "All fields are required");
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Error", "Password dan confirm password tidak sama");
+      Alert.alert("Error", "Passwords do not match");
       return;
     }
 
@@ -58,14 +59,14 @@ export default function RegisterScreen({ navigation }) {
       });
 
       if (!data?.register) {
-        Alert.alert("Register gagal", "Terjadi kesalahan");
+        Alert.alert("Registration failed", "An error occurred");
         return;
       }
 
-      Alert.alert("Sukses", "Akun berhasil dibuat, silakan login");
+      Alert.alert("Success", "Account created successfully, please log in");
       navigation.navigate("Login");
     } catch (error) {
-      const msg = error?.message || "Gagal terhubung ke server";
+      const msg = error?.message || "Failed to connect to server";
       Alert.alert("Error", msg);
       console.log(error);
     }
@@ -82,11 +83,20 @@ export default function RegisterScreen({ navigation }) {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Logo Section */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require("../../assets/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+
           {/* Title */}
-          <Text style={styles.title}>Create account</Text>
+          <Text style={styles.title}>NexaHome</Text>
           <Text style={styles.subtitle}>
-            Fill in your details below to{"\n"}
-            <Text style={styles.subtitleAccent}>get started</Text>
+            Create your account to start{"\n"}
+            <Text style={styles.subtitleAccent}>smarter living</Text>
           </Text>
 
           {/* Full Name Input */}
@@ -251,6 +261,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 32,
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  logo: {
+    width: 140,
+    height: 140,
   },
   backButton: {
     width: 48,

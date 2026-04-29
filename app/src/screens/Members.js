@@ -21,9 +21,13 @@ const Members = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [inviting, setInviting] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [control, setControl] = useState(true);
-  const [schedule, setSchedule] = useState(false);
-  const [invite, setInvite] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [permissions, setPermissions] = useState({
+    control: true,
+    schedule: false,
+    invite: false,
+  });
+  const [saving, setSaving] = useState(false);
 
   const initialsFromName = useCallback((name = "") => {
     const text = String(name).trim();
@@ -80,13 +84,23 @@ const Members = ({ navigation }) => {
       const result = await response.json();
 
       if (result.errors?.length) {
-        throw new Error(result.errors[0]?.message || "Gagal memuat members");
+        throw new Error(result.errors[0]?.message || "Failed to load members");
       }
 
       setHome(result.data?.home || null);
-      setMembers(result.data?.membersByHome || []);
+      const memberList = result.data?.membersByHome || [];
+      setMembers(memberList);
+
+      // Select first non-owner member by default if none selected
+      if (!selectedMember && memberList.length > 0) {
+        const ownerIdStr = String(result.data?.home?.owner_id);
+        const firstMember = memberList.find(m => String(m.userId) !== ownerIdStr);
+        if (firstMember) {
+          handleSelectMember(firstMember);
+        }
+      }
     } catch (error) {
-      Alert.alert("Error", error.message || "Gagal memuat members");
+      Alert.alert("Error", error.message || "Failed to load members");
     } finally {
       setLoading(false);
     }
@@ -99,7 +113,7 @@ const Members = ({ navigation }) => {
   const handleInvite = async () => {
     const email = inviteEmail.trim();
     if (!email) {
-      Alert.alert("Error", "Email member tidak boleh kosong");
+      Alert.alert("Error", "Member email cannot be empty");
       return;
     }
 
@@ -114,7 +128,7 @@ const Members = ({ navigation }) => {
       }
 
       if (!homeId) {
-        Alert.alert("Error", "Tidak ada home aktif");
+        Alert.alert("Error", "No active home");
         return;
       }
 
@@ -142,16 +156,82 @@ const Members = ({ navigation }) => {
       const result = await response.json();
 
       if (result.errors?.length) {
-        throw new Error(result.errors[0]?.message || "Gagal invite member");
+        throw new Error(result.errors[0]?.message || "Failed to invite member");
       }
 
       setInviteEmail("");
       await loadMembers();
-      Alert.alert("Sukses", "Member berhasil diinvite");
+      Alert.alert("Success", "Member successfully invited");
     } catch (error) {
-      Alert.alert("Error", error.message || "Gagal invite member");
+      Alert.alert("Error", error.message || "Failed to invite member");
     } finally {
       setInviting(false);
+    }
+  };
+
+  const handleSelectMember = (member) => {
+    setSelectedMember(member);
+    setPermissions({
+      control: member.can_control_devices,
+      schedule: member.can_manage_schedules,
+      invite: member.can_invite_members,
+    });
+  };
+
+  const updatePermission = async (key, value) => {
+    if (!selectedMember || saving) return;
+
+    const newPermissions = { ...permissions, [key]: value };
+    setPermissions(newPermissions);
+
+    try {
+      setSaving(true);
+      const token = await SecureStore.getItemAsync("token");
+      const homeId = await SecureStore.getItemAsync("activeHomeId");
+
+      const response = await postGraphQL(
+        {
+          query: `
+            mutation UpdatePermissions($homeId: String!, $targetUserId: String!, $input: UpdateMemberPermissionsInput!) {
+              updateMemberPermissions(homeId: $homeId, targetUserId: $targetUserId, input: $input)
+            }
+          `,
+          variables: {
+            homeId,
+            targetUserId: selectedMember.userId,
+            input: {
+              can_control_devices: newPermissions.control,
+              can_manage_schedules: newPermissions.schedule,
+              can_invite_members: newPermissions.invite,
+            },
+          },
+        },
+        {
+          Authorization: `Bearer ${token}`,
+          "x-home-id": homeId,
+        },
+      );
+
+      const result = await response.json();
+      if (result.errors?.length) throw new Error(result.errors[0].message);
+
+      // Update local members list to keep it in sync
+      setMembers(prev => prev.map(m => 
+        m.userId === selectedMember.userId 
+          ? { 
+              ...m, 
+              can_control_devices: newPermissions.control,
+              can_manage_schedules: newPermissions.schedule,
+              can_invite_members: newPermissions.invite 
+            } 
+          : m
+      ));
+    } catch (error) {
+      Alert.alert("Error", "Failed to update permissions");
+      // Rollback on error
+      setPermissions(permissions);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -171,17 +251,20 @@ const Members = ({ navigation }) => {
     <ScreenShell>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <View>
+          <AnimatedPressable 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backIcon}>←</Text>
+          </AnimatedPressable>
+          <View style={styles.headerTitleWrap}>
             <Text style={styles.title}>Members</Text>
             <Text style={styles.subtitle}>
               {home?.name
-                ? `Kelola member untuk ${home.name}`
-                : "Pilih home dulu untuk melihat member"}
+                ? `Manage members for ${home.name}`
+                : "Select a home to view members"}
             </Text>
           </View>
-          <AnimatedPressable style={styles.refreshButton} onPress={loadMembers}>
-            <Text style={styles.refreshText}>Refresh</Text>
-          </AnimatedPressable>
         </View>
 
         <View style={styles.summaryCard}>
@@ -225,21 +308,29 @@ const Members = ({ navigation }) => {
         <Text style={styles.sectionTitle}>Member list</Text>
         {loading ? (
           <View style={styles.loadingBox}>
-            <ActivityIndicator />
+            <ActivityIndicator color="#FF6B00" />
             <Text style={styles.loadingText}>Loading members...</Text>
           </View>
         ) : sortedMembers.length === 0 ? (
           <View style={styles.emptyBox}>
-            <Text style={styles.emptyTitle}>Belum ada member</Text>
+            <Text style={styles.emptyTitle}>No members yet</Text>
             <Text style={styles.emptySubtitle}>
-              Invite member baru untuk mulai mengelola home bersama.
+              Invite new members to start managing your home together.
             </Text>
           </View>
         ) : (
           sortedMembers.map((member) => {
             const isOwner = String(member.userId) === ownerId;
+            const isSelected = selectedMember?.userId === member.userId;
             return (
-              <View key={member.userId} style={styles.memberCard}>
+              <AnimatedPressable
+                key={member.userId}
+                style={[
+                  styles.memberCard,
+                  isSelected && styles.memberCardSelected,
+                ]}
+                onPress={() => !isOwner && handleSelectMember(member)}
+              >
                 <View style={styles.memberAvatar}>
                   <Text style={styles.initials}>
                     {initialsFromName(member.name)}
@@ -260,50 +351,62 @@ const Members = ({ navigation }) => {
                     {isOwner ? "Owner" : "Member"}
                   </Text>
                 </View>
-              </View>
+              </AnimatedPressable>
             );
           })
         )}
 
-        <Text style={styles.sectionTitle}>Permissions</Text>
-        <View style={styles.permissionCard}>
-          <View style={styles.permissionRow}>
-            <View style={styles.permissionCopy}>
-              <Text style={styles.permissionText}>Control devices</Text>
-              <Text style={styles.permissionSub}>
-                Allow members to control devices
+        {selectedMember && (
+          <>
+            <View style={styles.permissionHeader}>
+              <Text style={styles.sectionTitle}>Permissions</Text>
+              <Text style={styles.editingFor}>
+                Editing for: <Text style={{ fontWeight: "900", color: "#FF6B00" }}>{selectedMember.name}</Text>
               </Text>
             </View>
-            <Toggle
-              active={control}
-              onPress={() => setControl((value) => !value)}
-            />
-          </View>
-          <View style={styles.permissionRow}>
-            <View style={styles.permissionCopy}>
-              <Text style={styles.permissionText}>Manage schedules</Text>
-              <Text style={styles.permissionSub}>
-                Allow schedule management
-              </Text>
+            <View style={styles.permissionCard}>
+              <View style={styles.permissionRow}>
+                <View style={styles.permissionCopy}>
+                  <Text style={styles.permissionText}>Control devices</Text>
+                  <Text style={styles.permissionSub}>
+                    Allow member to control devices
+                  </Text>
+                </View>
+                <Toggle
+                  active={permissions.control}
+                  onPress={() => updatePermission("control", !permissions.control)}
+                  disabled={saving}
+                />
+              </View>
+              <View style={styles.permissionRow}>
+                <View style={styles.permissionCopy}>
+                  <Text style={styles.permissionText}>Manage schedules</Text>
+                  <Text style={styles.permissionSub}>
+                    Allow schedule management
+                  </Text>
+                </View>
+                <Toggle
+                  active={permissions.schedule}
+                  onPress={() => updatePermission("schedule", !permissions.schedule)}
+                  disabled={saving}
+                />
+              </View>
+              <View style={styles.permissionRowLast}>
+                <View style={styles.permissionCopy}>
+                  <Text style={styles.permissionText}>Invite members</Text>
+                  <Text style={styles.permissionSub}>
+                    Allow inviting new members
+                  </Text>
+                </View>
+                <Toggle
+                  active={permissions.invite}
+                  onPress={() => updatePermission("invite", !permissions.invite)}
+                  disabled={saving}
+                />
+              </View>
             </View>
-            <Toggle
-              active={schedule}
-              onPress={() => setSchedule((value) => !value)}
-            />
-          </View>
-          <View style={styles.permissionRowLast}>
-            <View style={styles.permissionCopy}>
-              <Text style={styles.permissionText}>Invite members</Text>
-              <Text style={styles.permissionSub}>
-                Allow inviting new members
-              </Text>
-            </View>
-            <Toggle
-              active={invite}
-              onPress={() => setInvite((value) => !value)}
-            />
-          </View>
-        </View>
+          </>
+        )}
       </ScrollView>
       <BottomNav active="members" navigation={navigation} />
     </ScreenShell>
@@ -312,174 +415,209 @@ const Members = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  content: { padding: 20, paddingBottom: 60 },
+  content: { padding: 22, paddingBottom: 100 },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 14,
-    gap: 12,
+    alignItems: "center",
+    marginBottom: 24,
+    gap: 16,
   },
-  title: { fontSize: 26, fontWeight: "900", color: "#0A0F2C" },
-  subtitle: { color: "#64748B", marginTop: 6, fontSize: 13, lineHeight: 18 },
-  refreshButton: {
-    backgroundColor: "#0A0F2C",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
   },
-  refreshText: { color: "#FFFFFF", fontSize: 12, fontWeight: "900" },
+  backIcon: {
+    fontSize: 20,
+    color: "#0A0F2C",
+    fontWeight: "900",
+  },
+  headerTitleWrap: {
+    flex: 1,
+  },
+  title: { fontSize: 28, fontWeight: "900", color: "#0A0F2C" },
+  subtitle: { color: "#64748B", marginTop: 4, fontSize: 13, lineHeight: 18, fontWeight: "600" },
   summaryCard: {
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 18,
-    padding: 16,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 22,
+    padding: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 14,
+    marginBottom: 16,
+    shadowColor: "#0A0F2C",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   summaryItem: { flex: 1, alignItems: "center" },
-  summaryValue: { color: "#0A0F2C", fontSize: 18, fontWeight: "900" },
-  summaryLabel: { color: "#64748B", fontSize: 12, marginTop: 4 },
-  summaryDivider: { width: 1, height: 34, backgroundColor: "#E5E7EB" },
+  summaryValue: { color: "#0A0F2C", fontSize: 22, fontWeight: "900" },
+  summaryLabel: { color: "#64748B", fontSize: 12, marginTop: 4, fontWeight: "700" },
+  summaryDivider: { width: 1.5, height: 36, backgroundColor: "#F1F5F9" },
   inviteCard: {
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 18,
-    padding: 16,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 24,
   },
   cardTitle: {
     color: "#0A0F2C",
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "900",
-    marginBottom: 10,
+    marginBottom: 14,
   },
   input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    height: 52,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 14,
+    paddingHorizontal: 16,
     backgroundColor: "#F8FAFC",
     color: "#0A0F2C",
     fontWeight: "700",
     fontSize: 14,
   },
   inviteButton: {
-    marginTop: 12,
-    height: 48,
-    borderRadius: 12,
+    marginTop: 14,
+    height: 52,
+    borderRadius: 14,
     backgroundColor: "#0A0F2C",
     alignItems: "center",
     justifyContent: "center",
   },
-  inviteButtonText: { color: "#FFFFFF", fontWeight: "900", fontSize: 14 },
+  inviteButtonText: { color: "#FFFFFF", fontWeight: "900", fontSize: 15 },
   sectionTitle: {
-    marginTop: 18,
-    marginBottom: 10,
-    fontSize: 18,
+    marginTop: 24,
+    marginBottom: 14,
+    fontSize: 20,
     fontWeight: "900",
     color: "#0A0F2C",
   },
   loadingBox: {
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 18,
-    padding: 18,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 22,
+    padding: 24,
     alignItems: "center",
-    gap: 10,
+    gap: 12,
   },
-  loadingText: { color: "#64748B", fontSize: 13 },
+  loadingText: { color: "#64748B", fontSize: 14, fontWeight: "600" },
   emptyBox: {
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 18,
-    padding: 18,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 22,
+    padding: 24,
   },
-  emptyTitle: { color: "#0A0F2C", fontSize: 15, fontWeight: "900" },
+  emptyTitle: { color: "#0A0F2C", fontSize: 16, fontWeight: "900" },
   emptySubtitle: {
     color: "#64748B",
-    fontSize: 13,
-    marginTop: 6,
-    lineHeight: 18,
+    fontSize: 14,
+    marginTop: 8,
+    lineHeight: 20,
+    fontWeight: "600",
   },
   memberCard: {
-    minHeight: 76,
+    minHeight: 84,
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 22,
+    padding: 16,
+    marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
   },
+  memberCardSelected: {
+    borderColor: "#FF6B00",
+    backgroundColor: "#FFF4ED",
+  },
   memberAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#E6FAFF",
-    borderWidth: 1,
-    borderColor: "#00D4FF",
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: "#FFF4ED",
+    borderWidth: 1.5,
+    borderColor: "#FF6B00",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: 14,
   },
-  initials: { color: "#7B61FF", fontSize: 12, fontWeight: "900" },
+  initials: { color: "#B24B00", fontSize: 14, fontWeight: "900" },
   memberCopy: { flex: 1, paddingRight: 8 },
-  memberName: { color: "#0A0F2C", fontSize: 15, fontWeight: "900" },
-  role: { color: "#64748B", fontSize: 12, marginTop: 4 },
+  memberName: { color: "#0A0F2C", fontSize: 16, fontWeight: "900" },
+  role: { color: "#64748B", fontSize: 12, marginTop: 4, fontWeight: "600" },
   badge: {
-    minWidth: 62,
-    height: 28,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#00D4FF",
-    backgroundColor: "#E6FAFF",
+    minWidth: 70,
+    height: 30,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#FF6B00",
+    backgroundColor: "#FFF4ED",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
   },
-  badgeText: { color: "#036B82", fontSize: 11, fontWeight: "900" },
-  badgeOwner: { borderColor: "#7B61FF", backgroundColor: "#F0ECFF" },
-  badgeOwnerText: { color: "#6D4DFF" },
+  badgeText: { color: "#B24B00", fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
+  badgeOwner: { borderColor: "#FF6B00", backgroundColor: "#FFF4ED" },
+  badgeOwnerText: { color: "#B24B00" },
+  permissionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  editingFor: {
+    fontSize: 12,
+    color: "#64748B",
+    fontWeight: "700",
+    marginBottom: 2,
+  },
   permissionCard: {
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 24,
     overflow: "hidden",
+    marginBottom: 60,
   },
   permissionRow: {
-    minHeight: 62,
-    paddingHorizontal: 14,
+    minHeight: 80,
+    paddingHorizontal: 20,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#EEF2F7",
+    borderBottomWidth: 1.5,
+    borderBottomColor: "#F1F5F9",
     gap: 12,
   },
   permissionRowLast: {
-    minHeight: 62,
-    paddingHorizontal: 14,
+    minHeight: 80,
+    paddingHorizontal: 20,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     gap: 12,
   },
   permissionCopy: { flex: 1, paddingRight: 10 },
-  permissionText: { color: "#0A0F2C", fontSize: 14, fontWeight: "800" },
+  permissionText: { color: "#0A0F2C", fontSize: 16, fontWeight: "900" },
   permissionSub: {
     color: "#64748B",
     fontSize: 12,
-    marginTop: 3,
-    lineHeight: 16,
+    marginTop: 4,
+    lineHeight: 18,
+    fontWeight: "600",
   },
 });
 

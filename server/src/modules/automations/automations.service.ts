@@ -120,6 +120,7 @@ export class AutomationsService {
     return JSON.stringify({
       command: this.normalizeActionCommand(currentAction.command),
       ...(typeof currentAction.enabled === 'boolean' ? { enabled: currentAction.enabled } : {}),
+      ...(typeof (currentAction as any).state === 'string' ? { state: (currentAction as any).state } : {}),
       ...(homeId ? { homeId } : {}),
     });
   }
@@ -147,6 +148,10 @@ export class AutomationsService {
 
     if (value === 'SetAwayMode' || value === 'setAwayMode') {
       return 'setAwayMode';
+    }
+
+    if (value === 'ToggleDevices' || value === 'toggleDevices') {
+      return 'toggleDevices';
     }
 
     return value;

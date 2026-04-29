@@ -50,7 +50,7 @@ const Automation = ({ navigation }) => {
           );
         }
       } catch (err) {
-        console.error("Gagal memuat automation", err);
+        console.error("Failed to load automations", err);
       } finally {
         setLoading(false);
       }
@@ -69,33 +69,49 @@ const Automation = ({ navigation }) => {
           </AnimatedPressable>
         </View>
 
-        {loading && <ActivityIndicator size="small" color="#7B61FF" style={{ marginTop: 20 }} />}
+        {loading && <ActivityIndicator size="small" color="#FF6B00" style={{ marginTop: 20 }} />}
         
         {!loading && automations.length === 0 && (
-          <Text style={{ color: "#64748B", marginTop: 20 }}>Belum ada aturan otomatisasi yang dibuat.</Text>
+          <Text style={{ color: "#64748B", marginTop: 20 }}>No automation rules created yet.</Text>
         )}
 
         {!loading && automations.map((item) => (
-          <View key={item.id} style={styles.card}>
-            <Text style={styles.cardTitle}>{item.name}</Text>
-            <Text style={styles.action}>Then {item.action}</Text>
-            <Text style={styles.sensor}>Trigger: {item.sensor}</Text>
-            <View style={styles.footer}>
-              <View style={[styles.status, !item.active && styles.statusOff]}>
-                <Text style={[styles.statusText, !item.active && styles.statusTextOff]}>
-                  {item.active ? "Active" : "Inactive"}
+          <AnimatedPressable key={item.id} style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={styles.iconCircle}>
+                <Text style={{ fontSize: 18 }}>⚡</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>{item.name}</Text>
+                <Text style={styles.triggerText}>Trigger: {item.sensor}</Text>
+              </View>
+              <View style={[styles.statusPill, !item.active && styles.statusPillOff]}>
+                <Text style={[styles.statusPillText, !item.active && styles.statusPillTextOff]}>
+                  {item.active ? "Active" : "Paused"}
                 </Text>
               </View>
-              <View style={styles.actions}>
-                <AnimatedPressable style={styles.smallButton}>
-                  <Text style={styles.smallText}>Edit</Text>
+            </View>
+
+            <View style={styles.actionRow}>
+              <Text style={styles.actionLabel}>THEN</Text>
+              <View style={styles.actionBox}>
+                <Text style={styles.actionValue}>{item.action}</Text>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.footer}>
+              <View style={styles.btnRow}>
+                <AnimatedPressable style={styles.editBtn}>
+                  <Text style={styles.editBtnText}>Edit</Text>
                 </AnimatedPressable>
-                <AnimatedPressable style={styles.deleteButton}>
-                  <Text style={styles.deleteText}>Delete</Text>
+                <AnimatedPressable style={styles.deleteBtn}>
+                  <Text style={styles.deleteBtnText}>Delete</Text>
                 </AnimatedPressable>
               </View>
             </View>
-          </View>
+          </AnimatedPressable>
         ))}
       </ScrollView>
       <BottomNav active="schedule" navigation={navigation} />
@@ -127,56 +143,121 @@ const styles = StyleSheet.create({
   darkText: { color: "#FFFFFF", fontSize: 12, fontWeight: "900" },
   card: {
     backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 16,
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 13,
-    padding: 14,
-    marginBottom: 10,
+    borderColor: "#F1F5F9",
   },
-  cardTitle: { color: "#0A0F2C", fontSize: 16, fontWeight: "900" },
-  action: { color: "#64748B", fontSize: 13, marginTop: 5 },
-  sensor: { color: "#64748B", fontSize: 12.5, marginTop: 3 },
-  footer: {
+  cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 12,
+    marginBottom: 16,
   },
-  status: {
-    minWidth: 64,
-    height: 28,
-    borderRadius: 6,
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  cardTitle: {
+    color: "#0F172A",
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  triggerText: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: "#FFF4ED",
     borderWidth: 1,
-    borderColor: "#00D4FF",
-    backgroundColor: "#E6FAFF",
+    borderColor: "#FF6B00",
+  },
+  statusPillOff: {
+    backgroundColor: "#F1F5F9",
+    borderColor: "#CBD5E1",
+  },
+  statusPillText: {
+    color: "#B24B00",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  statusPillTextOff: {
+    color: "#64748B",
+  },
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    padding: 12,
+    borderRadius: 12,
+  },
+  actionLabel: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: "#94A3B8",
+    marginRight: 12,
+  },
+  actionBox: {
+    flex: 1,
+  },
+  actionValue: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#475569",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#F1F5F9",
+    marginVertical: 16,
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
+  btnRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  editBtn: {
+    height: 34,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
   },
-  statusOff: { borderColor: "#D8DEE9", backgroundColor: "#F8FAFC" },
-  statusText: { color: "#036B82", fontSize: 11, fontWeight: "900" },
-  statusTextOff: { color: "#64748B" },
-  actions: { flexDirection: "row" },
-  smallButton: {
-    height: 28,
-    minWidth: 54,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 8,
+  editBtnText: {
+    color: "#475569",
+    fontSize: 12,
+    fontWeight: "800",
   },
-  smallText: { color: "#64748B", fontSize: 11, fontWeight: "800" },
-  deleteButton: {
-    height: 28,
-    minWidth: 58,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#FF5C7A",
+  deleteBtn: {
+    height: 34,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: "#FFF1F2",
     alignItems: "center",
     justifyContent: "center",
   },
-  deleteText: { color: "#FF5C7A", fontSize: 11, fontWeight: "800" },
+  deleteBtnText: {
+    color: "#E11D48",
+    fontSize: 12,
+    fontWeight: "800",
+  },
 });
 
 export default Automation;

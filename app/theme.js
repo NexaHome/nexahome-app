@@ -9,8 +9,8 @@ import { StyleSheet } from "react-native";
 
 export const palette = {
   primary: "#0A0F2C",
-  secondary: "#7B61FF",
-  accent: "#00D4FF",
+  secondary: "#FF6B00",
+  accent: "#FF914D",
   softWhite: "#F8FAFC",
   surface: "#FFFFFF",
   darkGray: "#64748B",
@@ -28,28 +28,28 @@ export const lightColors = {
   textMuted: palette.darkGray,
   textSoft: "#94A3B8",
   successText: "#036B82",
-  accentSoft: "#E6FAFF",
-  secondarySoft: "#F0ECFF",
+  accentSoft: "#FFF8F1",
+  secondarySoft: "#FFF4ED",
   danger: "#FF5C7A",
   dangerSoft: "#FFF0F3",
 };
 
 export const darkColors = {
-  primary: palette.primary,
+  primary: "#FFFFFF",
   secondary: "#9A86FF",
   accent: palette.accent,
-  background: "#060A1F",
+  background: "#02040C",
   surface: "#0A0F2C",
-  surfaceMuted: "#111936",
-  border: "#263154",
-  text: palette.softWhite,
-  textMuted: "#B7C0D1",
-  textSoft: "#7F8AA3",
-  successText: palette.accent,
-  accentSoft: "#072F46",
-  secondarySoft: "#1B1742",
-  danger: "#FF6F8A",
-  dangerSoft: "#351422",
+  surfaceMuted: "#161B33",
+  border: "#1E293B",
+  text: "#FFFFFF",
+  textMuted: "#94A3B8",
+  textSoft: "#64748B",
+  successText: "#4ADE80",
+  accentSoft: "#0C2D48",
+  secondarySoft: "#1E1B4B",
+  danger: "#FF4D6A",
+  dangerSoft: "#31111D",
 };
 
 export const fonts = {
@@ -87,19 +87,43 @@ const colorRoles = {
   "#F8FAFC": "background",
   "#FFFFFF": "surface",
   "#EEF2F7": "surfaceMuted",
+  "#F1F5F9": "surfaceMuted",
+  "#EEF2FF": "secondarySoft",
+  "#EEF6FF": "accentSoft",
+  "#F8FAFC": "background",
   "#D8DEE9": "border",
+  "#F1F5F9": "border",
   "#0A0F2C": "text",
   "#64748B": "textMuted",
   "#94A3B8": "textSoft",
-  "#7B61FF": "secondary",
-  "#9A86FF": "secondary",
+  "#FF6B00": "secondary",
+  "#FF914D": "accent",
+  "#FFF4ED": "secondarySoft",
+  "#FFF8F1": "accentSoft",
   "#00D4FF": "accent",
   "#036B82": "successText",
   "#E6FAFF": "accentSoft",
   "#F0ECFF": "secondarySoft",
+  "#F5F3FF": "secondarySoft",
   "#FF5C7A": "danger",
   "#FF6F8A": "danger",
+  "#E11D48": "danger",
+  "#FECACA": "danger",
   "#FFF0F3": "dangerSoft",
+  "#FFF1F2": "dangerSoft",
+  "#DCFCE7": "successText",
+  "#F0FDF4": "accentSoft",
+  "#DBEAFE": "accent",
+  "#EFF6FF": "accentSoft",
+  "#FEF3C7": "secondary",
+  "#FFFBEB": "secondarySoft",
+  "#475569": "textMuted",
+  "#0F172A": "text",
+  "#1F2937": "text",
+  "#334155": "textMuted",
+  "#4B5563": "textMuted",
+  "#CBD5E1": "border",
+  "#E2E8F0": "border",
 };
 
 const textProps = new Set(["color", "textDecorationColor"]);
@@ -148,7 +172,9 @@ const mapColor = (value, propName, theme, mode) => {
 
   if (surfaceProps.has(propName)) {
     if (role === "text")
-      return mode === "dark" ? theme.secondary : theme.primary;
+      return mode === "dark" ? theme.surface : theme.primary;
+    if (role === "surface")
+      return mode === "dark" ? theme.surfaceMuted : theme.surface;
     return theme[role] || value;
   }
 

@@ -21,6 +21,9 @@ export class User extends Model {
   @Field()
   createdAt!: Date;
 
+  @Field(() => [String], { nullable: true })
+  pushTokens?: string[];
+
   public homeUser() {
     return this.hasMany(HomeUser);
   }

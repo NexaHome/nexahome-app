@@ -36,6 +36,15 @@ export class LogDeviceResolver {
     return this.logDeviceService.findByHome(user.userId, homeId);
   }
 
+  @Query(() => [LogDevice], { name: 'alertsByHome' })
+  findAlertsByHome(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentHomeId() homeId: string,
+    @Args('limit', { type: () => Number, nullable: true }) limit?: number,
+  ) {
+    return this.logDeviceService.findAlertsByHome(user.userId, homeId, limit);
+  }
+
   @ResolveField(() => String)
   value(@Parent() log: LogDevice) {
     return typeof log.value === 'object' ? JSON.stringify(log.value) : String(log.value);

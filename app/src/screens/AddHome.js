@@ -20,7 +20,7 @@ const AddHome = ({ navigation }) => {
 
   const handleCreateHome = async () => {
     if (!name.trim()) {
-      Alert.alert("Error", "Nama home tidak boleh kosong");
+      Alert.alert("Error", "Home name cannot be empty");
       return;
     }
 
@@ -31,7 +31,7 @@ const AddHome = ({ navigation }) => {
       if (!token) {
         Alert.alert(
           "Error",
-          "Sesi login tidak ditemukan. Silakan login ulang.",
+          "Login session not found. Please log in again.",
         );
         navigation.replace("Login");
         return;
@@ -58,14 +58,14 @@ const AddHome = ({ navigation }) => {
       const result = await response.json();
 
       if (result.errors) {
-        throw new Error(result.errors[0].message || "Gagal membuat home");
+        throw new Error(result.errors[0].message || "Failed to create home");
       }
 
       if (result.data?.createHome) {
         const newHomeId = result.data.createHome._id;
         await SecureStore.setItemAsync("activeHomeId", newHomeId);
 
-        Alert.alert("Sukses", "Home berhasil dibuat!", [
+        Alert.alert("Success", "Home created successfully!", [
           { text: "OK", onPress: () => navigation.replace("Dashboard") },
         ]);
       }
@@ -87,16 +87,16 @@ const AddHome = ({ navigation }) => {
         </AnimatedPressable>
         <Text style={styles.title}>Add Home</Text>
         <Text style={styles.subtitle}>
-          Buat rumah baru untuk mengelola device Anda secara terpisah.
+          Create a new home to manage your devices separately.
         </Text>
 
         <View style={styles.formCard}>
-          <Text style={styles.label}>Nama Home</Text>
+          <Text style={styles.label}>Home Name</Text>
           <TextInput
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="Contoh: Rumah Utama, Villa"
+            placeholder="Example: Main Home, Villa"
             editable={!loading}
           />
         </View>
@@ -104,10 +104,10 @@ const AddHome = ({ navigation }) => {
         <Text style={styles.sectionTitle}>Preview</Text>
         <View style={styles.previewCard}>
           <View>
-            <Text style={styles.previewTitle}>{name || "Home baru"}</Text>
+            <Text style={styles.previewTitle}>{name || "New home"}</Text>
           </View>
           <View style={styles.previewBadge}>
-            <Text style={styles.previewBadgeText}>Baru</Text>
+            <Text style={styles.previewBadgeText}>New</Text>
           </View>
         </View>
 
@@ -119,7 +119,7 @@ const AddHome = ({ navigation }) => {
           {loading ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
-            <Text style={styles.saveText}>Buat Home Baru</Text>
+            <Text style={styles.saveText}>Create New Home</Text>
           )}
         </AnimatedPressable>
       </ScrollView>
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 26 },
   backButton: { paddingVertical: 8, paddingRight: 16, alignSelf: "flex-start" },
-  backText: { color: "#7B61FF", fontSize: 14, fontWeight: "900" },
+  backText: { color: "#FF6B00", fontSize: 14, fontWeight: "900" },
   title: {
     color: "#0A0F2C",
     fontSize: 27,
@@ -198,10 +198,10 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 7,
     borderWidth: 1,
-    borderColor: "#00D4FF",
-    backgroundColor: "#E6FAFF",
+    borderColor: "#FF6B00",
+    backgroundColor: "#FFF4ED",
   },
-  previewBadgeText: { color: "#036B82", fontSize: 12, fontWeight: "900" },
+  previewBadgeText: { color: "#B24B00", fontSize: 12, fontWeight: "900" },
   saveButton: {
     height: 48,
     borderRadius: 9,

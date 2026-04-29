@@ -11,7 +11,7 @@ const Row = ({ label, value }) => (
       <Text style={styles.rowLabel}>{label}</Text>
       <Text style={styles.rowValue}>{value}</Text>
     </View>
-    <Text style={styles.changeText}>Ubah</Text>
+    <Text style={styles.changeText}>Edit</Text>
   </View>
 );
 
@@ -27,29 +27,29 @@ const LaundryAutomationRule = ({ navigation }) => {
         </AnimatedPressable>
         <Text style={styles.title}>Edit rule</Text>
 
-        <Text style={styles.section}>Trigger jika...</Text>
-        <Row label="Sensor" value="Water / rain - Teras" />
-        <Row label="Kondisi" value="Terdeteksi hujan (> 0 mm)" />
+        <Text style={styles.section}>Trigger if...</Text>
+        <Row label="Sensor" value="Water / Rain - Patio" />
+        <Row label="Condition" value="Rain detected (> 0 mm)" />
         <Text style={styles.arrow}>↓</Text>
 
-        <Text style={styles.section}>Aksi maka...</Text>
-        <Row label="Perangkat" value="Gantungan Baju - Teras" />
-        <Row label="Aksi" value="Tarik masuk" />
+        <Text style={styles.section}>Action then...</Text>
+        <Row label="Device" value="Clothes Hanger - Patio" />
+        <Row label="Action" value="Pull in" />
 
         <View style={styles.toggleRow}>
-          <Text style={styles.toggleText}>Kirim notifikasi saat aktif</Text>
+          <Text style={styles.toggleText}>Send notification when active</Text>
           <Toggle active={notify} onPress={() => setNotify((value) => !value)} />
         </View>
         <View style={styles.toggleRow}>
-          <Text style={styles.toggleText}>Rule aktif</Text>
+          <Text style={styles.toggleText}>Rule active</Text>
           <Toggle active={active} onPress={() => setActive((value) => !value)} />
         </View>
 
         <AnimatedPressable style={styles.saveButton}>
-          <Text style={styles.saveText}>Simpan rule</Text>
+          <Text style={styles.saveText}>Save rule</Text>
         </AnimatedPressable>
         <AnimatedPressable style={styles.deleteButton}>
-          <Text style={styles.deleteText}>Hapus rule</Text>
+          <Text style={styles.deleteText}>Delete rule</Text>
         </AnimatedPressable>
       </ScrollView>
       <BottomNav active="schedule" navigation={navigation} />
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 26 },
   backButton: { paddingVertical: 8, paddingRight: 16, alignSelf: "flex-start" },
-  backText: { color: "#7B61FF", fontSize: 14, fontWeight: "900" },
+  backText: { color: "#FF6B00", fontSize: 14, fontWeight: "900" },
   title: { color: "#0A0F2C", fontSize: 25, fontWeight: "900", letterSpacing: 0, marginBottom: 16 },
   section: { color: "#64748B", fontSize: 12, fontWeight: "900", textTransform: "uppercase", marginBottom: 8 },
   ruleRow: {
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   },
   rowLabel: { color: "#64748B", fontSize: 12, fontWeight: "700" },
   rowValue: { color: "#0A0F2C", fontSize: 14, fontWeight: "900", marginTop: 4 },
-  changeText: { color: "#7B61FF", fontSize: 12, fontWeight: "900" },
+  changeText: { color: "#FF6B00", fontSize: 12, fontWeight: "900" },
   arrow: { textAlign: "center", color: "#94A3B8", fontSize: 24, marginBottom: 8 },
   toggleRow: {
     minHeight: 54,

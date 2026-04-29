@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "app",
-    "slug": "app",
+    "name": "NexaHome",
+    "slug": "nexahome",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -17,14 +17,22 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#ffffff"
       },
+      "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
-      "usesCleartextTraffic": true
+      "package": "com.app.nexahome"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/logo.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "bdc02fa1-64d3-4964-99a2-68f6d74b342c"
+      }
+    },
+    "owner": "leez12",
+    "plugins": ["expo-secure-store", "@react-native-community/datetimepicker", "expo-notifications"]
   }
 }

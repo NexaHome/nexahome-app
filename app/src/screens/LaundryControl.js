@@ -6,7 +6,7 @@ import ScreenShell from "../components/ScreenShell";
 import Toggle from "../components/Toggle";
 
 const LaundryControl = ({ navigation }) => {
-  const [position, setPosition] = useState("Masuk");
+  const [position, setPosition] = useState("Inside");
   const [disableAuto, setDisableAuto] = useState(false);
 
   return (
@@ -17,34 +17,34 @@ const LaundryControl = ({ navigation }) => {
         </View>
         <View style={styles.sheet}>
           <View style={styles.drag} />
-          <Text style={styles.title}>Kontrol manual</Text>
-          <Text style={styles.subtitle}>Gantungan Baju - Teras</Text>
-          <Text style={styles.label}>Posisi saat ini</Text>
+          <Text style={styles.title}>Manual control</Text>
+          <Text style={styles.subtitle}>Clothes Hanger - Patio</Text>
+          <Text style={styles.label}>Current position</Text>
           <Text style={styles.position}>{position}</Text>
 
           <View style={styles.segment}>
-            {["Keluar", "Masuk"].map((item) => (
+            {["Outside", "Inside"].map((item) => (
               <AnimatedPressable
                 key={item}
                 style={[styles.segmentButton, position === item && styles.segmentActive]}
                 onPress={() => setPosition(item)}
               >
                 <Text style={[styles.segmentText, position === item && styles.segmentTextActive]}>
-                  {item === "Keluar" ? "Keluarkan" : "Masukkan"}
+                  {item === "Outside" ? "Move Out" : "Move In"}
                 </Text>
               </AnimatedPressable>
             ))}
           </View>
 
           <View style={styles.settingCard}>
-            <Text style={styles.settingText}>Nonaktifkan mode otomatis</Text>
+            <Text style={styles.settingText}>Disable automatic mode</Text>
             <Toggle active={disableAuto} onPress={() => setDisableAuto((value) => !value)} />
           </View>
           <View style={styles.warning}>
-            <Text style={styles.warningText}>Saat mode manual aktif, sensor hujan tidak menggerakkan gantungan.</Text>
+            <Text style={styles.warningText}>When manual mode is active, the rain sensor will not move the hanger.</Text>
           </View>
           <AnimatedPressable style={styles.cancelButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.cancelText}>Batal</Text>
+            <Text style={styles.cancelText}>Cancel</Text>
           </AnimatedPressable>
         </View>
       </ScrollView>
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   settingText: { color: "#0A0F2C", fontSize: 14, fontWeight: "800" },
   warning: {
     borderWidth: 1,
-    borderColor: "#7B61FF",
+    borderColor: "#FF6B00",
     backgroundColor: "#F0ECFF",
     borderRadius: 9,
     padding: 12,
