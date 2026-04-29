@@ -153,7 +153,7 @@ const Schedule = ({ navigation }) => {
 
       const result = await response.json();
       if (result.errors?.length) {
-        throw new Error(result.errors[0]?.message || "Gagal memuat schedules");
+        throw new Error(result.errors[0]?.message || "Failed to load schedules");
       }
 
       const mapped = (result.data?.automations || [])
@@ -196,7 +196,7 @@ const Schedule = ({ navigation }) => {
       );
       await updateLocalActiveMap(nextMap);
     } catch (error) {
-      console.error("Gagal memuat jadwal", error);
+      console.error("Failed to load schedules", error);
       setItems([]);
     } finally {
       setLoading(false);
@@ -270,7 +270,7 @@ const Schedule = ({ navigation }) => {
         return updated;
       });
     } catch (error) {
-      console.error("Gagal check execution status", error);
+      console.error("Failed to check execution status", error);
     }
   }, []);
 
@@ -348,7 +348,7 @@ const Schedule = ({ navigation }) => {
               await updateLocalActiveMap(nextMap);
             }
           } catch (error) {
-            console.error("Gagal execute countdown action", error);
+            console.error("Failed to execute countdown action", error);
           }
         }
       }
@@ -366,7 +366,7 @@ const Schedule = ({ navigation }) => {
       const token = await SecureStore.getItemAsync("token");
       const activeHomeId = await SecureStore.getItemAsync("activeHomeId");
       if (!token) {
-        throw new Error("Token tidak ditemukan.");
+        throw new Error("Token not found.");
       }
 
       const nextActive = !item.active;
@@ -397,7 +397,7 @@ const Schedule = ({ navigation }) => {
 
       if (result.errors?.length) {
         throw new Error(
-          result.errors[0]?.message || "Gagal mengubah status schedule",
+          result.errors[0]?.message || "Failed to update schedule status",
         );
       }
 
@@ -430,12 +430,12 @@ const Schedule = ({ navigation }) => {
       );
       await updateLocalActiveMap(nextMap);
     } catch (error) {
-      console.error("Gagal mengubah status jadwal", error);
+      console.error("Failed to update schedule status", error);
     }
   };
 
   const deleteSchedule = async (item) => {
-    Alert.alert("Delete schedule", `Hapus "${item.name}"?`, [
+    Alert.alert("Delete schedule", `Delete "${item.name}"?`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
@@ -444,7 +444,7 @@ const Schedule = ({ navigation }) => {
           try {
             setDeleting(item.id);
             const token = await SecureStore.getItemAsync("token");
-            if (!token) throw new Error("Token tidak ditemukan.");
+            if (!token) throw new Error("Token not found.");
 
             const response = await postGraphQL(
               {
@@ -455,12 +455,12 @@ const Schedule = ({ navigation }) => {
             );
             const result = await response.json();
             if (result.errors?.length)
-              throw new Error(result.errors[0]?.message || "Gagal menghapus");
+              throw new Error(result.errors[0]?.message || "Failed to delete");
 
             fetchSchedules();
           } catch (error) {
-            console.error("Gagal menghapus jadwal", error);
-            Alert.alert("Error", error.message || "Gagal menghapus jadwal");
+            console.error("Failed to delete schedule", error);
+            Alert.alert("Error", error.message || "Failed to delete schedule");
           } finally {
             setDeleting(null);
           }

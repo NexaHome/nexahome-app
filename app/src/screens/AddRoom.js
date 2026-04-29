@@ -15,15 +15,15 @@ import { postGraphQL } from "../../utils/api";
 
 const AddRoom = ({ navigation, route }) => {
   const isEdit = route.params?.mode === "edit";
-  const [name, setName] = useState(route.params?.roomName || "Teras");
-  const [area, setArea] = useState("Luar rumah");
-  const [icon, setIcon] = useState("Jemuran");
+  const [name, setName] = useState(route.params?.roomName || "Living Room");
+  const [area, setArea] = useState("Main Floor");
+  const [icon, setIcon] = useState("Sofa");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const handleSave = async () => {
     if (!name.trim()) {
-      setError("Nama room wajib diisi.");
+      setError("Room name is required.");
       return;
     }
 
@@ -33,12 +33,12 @@ const AddRoom = ({ navigation, route }) => {
 
       const token = await SecureStore.getItemAsync("token");
       if (!token) {
-        throw new Error("Token tidak ditemukan, silakan login ulang.");
+        throw new Error("Token not found, please log in again.");
       }
 
       const homeId = await SecureStore.getItemAsync("activeHomeId");
       if (!homeId) {
-        throw new Error("Home aktif tidak ditemukan.");
+        throw new Error("Active home not found.");
       }
 
       const mutation = isEdit
@@ -76,12 +76,12 @@ const AddRoom = ({ navigation, route }) => {
 
       const result = await response.json();
       if (!response.ok || result.errors?.length) {
-        throw new Error(result.errors?.[0]?.message || "Gagal menyimpan room");
+        throw new Error(result.errors?.[0]?.message || "Failed to save room");
       }
 
       navigation.goBack();
     } catch (saveError) {
-      setError(saveError.message || "Terjadi kesalahan");
+      setError(saveError.message || "An error occurred");
     } finally {
       setSaving(false);
     }
@@ -98,41 +98,41 @@ const AddRoom = ({ navigation, route }) => {
         </AnimatedPressable>
         <Text style={styles.title}>{isEdit ? "Edit room" : "Add room"}</Text>
         <Text style={styles.subtitle}>
-          Atur ruangan biar device dan sensor gampang ditemukan.
+          Organize rooms to make devices and sensors easier to find.
         </Text>
 
         <View style={styles.formCard}>
-          <Text style={styles.label}>Nama room</Text>
+          <Text style={styles.label}>Room name</Text>
           <TextInput
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="Contoh: Teras"
+            placeholder="Example: Living Room"
           />
 
-          <Text style={styles.label}>Area / lantai</Text>
+          <Text style={styles.label}>Area / Floor</Text>
           <TextInput
             style={styles.input}
             value={area}
             onChangeText={setArea}
-            placeholder="Contoh: Luar rumah"
+            placeholder="Example: Upstairs"
           />
 
-          <Text style={styles.label}>Icon / kategori</Text>
+          <Text style={styles.label}>Icon / Category</Text>
           <TextInput
             style={styles.input}
             value={icon}
             onChangeText={setIcon}
-            placeholder="Contoh: Jemuran"
+            placeholder="Example: Kitchen"
           />
         </View>
 
         <Text style={styles.sectionTitle}>Preview</Text>
         <View style={styles.previewCard}>
           <View>
-            <Text style={styles.previewTitle}>{name || "Room baru"}</Text>
+            <Text style={styles.previewTitle}>{name || "New Room"}</Text>
             <Text style={styles.previewMeta}>
-              {area || "Belum diatur"} - {icon || "Kategori"}
+              {area || "Not set"} - {icon || "Category"}
             </Text>
           </View>
           <View style={styles.previewBadge}>
@@ -151,13 +151,13 @@ const AddRoom = ({ navigation, route }) => {
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text style={styles.saveText}>
-              {isEdit ? "Simpan perubahan" : "Tambah room"}
+              {isEdit ? "Save Changes" : "Add Room"}
             </Text>
           )}
         </AnimatedPressable>
         {isEdit && (
           <AnimatedPressable style={styles.deleteButton}>
-            <Text style={styles.deleteText}>Hapus room</Text>
+            <Text style={styles.deleteText}>Delete Room</Text>
           </AnimatedPressable>
         )}
       </ScrollView>

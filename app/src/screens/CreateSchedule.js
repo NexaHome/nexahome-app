@@ -15,6 +15,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import AnimatedPressable from "../components/AnimatedPressable";
 import ScreenShell from "../components/ScreenShell";
 import { postGraphQL } from "../../utils/api";
+import { useTheme } from "../../theme";
 
 const COMMANDS = [
   {
@@ -77,7 +78,6 @@ const getCategoryIcon = (cat) => {
 
 const CreateSchedule = ({ navigation, route }) => {
   const deviceId = route.params?.deviceId;
-  const deviceName = route.params?.deviceName;
   const [name, setName] = useState("");
   const [triggerType, setTriggerType] = useState("Schedule");
   const [delaySec, setDelaySec] = useState("");
@@ -103,6 +103,8 @@ const CreateSchedule = ({ navigation, route }) => {
   const [selectedDeviceIds, setSelectedDeviceIds] = useState(
     deviceId ? [deviceId] : [],
   );
+
+  const { theme, mode } = useTheme();
 
   useEffect(() => {
     loadAllDevices();
@@ -179,7 +181,6 @@ const CreateSchedule = ({ navigation, route }) => {
   };
 
   const handleDelayChange = (value) => {
-    // Basic numeric filter
     setDelaySec(value.replace(/[^0-9]/g, ""));
   };
 
@@ -232,7 +233,6 @@ const CreateSchedule = ({ navigation, route }) => {
     if (triggerType === "Delay") {
       return `Delay ${delaySec || "0"} s`;
     }
-
     return `${scheduleDate || "YYYY-MM-DD"} ${scheduleTime || "HH:mm"}`;
   }, [delaySec, scheduleDate, scheduleTime, triggerType]);
 
@@ -257,13 +257,8 @@ const CreateSchedule = ({ navigation, route }) => {
       const token = await SecureStore.getItemAsync("token");
       const homeId = await SecureStore.getItemAsync("activeHomeId");
 
-      if (!token) {
-        throw new Error("Token not found, please log in again.");
-      }
-
-      if (!homeId) {
-        throw new Error("Active home not found.");
-      }
+      if (!token) throw new Error("Token not found, please log in again.");
+      if (!homeId) throw new Error("Active home not found.");
 
       const trigger =
         triggerType === "Delay"
@@ -316,11 +311,9 @@ const CreateSchedule = ({ navigation, route }) => {
       const newAutomationId = result.data?.createAutomation?._id;
 
       if (newAutomationId && selectedDeviceIds.length > 0) {
-        // Loop through all selected devices to attach them to the automation
         for (const targetDeviceId of selectedDeviceIds) {
           const device = allDevices.find((d) => d._id === targetDeviceId);
-          const roomId =
-            device?.room_id || (await SecureStore.getItemAsync("activeRoomId"));
+          const roomId = device?.room_id;
 
           await postGraphQL(
             {
@@ -354,8 +347,8 @@ const CreateSchedule = ({ navigation, route }) => {
   };
 
   const activeChipStyle = (isActive) => ({
-    backgroundColor: isActive ? "#0A0F2C" : "#F8FAFC",
-    borderColor: isActive ? "#0A0F2C" : "#D8DEE9",
+    backgroundColor: isActive ? "#7B61FF" : "#F8FAFC",
+    borderColor: isActive ? "#7B61FF" : "#F1F5F9",
   });
 
   const activeChipTextStyle = (isActive) => ({
@@ -374,8 +367,7 @@ const CreateSchedule = ({ navigation, route }) => {
 
         <Text style={styles.title}>Create schedule</Text>
         <Text style={styles.subtitle}>
-          Set up automated schedules for your smart devices to make life easier
-          and more efficient.
+          Set up automated schedules for your smart devices to make life easier and more efficient.
         </Text>
 
         <View style={styles.formCard}>
@@ -400,16 +392,11 @@ const CreateSchedule = ({ navigation, route }) => {
                   style={[
                     styles.chip,
                     activeChipStyle(isActive),
-                    index === 0 ? styles.chipLeft : null,
-                    index === TRIGGER_TYPES.length - 1
-                      ? styles.chipRight
-                      : null,
+                    index === 0 ? styles.chipLeft : styles.chipRight,
                   ]}
                   onPress={() => setTriggerType(item.value)}
                 >
-                  <Text
-                    style={[styles.chipText, activeChipTextStyle(isActive)]}
-                  >
+                  <Text style={[styles.chipText, activeChipTextStyle(isActive)]}>
                     {item.label}
                   </Text>
                 </AnimatedPressable>
@@ -432,9 +419,6 @@ const CreateSchedule = ({ navigation, route }) => {
                 />
                 <Text style={{ fontSize: 16, marginRight: 12 }}>⏱️</Text>
               </View>
-              <Text style={styles.helperText}>
-                The automation will run after the specified time.
-              </Text>
             </>
           ) : (
             <>
@@ -445,140 +429,110 @@ const CreateSchedule = ({ navigation, route }) => {
                     style={styles.input}
                     onPress={() => setShowDatePicker(true)}
                   >
-                    <Text
-                      style={{
-                        color: scheduleDate ? "#0A0F2C" : "#94A3B8",
-                        fontSize: 13,
-                        fontWeight: "700",
-                      }}
-                    >
+                    <Text style={{ color: scheduleDate ? theme.text : theme.textMuted, fontSize: 13, fontWeight: "700" }}>
                       {scheduleDate || "Select"}
                     </Text>
                     <Text style={{ fontSize: 14 }}>📅</Text>
                   </AnimatedPressable>
-                  {showDatePicker && Platform.OS === "android" && (
-                    <DateTimePicker
-                      value={safeDateFromString(scheduleDate)}
-                      mode="date"
-                      display="default"
-                      onChange={handleDateChange}
-                    />
-                  )}
                 </View>
-
-                <View style={styles.timeBox}>
-                  <Text style={styles.labelSmall}>End Date (Optional)</Text>
-                  <AnimatedPressable
-                    style={styles.input}
-                    onPress={() => setShowEndDatePicker(true)}
-                  >
-                    <Text
-                      style={{
-                        color: scheduleEndDate ? "#0A0F2C" : "#CBD5E1",
-                        fontSize: 13,
-                        fontWeight: "700",
-                      }}
-                    >
-                      {scheduleEndDate || "None"}
-                    </Text>
-                    <Text style={{ fontSize: 14, opacity: 0.5 }}>📅</Text>
-                  </AnimatedPressable>
-                  {showEndDatePicker && Platform.OS === "android" && (
-                    <DateTimePicker
-                      value={safeDateFromString(
-                        scheduleEndDate || scheduleDate,
-                      )}
-                      mode="date"
-                      display="default"
-                      onChange={(e, d) => {
-                        setShowEndDatePicker(false);
-                        if (d)
-                          setScheduleEndDate(d.toISOString().split("T")[0]);
-                      }}
-                    />
-                  )}
-                </View>
-              </View>
-
-              <View style={styles.timeRangeRow}>
                 <View style={styles.timeBox}>
                   <Text style={styles.labelSmall}>Start Time</Text>
                   <AnimatedPressable
                     style={styles.input}
                     onPress={() => setShowTimePicker(true)}
                   >
-                    <Text
-                      style={{
-                        color: scheduleTime ? "#0A0F2C" : "#94A3B8",
-                        fontSize: 13,
-                        fontWeight: "700",
-                      }}
-                    >
+                    <Text style={{ color: scheduleTime ? theme.text : theme.textMuted, fontSize: 13, fontWeight: "700" }}>
                       {scheduleTime || "Select"}
                     </Text>
                     <Text style={{ fontSize: 14 }}>⏰</Text>
                   </AnimatedPressable>
-                  {showTimePicker && Platform.OS === "android" && (
-                    <DateTimePicker
-                      value={safeTimeFromString(scheduleTime)}
-                      mode="time"
-                      display="default"
-                      onChange={handleTimeChange}
-                      is24Hour={true}
-                    />
-                  )}
                 </View>
+              </View>
 
+              <View style={styles.timeRangeRow}>
+                <View style={styles.timeBox}>
+                  <Text style={styles.labelSmall}>End Date (Optional)</Text>
+                  <AnimatedPressable
+                    style={styles.input}
+                    onPress={() => setShowEndDatePicker(true)}
+                  >
+                    <Text style={{ color: scheduleEndDate ? theme.text : theme.textMuted, fontSize: 13, fontWeight: "700" }}>
+                      {scheduleEndDate || "No limit"}
+                    </Text>
+                    <Text style={{ fontSize: 14 }}>📅</Text>
+                  </AnimatedPressable>
+                </View>
                 <View style={styles.timeBox}>
                   <Text style={styles.labelSmall}>End Time (Optional)</Text>
                   <AnimatedPressable
                     style={styles.input}
                     onPress={() => setShowEndTimePicker(true)}
                   >
-                    <Text
-                      style={{
-                        color: scheduleEndTime ? "#0A0F2C" : "#CBD5E1",
-                        fontSize: 13,
-                        fontWeight: "700",
-                      }}
-                    >
-                      {scheduleEndTime || "None"}
+                    <Text style={{ color: scheduleEndTime ? theme.text : theme.textMuted, fontSize: 13, fontWeight: "700" }}>
+                      {scheduleEndTime || "No limit"}
                     </Text>
-                    <Text style={{ fontSize: 14, opacity: 0.5 }}>⏰</Text>
+                    <Text style={{ fontSize: 14 }}>⏰</Text>
                   </AnimatedPressable>
-                  {showEndTimePicker && Platform.OS === "android" && (
-                    <DateTimePicker
-                      value={safeTimeFromString(
-                        scheduleEndTime || scheduleTime,
-                      )}
-                      mode="time"
-                      display="default"
-                      onChange={(e, d) => {
-                        setShowEndTimePicker(false);
-                        if (d)
-                          setScheduleEndTime(
-                            `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
-                          );
-                      }}
-                      is24Hour={true}
-                    />
-                  )}
                 </View>
               </View>
 
+              {/* Start Pickers Android */}
+              {showDatePicker && Platform.OS === "android" && (
+                <DateTimePicker
+                  value={safeDateFromString(scheduleDate)}
+                  mode="date"
+                  display="default"
+                  onChange={handleDateChange}
+                />
+              )}
+              {showTimePicker && Platform.OS === "android" && (
+                <DateTimePicker
+                  value={safeTimeFromString(scheduleTime)}
+                  mode="time"
+                  display="default"
+                  onChange={handleTimeChange}
+                  is24Hour={true}
+                />
+              )}
+
+              {/* End Pickers Android */}
+              {showEndDatePicker && Platform.OS === "android" && (
+                <DateTimePicker
+                  value={safeDateFromString(scheduleEndDate || scheduleDate)}
+                  mode="date"
+                  display="default"
+                  onChange={(e, d) => {
+                    setShowEndDatePicker(false);
+                    if (d) {
+                      setScheduleEndDate(d.toISOString().split("T")[0]);
+                    }
+                  }}
+                />
+              )}
+              {showEndTimePicker && Platform.OS === "android" && (
+                <DateTimePicker
+                  value={safeTimeFromString(scheduleEndTime || "23:59")}
+                  mode="time"
+                  display="default"
+                  onChange={(e, d) => {
+                    setShowEndTimePicker(false);
+                    if (d) {
+                      const h = String(d.getHours()).padStart(2, "0");
+                      const m = String(d.getMinutes()).padStart(2, "0");
+                      setScheduleEndTime(`${h}:${m}`);
+                    }
+                  }}
+                  is24Hour={true}
+                />
+              )}
+
               {Platform.OS === "ios" && (
                 <>
-                  <Modal
-                    visible={showDatePicker}
-                    transparent
-                    animationType="slide"
-                  >
+                  <Modal visible={showDatePicker} transparent animationType="slide">
                     <View style={styles.modalOverlay}>
-                      <View style={styles.modalContent}>
-                        <View style={styles.modalToolbar}>
-                          <TouchableOpacity
-                            onPress={() => setShowDatePicker(false)}
-                          >
+                      <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+                        <View style={[styles.modalToolbar, { borderColor: theme.border }]}>
+                          <TouchableOpacity onPress={() => setShowDatePicker(false)}>
                             <Text style={styles.modalButtonText}>Done</Text>
                           </TouchableOpacity>
                         </View>
@@ -587,22 +541,17 @@ const CreateSchedule = ({ navigation, route }) => {
                           mode="date"
                           display="spinner"
                           onChange={handleDateChange}
+                          themeVariant={mode}
                         />
                       </View>
                     </View>
                   </Modal>
 
-                  <Modal
-                    visible={showTimePicker}
-                    transparent
-                    animationType="slide"
-                  >
+                  <Modal visible={showTimePicker} transparent animationType="slide">
                     <View style={styles.modalOverlay}>
-                      <View style={styles.modalContent}>
-                        <View style={styles.modalToolbar}>
-                          <TouchableOpacity
-                            onPress={() => setShowTimePicker(false)}
-                          >
+                      <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+                        <View style={[styles.modalToolbar, { borderColor: theme.border }]}>
+                          <TouchableOpacity onPress={() => setShowTimePicker(false)}>
                             <Text style={styles.modalButtonText}>Done</Text>
                           </TouchableOpacity>
                         </View>
@@ -612,6 +561,54 @@ const CreateSchedule = ({ navigation, route }) => {
                           display="spinner"
                           onChange={handleTimeChange}
                           is24Hour={true}
+                          themeVariant={mode}
+                        />
+                      </View>
+                    </View>
+                  </Modal>
+
+                  <Modal visible={showEndDatePicker} transparent animationType="slide">
+                    <View style={styles.modalOverlay}>
+                      <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+                        <View style={[styles.modalToolbar, { borderColor: theme.border }]}>
+                          <TouchableOpacity onPress={() => setShowEndDatePicker(false)}>
+                            <Text style={styles.modalButtonText}>Done</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <DateTimePicker
+                          value={safeDateFromString(scheduleEndDate || scheduleDate)}
+                          mode="date"
+                          display="spinner"
+                          onChange={(e, d) => {
+                            if (d) setScheduleEndDate(d.toISOString().split("T")[0]);
+                          }}
+                          themeVariant={mode}
+                        />
+                      </View>
+                    </View>
+                  </Modal>
+
+                  <Modal visible={showEndTimePicker} transparent animationType="slide">
+                    <View style={styles.modalOverlay}>
+                      <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+                        <View style={[styles.modalToolbar, { borderColor: theme.border }]}>
+                          <TouchableOpacity onPress={() => setShowEndTimePicker(false)}>
+                            <Text style={styles.modalButtonText}>Done</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <DateTimePicker
+                          value={safeTimeFromString(scheduleEndTime || "23:59")}
+                          mode="time"
+                          display="spinner"
+                          onChange={(e, d) => {
+                            if (d) {
+                              const h = String(d.getHours()).padStart(2, "0");
+                              const m = String(d.getMinutes()).padStart(2, "0");
+                              setScheduleEndTime(`${h}:${m}`);
+                            }
+                          }}
+                          is24Hour={true}
+                          themeVariant={mode}
                         />
                       </View>
                     </View>
@@ -629,9 +626,7 @@ const CreateSchedule = ({ navigation, route }) => {
                   style={[styles.toggleBox, repeat && styles.toggleBoxOn]}
                   onPress={() => setRepeat((v) => !v)}
                 >
-                  <Text
-                    style={[styles.toggleText, repeat && styles.toggleTextOn]}
-                  >
+                  <Text style={[styles.toggleText, repeat && styles.toggleTextOn]}>
                     {repeat ? "On" : "Off"}
                   </Text>
                 </AnimatedPressable>
@@ -644,18 +639,10 @@ const CreateSchedule = ({ navigation, route }) => {
                     return (
                       <AnimatedPressable
                         key={day.value}
-                        style={[
-                          styles.dayCircle,
-                          isActive && styles.dayCircleActive,
-                        ]}
+                        style={[styles.dayCircle, isActive && styles.dayCircleActive]}
                         onPress={() => toggleDay(day.value)}
                       >
-                        <Text
-                          style={[
-                            styles.dayText,
-                            isActive && styles.dayTextActive,
-                          ]}
-                        >
+                        <Text style={[styles.dayText, isActive && styles.dayTextActive]}>
                           {day.label}
                         </Text>
                       </AnimatedPressable>
@@ -673,35 +660,17 @@ const CreateSchedule = ({ navigation, route }) => {
               return (
                 <AnimatedPressable
                   key={item.value}
-                  style={[
-                    styles.commandCard,
-                    isActive && styles.commandCardActive,
-                  ]}
+                  style={[styles.commandCard, isActive && styles.commandCardActive]}
                   onPress={() => setCommand(item.value)}
                 >
-                  <View
-                    style={[
-                      styles.commandIconBox,
-                      isActive && styles.commandIconBoxActive,
-                    ]}
-                  >
+                  <View style={[styles.commandIconBox, isActive && styles.commandIconBoxActive]}>
                     <Text style={{ fontSize: 18 }}>{item.icon}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text
-                      style={[
-                        styles.commandLabel,
-                        isActive && styles.commandLabelActive,
-                      ]}
-                    >
+                    <Text style={[styles.commandLabel, isActive && styles.commandLabelActive]}>
                       {item.label}
                     </Text>
-                    <Text
-                      style={[
-                        styles.commandDesc,
-                        isActive && styles.commandDescActive,
-                      ]}
-                    >
+                    <Text style={[styles.commandDesc, isActive && styles.commandDescActive]}>
                       {item.desc}
                     </Text>
                   </View>
@@ -713,69 +682,30 @@ const CreateSchedule = ({ navigation, route }) => {
 
           {command === "ToggleDevices" && (
             <>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "flex-end",
-                }}
-              >
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" }}>
                 <Text style={styles.label}>Select Devices</Text>
                 {activeHomeName ? (
-                  <Text
-                    style={{
-                      fontSize: 10,
-                      color: "#94A3B8",
-                      fontWeight: "700",
-                      marginBottom: 7,
-                    }}
-                  >
+                  <Text style={{ fontSize: 10, color: theme.textMuted, fontWeight: "700", marginBottom: 7 }}>
                     HOME: {activeHomeName.toUpperCase()}
                   </Text>
                 ) : null}
               </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.deviceListScroll}
-              >
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.deviceListScroll}>
                 {allDevices.map((dev) => {
                   const isSelected = selectedDeviceIds.includes(dev._id);
                   return (
                     <AnimatedPressable
                       key={dev._id}
-                      style={[
-                        styles.deviceCard,
-                        isSelected && styles.deviceCardActive,
-                      ]}
+                      style={[styles.deviceCard, isSelected && styles.deviceCardActive]}
                       onPress={() => toggleDeviceSelection(dev._id)}
                     >
-                      <View
-                        style={[
-                          styles.deviceIconBox,
-                          isSelected && styles.deviceIconBoxActive,
-                        ]}
-                      >
-                        <Text style={{ fontSize: 18 }}>
-                          {getCategoryIcon(dev.category)}
-                        </Text>
+                      <View style={[styles.deviceIconBox, isSelected && styles.deviceIconBoxActive]}>
+                        <Text style={{ fontSize: 18 }}>{getCategoryIcon(dev.category)}</Text>
                       </View>
-                      <Text
-                        numberOfLines={1}
-                        style={[
-                          styles.deviceCardName,
-                          isSelected && styles.deviceCardNameActive,
-                        ]}
-                      >
+                      <Text numberOfLines={1} style={[styles.deviceCardName, isSelected && styles.deviceCardNameActive]}>
                         {dev.name}
                       </Text>
-                      <Text
-                        numberOfLines={1}
-                        style={[
-                          styles.deviceCardRoom,
-                          isSelected && styles.deviceCardRoomActive,
-                        ]}
-                      >
+                      <Text numberOfLines={1} style={[styles.deviceCardRoom, isSelected && styles.deviceCardRoomActive]}>
                         {dev.room?.name || "No Room"}
                       </Text>
                       {isSelected && (
@@ -787,35 +717,25 @@ const CreateSchedule = ({ navigation, route }) => {
                   );
                 })}
               </ScrollView>
-            </>
-          )}
 
-          {command === "ToggleDevices" && (
-            <View style={styles.previewRow}>
-              <Text style={styles.previewRowLabel}>Target State</Text>
-              <View style={styles.chipRow}>
-                {["ON", "OFF"].map((s) => {
-                  const isActive = deviceState === s;
-                  return (
-                    <AnimatedPressable
-                      key={s}
-                      style={[
-                        styles.chip,
-                        activeChipStyle(isActive),
-                        s === "ON" ? styles.chipLeft : styles.chipRight,
-                      ]}
-                      onPress={() => setDeviceState(s)}
-                    >
-                      <Text
-                        style={[styles.chipText, activeChipTextStyle(isActive)]}
+              <View style={styles.previewRow}>
+                <Text style={styles.previewRowLabel}>Target State</Text>
+                <View style={styles.chipRow}>
+                  {["ON", "OFF"].map((s, idx) => {
+                    const isActive = deviceState === s;
+                    return (
+                      <AnimatedPressable
+                        key={s}
+                        style={[styles.chip, activeChipStyle(isActive), idx === 0 ? styles.chipLeft : styles.chipRight]}
+                        onPress={() => setDeviceState(s)}
                       >
-                        {s}
-                      </Text>
-                    </AnimatedPressable>
-                  );
-                })}
+                        <Text style={[styles.chipText, activeChipTextStyle(isActive)]}>{s}</Text>
+                      </AnimatedPressable>
+                    );
+                  })}
+                </View>
               </View>
-            </View>
+            </>
           )}
 
           {command === "SetAwayMode" && (
@@ -823,14 +743,9 @@ const CreateSchedule = ({ navigation, route }) => {
               <Text style={styles.previewRowLabel}>Away mode enabled</Text>
               <AnimatedPressable
                 style={[styles.toggleBox, awayEnabled && styles.toggleBoxOn]}
-                onPress={() => setAwayEnabled((value) => !value)}
+                onPress={() => setAwayEnabled((v) => !v)}
               >
-                <Text
-                  style={[
-                    styles.toggleText,
-                    awayEnabled && styles.toggleTextOn,
-                  ]}
-                >
+                <Text style={[styles.toggleText, awayEnabled && styles.toggleTextOn]}>
                   {awayEnabled ? "On" : "Off"}
                 </Text>
               </AnimatedPressable>
@@ -856,11 +771,7 @@ const CreateSchedule = ({ navigation, route }) => {
           onPress={handleSave}
           disabled={saving}
         >
-          {saving ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.saveText}>Save schedule</Text>
-          )}
+          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Save schedule</Text>}
         </AnimatedPressable>
       </ScrollView>
     </ScreenShell>
@@ -869,254 +780,161 @@ const CreateSchedule = ({ navigation, route }) => {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  content: { padding: 20, paddingBottom: 26 },
-  backButton: { paddingVertical: 8, paddingRight: 16, alignSelf: "flex-start" },
-  backText: { color: "#7B61FF", fontSize: 14, fontWeight: "900" },
-  title: {
-    color: "#0A0F2C",
-    fontSize: 27,
-    fontWeight: "900",
-    marginTop: 4,
+  content: { padding: 22, paddingBottom: 100 },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
   },
+  backText: { color: "#0A0F2C", fontSize: 14, fontWeight: "900" },
+  title: { fontSize: 28, fontWeight: "900", color: "#0A0F2C" },
   subtitle: {
     color: "#64748B",
-    fontSize: 13,
-    marginTop: 5,
-    marginBottom: 16,
-    lineHeight: 18,
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 22,
+    marginBottom: 24,
   },
   formCard: {
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
   },
   label: {
-    color: "#64748B",
     fontSize: 12,
     fontWeight: "900",
-    marginBottom: 8,
+    color: "#94A3B8",
+    marginBottom: 10,
     marginTop: 22,
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
-  input: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#D1D9E6",
+  chipRow: { flexDirection: "row", gap: 10, marginBottom: 10 },
+  chip: {
+    flex: 1,
+    height: 46,
     borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#F1F5F9",
+  },
+  chipLeft: { borderTopRightRadius: 0, borderBottomRightRadius: 0 },
+  chipRight: { borderTopLeftRadius: 0, borderBottomLeftRadius: 0 },
+  chipText: { fontSize: 13, fontWeight: "800", color: "#64748B" },
+  input: {
+    height: 52,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+  },
+  inputContainer: {
+    height: 52,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 14,
+    backgroundColor: "#F1F5F9",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  textInput: {
+    flex: 1,
+    height: 52,
     paddingHorizontal: 16,
     color: "#0A0F2C",
     fontSize: 14,
     fontWeight: "700",
-    backgroundColor: "#F0F4F8",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
   },
-  helperText: {
-    color: "#64748B",
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 6,
-  },
-  chipRow: {
-    flexDirection: "row",
-  },
-  chip: {
-    flex: 1,
-    minHeight: 42,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 10,
-  },
-  chipLeft: {
-    borderTopLeftRadius: 10,
-    borderBottomLeftRadius: 10,
-  },
-  chipRight: {
-    borderTopRightRadius: 10,
-    borderBottomRightRadius: 10,
-  },
-  chipText: {
-    fontSize: 12.5,
-    fontWeight: "800",
-  },
-  commandGrid: {
-    gap: 10,
-  },
+  helperText: { fontSize: 12, color: "#64748B", marginTop: 8, fontWeight: "600" },
+  commandGrid: { gap: 12, marginTop: 4 },
   commandCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    borderRadius: 14,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    marginBottom: 4,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 20,
+    padding: 14,
   },
-  commandCardActive: {
-    backgroundColor: "#0A0F2C",
-    borderColor: "#0A0F2C",
-  },
+  commandCardActive: { borderColor: "#7B61FF", backgroundColor: "#F5F3FF" },
   commandIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: "#EEF2F7",
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: 14,
   },
-  commandIconBoxActive: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-  },
-  commandLabel: {
-    color: "#0A0F2C",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  commandLabelActive: {
-    color: "#FFFFFF",
-  },
-  commandDesc: {
-    color: "#64748B",
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 1,
-  },
-  commandDescActive: {
-    color: "rgba(255,255,255,0.6)",
-  },
-  checkIcon: {
-    color: "#00D4FF",
-    fontSize: 16,
-    fontWeight: "900",
-    marginLeft: 8,
-  },
-  commandText: {
-    fontSize: 12.5,
-    fontWeight: "800",
-  },
+  commandIconBoxActive: { backgroundColor: "#E0DBFF" },
+  commandLabel: { fontSize: 15, fontWeight: "900", color: "#0A0F2C" },
+  commandLabelActive: { color: "#4C1D95" },
+  commandDesc: { fontSize: 12, color: "#64748B", marginTop: 2, fontWeight: "600" },
+  commandDescActive: { color: "#7B61FF" },
+  checkIcon: { color: "#7B61FF", fontSize: 18, fontWeight: "900" },
   previewRow: {
     minHeight: 52,
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    marginTop: 10,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    marginTop: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    backgroundColor: "#FFFFFF",
   },
   previewRowLabel: { color: "#0A0F2C", fontSize: 14, fontWeight: "800" },
   toggleBox: {
     minWidth: 54,
     minHeight: 30,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F1F5F9",
   },
-  toggleBoxOn: {
-    backgroundColor: "#E6FAFF",
-    borderColor: "#00D4FF",
-  },
+  toggleBoxOn: { backgroundColor: "#E6FAFF", borderColor: "#00D4FF" },
   toggleText: { color: "#64748B", fontSize: 12, fontWeight: "900" },
   toggleTextOn: { color: "#036B82" },
-  sectionTitle: {
-    color: "#0A0F2C",
-    fontSize: 18,
-    fontWeight: "900",
-    marginTop: 18,
-    marginBottom: 10,
-  },
-  previewCard: {
-    minHeight: 78,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 14,
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 14,
-  },
-  previewTitle: { color: "#0A0F2C", fontSize: 17, fontWeight: "900" },
-  previewMeta: { color: "#64748B", fontSize: 12.5, marginTop: 5 },
-  previewBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 7,
-    borderWidth: 1,
-    borderColor: "#00D4FF",
-    backgroundColor: "#E6FAFF",
-  },
-  previewBadgeText: { color: "#036B82", fontSize: 12, fontWeight: "900" },
-  inputContainer: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#D1D9E6",
-    borderRadius: 12,
-    backgroundColor: "#F0F4F8",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  textInput: {
-    flex: 1,
-    height: 50,
-    paddingHorizontal: 16,
-    color: "#0A0F2C",
-    fontSize: 14,
-    fontWeight: "700",
-  },
   saveButton: {
-    height: 48,
-    borderRadius: 9,
+    height: 54,
+    borderRadius: 16,
     backgroundColor: "#0A0F2C",
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 32,
   },
   saveButtonDisabled: { opacity: 0.7 },
-  saveText: { color: "#FFFFFF", fontSize: 14, fontWeight: "900" },
-  errorText: {
-    color: "#FF5C7A",
-    fontSize: 12,
-    marginBottom: 10,
-    fontWeight: "800",
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.3)",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    paddingBottom: 20,
-  },
+  saveText: { color: "#FFFFFF", fontSize: 16, fontWeight: "900" },
+  modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" },
+  modalContent: { backgroundColor: "#FFFFFF", borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 40 },
   modalToolbar: {
-    height: 44,
+    height: 50,
     alignItems: "flex-end",
     justifyContent: "center",
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderColor: "#EFEFEF",
+    paddingHorizontal: 20,
+    borderBottomWidth: 1.5,
+    borderColor: "#F1F5F9",
   },
-  modalButtonText: { color: "#0A0F2C", fontSize: 16, fontWeight: "800" },
-  timeRangeRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 20,
-    marginBottom: 0,
-  },
-  timeBox: {
-    flex: 1,
-  },
+  modalButtonText: { color: "#7B61FF", fontSize: 16, fontWeight: "900" },
+  timeRangeRow: { flexDirection: "row", gap: 12, marginTop: 20, marginBottom: 0 },
+  timeBox: { flex: 1 },
   labelSmall: {
     fontSize: 10,
     fontWeight: "900",
@@ -1125,31 +943,33 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1,
   },
-  deviceListScroll: {
-    marginTop: 8,
-    marginBottom: 16,
-    marginHorizontal: -4,
+  sectionTitle: { fontSize: 18, fontWeight: "900", color: "#0A0F2C", marginTop: 24, marginBottom: 12 },
+  previewCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
+  previewTitle: { fontSize: 16, fontWeight: "900", color: "#0A0F2C" },
+  previewMeta: { fontSize: 12, color: "#64748B", marginTop: 4 },
+  previewBadge: { backgroundColor: "#F0ECFF", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  previewBadgeText: { color: "#7B61FF", fontSize: 12, fontWeight: "900" },
+  deviceListScroll: { marginTop: 8, marginBottom: 16, marginHorizontal: -4 },
   deviceCard: {
     width: 120,
     padding: 16,
-    borderRadius: 20,
+    borderRadius: 24,
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#F1F5F9",
     alignItems: "center",
     marginHorizontal: 6,
-    shadowColor: "#0F172A",
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
   },
-  deviceCardActive: {
-    backgroundColor: "#0A0F2C",
-    borderColor: "#0A0F2C",
-    elevation: 6,
-    shadowOpacity: 0.2,
-  },
+  deviceCardActive: { backgroundColor: "#7B61FF", borderColor: "#7B61FF" },
   deviceIconBox: {
     width: 44,
     height: 44,
@@ -1159,28 +979,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 10,
   },
-  deviceIconBoxActive: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-  },
-  deviceCardName: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: "#0F172A",
-    textAlign: "center",
-  },
-  deviceCardNameActive: {
-    color: "#FFFFFF",
-  },
-  deviceCardRoom: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#64748B",
-    marginTop: 2,
-    textAlign: "center",
-  },
-  deviceCardRoomActive: {
-    color: "rgba(255,255,255,0.7)",
-  },
+  deviceIconBoxActive: { backgroundColor: "rgba(255,255,255,0.25)" },
+  deviceCardName: { fontSize: 13, fontWeight: "900", color: "#0F172A", textAlign: "center" },
+  deviceCardNameActive: { color: "#FFFFFF" },
+  deviceCardRoom: { fontSize: 10, fontWeight: "600", color: "#64748B", marginTop: 2, textAlign: "center" },
+  deviceCardRoomActive: { color: "rgba(255,255,255,0.7)" },
   selectedBadge: {
     position: "absolute",
     top: 8,
@@ -1194,39 +997,22 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#FFFFFF",
   },
-  selectedBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "900",
-  },
-  daysRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 12,
-    marginBottom: 4,
-  },
+  selectedBadgeText: { color: "#FFFFFF", fontSize: 10, fontWeight: "900" },
+  daysRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 12, marginBottom: 4 },
   dayCircle: {
     width: 38,
     height: 38,
     borderRadius: 19,
     backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
   },
-  dayCircleActive: {
-    backgroundColor: "#0A0F2C",
-    borderColor: "#0A0F2C",
-  },
-  dayText: {
-    color: "#64748B",
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  dayTextActive: {
-    color: "#FFFFFF",
-  },
+  dayCircleActive: { backgroundColor: "#7B61FF", borderColor: "#7B61FF" },
+  dayText: { color: "#64748B", fontSize: 13, fontWeight: "900" },
+  dayTextActive: { color: "#FFFFFF" },
+  errorText: { color: "#FF5C7A", fontSize: 13, fontWeight: "700", textAlign: "center", marginTop: 10 },
 });
 
 export default CreateSchedule;

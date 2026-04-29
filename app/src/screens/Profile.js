@@ -15,7 +15,7 @@ import AnimatedPressable from "../components/AnimatedPressable";
 import { postGraphQL } from "../../utils/api";
 
 export default function Profile({ navigation }) {
-  const { mode, toggleMode } = useTheme();
+  const { theme, mode, toggleMode } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [user, setUser] = useState({ name: "Loading...", email: "Loading..." });
 
@@ -28,7 +28,7 @@ export default function Profile({ navigation }) {
       const token = await SecureStore.getItemAsync("token");
 
       if (!token) {
-        Alert.alert("Session habis", "Silakan login ulang");
+        Alert.alert("Session expired", "Please log in again");
         navigation.navigate("Login");
         return;
       }
@@ -54,14 +54,14 @@ export default function Profile({ navigation }) {
       if (result.errors) {
         Alert.alert(
           "Error",
-          result.errors[0]?.message || "Gagal mengambil profile",
+          result.errors[0]?.message || "Failed to fetch profile",
         );
         return;
       }
 
       setUser(result.data.me);
     } catch (error) {
-      Alert.alert("Error", "Gagal terhubung ke server");
+      Alert.alert("Error", "Failed to connect to server");
       console.log(error);
     }
   };
@@ -93,7 +93,7 @@ export default function Profile({ navigation }) {
         <Switch
           value={value}
           onValueChange={onPress}
-          trackColor={{ false: "#D1D5DB", true: "#7DDC7A" }}
+          trackColor={{ false: theme.border, true: "#7DDC7A" }}
           thumbColor="#FFFFFF"
         />
       ) : (
@@ -159,7 +159,7 @@ export default function Profile({ navigation }) {
           />
         </View>
 
-        <Text style={styles.sectionLabel}>DANGER ZONE</Text>
+        <Text style={styles.sectionLabel}>ACCOUNT ACTIONS</Text>
         <AnimatedPressable style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Sign Out</Text>
         </AnimatedPressable>
@@ -170,21 +170,10 @@ export default function Profile({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: 22,
-    paddingBottom: 100,
-  },
-  header: {
-    marginBottom: 20,
-  },
-  headerTitle: {
-    fontSize: 25,
-    fontWeight: "900",
-    color: "#0A0F2C",
-  },
+  scroll: { flex: 1 },
+  content: { padding: 22, paddingBottom: 100 },
+  header: { marginBottom: 24 },
+  headerTitle: { fontSize: 28, fontWeight: "900", color: "#0A0F2C" },
   profileCard: {
     width: "100%",
     flexDirection: "row",
@@ -195,59 +184,41 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1.5,
     borderColor: "#F1F5F9",
+    shadowColor: "#0A0F2C",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
+    width: 66,
+    height: 66,
+    borderRadius: 22,
     backgroundColor: "#EEF2FF",
     borderWidth: 1.5,
     borderColor: "#C7D2FE",
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarText: {
-    fontSize: 22,
-    color: "#4338CA",
-    fontWeight: "900",
-  },
-  profileInfo: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#0A0F2C",
-  },
-  email: {
-    fontSize: 13,
-    color: "#64748B",
-    marginTop: 2,
-  },
+  avatarText: { fontSize: 24, color: "#4338CA", fontWeight: "900" },
+  profileInfo: { flex: 1, marginLeft: 16 },
+  name: { fontSize: 20, fontWeight: "800", color: "#0A0F2C" },
+  email: { fontSize: 13, color: "#64748B", marginTop: 2, fontWeight: "600" },
   editButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
     backgroundColor: "#F1F5F9",
   },
-  editButtonText: {
-    fontSize: 12,
-    color: "#0A0F2C",
-    fontWeight: "900",
-  },
+  editButtonText: { fontSize: 13, color: "#0A0F2C", fontWeight: "900" },
   sectionLabel: {
-    marginTop: 24,
+    marginTop: 28,
     marginBottom: 12,
     color: "#94A3B8",
     fontSize: 11,
     fontWeight: "900",
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
-  menuGroup: {
-    width: "100%",
-    gap: 12,
-  },
+  menuGroup: { width: "100%", gap: 12 },
   menuRow: {
     width: "100%",
     backgroundColor: "#FFFFFF",
@@ -259,47 +230,21 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#F1F5F9",
   },
-  menuTextWrap: {
-    flex: 1,
-    paddingRight: 10,
-  },
-  menuTitle: {
-    fontSize: 15,
-    color: "#0A0F2C",
-    fontWeight: "800",
-  },
-  menuSubtitle: {
-    fontSize: 12,
-    color: "#64748B",
-    marginTop: 2,
-  },
-  menuValue: {
-    fontSize: 13,
-    color: "#94A3B8",
-    marginRight: 6,
-  },
-  rightSide: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  arrow: {
-    fontSize: 18,
-    color: "#CBD5E1",
-    fontWeight: "900",
-  },
+  menuTextWrap: { flex: 1, paddingRight: 10 },
+  menuTitle: { fontSize: 16, color: "#0A0F2C", fontWeight: "800" },
+  menuSubtitle: { fontSize: 12, color: "#64748B", marginTop: 2, fontWeight: "600" },
+  menuValue: { fontSize: 14, color: "#94A3B8", marginRight: 6, fontWeight: "700" },
+  rightSide: { flexDirection: "row", alignItems: "center" },
+  arrow: { fontSize: 20, color: "#CBD5E1", fontWeight: "900" },
   logoutButton: {
     width: "100%",
-    borderRadius: 20,
+    borderRadius: 22,
     paddingVertical: 16,
     alignItems: "center",
-    marginTop: 4,
+    marginTop: 8,
     backgroundColor: "#FFF1F2",
     borderWidth: 1.5,
     borderColor: "#FECACA",
   },
-  logoutButtonText: {
-    color: "#E11D48",
-    fontSize: 15,
-    fontWeight: "900",
-  },
+  logoutButtonText: { color: "#E11D48", fontSize: 16, fontWeight: "900" },
 });

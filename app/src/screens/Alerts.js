@@ -51,12 +51,12 @@ function formatTime(dateStr) {
     const now = new Date();
     const diffMs = now - d;
     const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) return "Baru saja";
-    if (diffMin < 60) return `${diffMin} menit lalu`;
+    if (diffMin < 1) return "Just now";
+    if (diffMin < 60) return `${diffMin}m ago`;
     const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return `${diffHr} jam lalu`;
+    if (diffHr < 24) return `${diffHr}h ago`;
     const diffDay = Math.floor(diffHr / 24);
-    return `${diffDay} hari lalu`;
+    return `${diffDay}d ago`;
   } catch {
     return "";
   }
@@ -175,7 +175,7 @@ const Alerts = ({ navigation }) => {
         setAlerts(formattedAlerts);
       }
     } catch (err) {
-      console.error("Gagal mengambil alerts", err);
+      console.error("Failed to fetch alerts", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -223,8 +223,8 @@ const Alerts = ({ navigation }) => {
             <Text style={styles.title}>Alerts</Text>
             <Text style={styles.subtitle}>
               {alerts.length > 0
-                ? `${alerts.length} log terbaru`
-                : "Belum ada data"}
+                ? `${alerts.length} recent logs`
+                : "No data available"}
             </Text>
           </View>
         </View>
@@ -296,7 +296,7 @@ const Alerts = ({ navigation }) => {
         {loading && (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="small" color="#7B61FF" />
-            <Text style={styles.loadingText}>Memuat alert...</Text>
+            <Text style={styles.loadingText}>Loading alerts...</Text>
           </View>
         )}
 
@@ -304,11 +304,11 @@ const Alerts = ({ navigation }) => {
         {!loading && filteredAlerts.length === 0 && (
           <View style={styles.emptyBox}>
             <Text style={styles.emptyIcon}>🔔</Text>
-            <Text style={styles.emptyTitle}>Tidak ada alert</Text>
+            <Text style={styles.emptyTitle}>No alerts</Text>
             <Text style={styles.emptySubtitle}>
               {filterMode !== "All"
-                ? `Tidak ada alert ${filterMode.toLowerCase()} saat ini.`
-                : "Semua sensor dalam kondisi normal."}
+                ? `No ${filterMode.toLowerCase()} alerts at this time.`
+                : "All sensors are in normal condition."}
             </Text>
           </View>
         )}
@@ -360,7 +360,7 @@ const Alerts = ({ navigation }) => {
             onPress={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
           >
             <Text style={styles.showMoreText}>
-              Tampilkan lebih banyak ({filteredAlerts.length - visibleCount} sisa)
+              Show more ({filteredAlerts.length - visibleCount} remaining)
             </Text>
           </AnimatedPressable>
         )}
@@ -368,7 +368,7 @@ const Alerts = ({ navigation }) => {
         {/* Counter info */}
         {!loading && filteredAlerts.length > 0 && (
           <Text style={styles.counterInfo}>
-            Menampilkan {Math.min(visibleCount, filteredAlerts.length)} dari {filteredAlerts.length} alert
+            Showing {Math.min(visibleCount, filteredAlerts.length)} of {filteredAlerts.length} alerts
           </Text>
         )}
 

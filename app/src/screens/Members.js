@@ -84,7 +84,7 @@ const Members = ({ navigation }) => {
       const result = await response.json();
 
       if (result.errors?.length) {
-        throw new Error(result.errors[0]?.message || "Gagal memuat members");
+        throw new Error(result.errors[0]?.message || "Failed to load members");
       }
 
       setHome(result.data?.home || null);
@@ -100,7 +100,7 @@ const Members = ({ navigation }) => {
         }
       }
     } catch (error) {
-      Alert.alert("Error", error.message || "Gagal memuat members");
+      Alert.alert("Error", error.message || "Failed to load members");
     } finally {
       setLoading(false);
     }
@@ -113,7 +113,7 @@ const Members = ({ navigation }) => {
   const handleInvite = async () => {
     const email = inviteEmail.trim();
     if (!email) {
-      Alert.alert("Error", "Email member tidak boleh kosong");
+      Alert.alert("Error", "Member email cannot be empty");
       return;
     }
 
@@ -128,7 +128,7 @@ const Members = ({ navigation }) => {
       }
 
       if (!homeId) {
-        Alert.alert("Error", "Tidak ada home aktif");
+        Alert.alert("Error", "No active home");
         return;
       }
 
@@ -156,14 +156,14 @@ const Members = ({ navigation }) => {
       const result = await response.json();
 
       if (result.errors?.length) {
-        throw new Error(result.errors[0]?.message || "Gagal invite member");
+        throw new Error(result.errors[0]?.message || "Failed to invite member");
       }
 
       setInviteEmail("");
       await loadMembers();
-      Alert.alert("Sukses", "Member berhasil diinvite");
+      Alert.alert("Success", "Member successfully invited");
     } catch (error) {
-      Alert.alert("Error", error.message || "Gagal invite member");
+      Alert.alert("Error", error.message || "Failed to invite member");
     } finally {
       setInviting(false);
     }
@@ -313,9 +313,9 @@ const Members = ({ navigation }) => {
           </View>
         ) : sortedMembers.length === 0 ? (
           <View style={styles.emptyBox}>
-            <Text style={styles.emptyTitle}>Belum ada member</Text>
+            <Text style={styles.emptyTitle}>No members yet</Text>
             <Text style={styles.emptySubtitle}>
-              Invite member baru untuk mulai mengelola home bersama.
+              Invite new members to start managing your home together.
             </Text>
           </View>
         ) : (
@@ -415,11 +415,11 @@ const Members = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  content: { padding: 20, paddingBottom: 60 },
+  content: { padding: 22, paddingBottom: 100 },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 24,
     gap: 16,
   },
   backButton: {
@@ -433,102 +433,108 @@ const styles = StyleSheet.create({
     borderColor: "#F1F5F9",
   },
   backIcon: {
-    fontSize: 22,
+    fontSize: 20,
     color: "#0A0F2C",
     fontWeight: "900",
   },
   headerTitleWrap: {
     flex: 1,
   },
-  title: { fontSize: 24, fontWeight: "900", color: "#0A0F2C" },
-  subtitle: { color: "#64748B", marginTop: 2, fontSize: 13, lineHeight: 18 },
+  title: { fontSize: 28, fontWeight: "900", color: "#0A0F2C" },
+  subtitle: { color: "#64748B", marginTop: 4, fontSize: 13, lineHeight: 18, fontWeight: "600" },
   summaryCard: {
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 18,
-    padding: 16,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 22,
+    padding: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 14,
+    marginBottom: 16,
+    shadowColor: "#0A0F2C",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   summaryItem: { flex: 1, alignItems: "center" },
-  summaryValue: { color: "#0A0F2C", fontSize: 18, fontWeight: "900" },
-  summaryLabel: { color: "#64748B", fontSize: 12, marginTop: 4 },
-  summaryDivider: { width: 1, height: 34, backgroundColor: "#E5E7EB" },
+  summaryValue: { color: "#0A0F2C", fontSize: 22, fontWeight: "900" },
+  summaryLabel: { color: "#64748B", fontSize: 12, marginTop: 4, fontWeight: "700" },
+  summaryDivider: { width: 1.5, height: 36, backgroundColor: "#F1F5F9" },
   inviteCard: {
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 18,
-    padding: 16,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 24,
   },
   cardTitle: {
     color: "#0A0F2C",
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "900",
-    marginBottom: 10,
+    marginBottom: 14,
   },
   input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#D8DEE9",
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    height: 52,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 14,
+    paddingHorizontal: 16,
     backgroundColor: "#F8FAFC",
     color: "#0A0F2C",
     fontWeight: "700",
     fontSize: 14,
   },
   inviteButton: {
-    marginTop: 12,
-    height: 48,
-    borderRadius: 12,
+    marginTop: 14,
+    height: 52,
+    borderRadius: 14,
     backgroundColor: "#0A0F2C",
     alignItems: "center",
     justifyContent: "center",
   },
-  inviteButtonText: { color: "#FFFFFF", fontWeight: "900", fontSize: 14 },
+  inviteButtonText: { color: "#FFFFFF", fontWeight: "900", fontSize: 15 },
   sectionTitle: {
-    marginTop: 18,
-    marginBottom: 10,
-    fontSize: 18,
+    marginTop: 24,
+    marginBottom: 14,
+    fontSize: 20,
     fontWeight: "900",
     color: "#0A0F2C",
   },
   loadingBox: {
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 18,
-    padding: 18,
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 22,
+    padding: 24,
     alignItems: "center",
-    gap: 10,
+    gap: 12,
   },
-  loadingText: { color: "#64748B", fontSize: 13 },
+  loadingText: { color: "#64748B", fontSize: 14, fontWeight: "600" },
   emptyBox: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 18,
-    padding: 18,
-  },
-  emptyTitle: { color: "#0A0F2C", fontSize: 15, fontWeight: "900" },
-  emptySubtitle: {
-    color: "#64748B",
-    fontSize: 13,
-    marginTop: 6,
-    lineHeight: 18,
-  },
-  memberCard: {
-    minHeight: 76,
     backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
     borderColor: "#F1F5F9",
-    borderRadius: 20,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: 22,
+    padding: 24,
+  },
+  emptyTitle: { color: "#0A0F2C", fontSize: 16, fontWeight: "900" },
+  emptySubtitle: {
+    color: "#64748B",
+    fontSize: 14,
+    marginTop: 8,
+    lineHeight: 20,
+    fontWeight: "600",
+  },
+  memberCard: {
+    minHeight: 84,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    borderRadius: 22,
+    padding: 16,
+    marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
   },
@@ -537,58 +543,58 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5F3FF",
   },
   memberAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     backgroundColor: "#E6FAFF",
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#00D4FF",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: 14,
   },
-  initials: { color: "#7B61FF", fontSize: 12, fontWeight: "900" },
+  initials: { color: "#036B82", fontSize: 14, fontWeight: "900" },
   memberCopy: { flex: 1, paddingRight: 8 },
-  memberName: { color: "#0A0F2C", fontSize: 15, fontWeight: "900" },
-  role: { color: "#64748B", fontSize: 12, marginTop: 4 },
+  memberName: { color: "#0A0F2C", fontSize: 16, fontWeight: "900" },
+  role: { color: "#64748B", fontSize: 12, marginTop: 4, fontWeight: "600" },
   badge: {
-    minWidth: 62,
-    height: 28,
-    borderRadius: 999,
-    borderWidth: 1,
+    minWidth: 70,
+    height: 30,
+    borderRadius: 10,
+    borderWidth: 1.5,
     borderColor: "#00D4FF",
     backgroundColor: "#E6FAFF",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
   },
-  badgeText: { color: "#036B82", fontSize: 11, fontWeight: "900" },
+  badgeText: { color: "#036B82", fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
   badgeOwner: { borderColor: "#7B61FF", backgroundColor: "#F0ECFF" },
   badgeOwnerText: { color: "#6D4DFF" },
   permissionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
-    marginTop: 18,
-    marginBottom: 10,
+    marginTop: 24,
+    marginBottom: 12,
   },
   editingFor: {
-    fontSize: 11,
+    fontSize: 12,
     color: "#64748B",
-    fontWeight: "800",
+    fontWeight: "700",
     marginBottom: 2,
   },
   permissionCard: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
     borderColor: "#F1F5F9",
-    borderRadius: 22,
+    borderRadius: 24,
     overflow: "hidden",
-    marginBottom: 40,
+    marginBottom: 60,
   },
   permissionRow: {
-    minHeight: 70,
-    paddingHorizontal: 16,
+    minHeight: 80,
+    paddingHorizontal: 20,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -597,20 +603,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   permissionRowLast: {
-    minHeight: 70,
-    paddingHorizontal: 16,
+    minHeight: 80,
+    paddingHorizontal: 20,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     gap: 12,
   },
   permissionCopy: { flex: 1, paddingRight: 10 },
-  permissionText: { color: "#0A0F2C", fontSize: 15, fontWeight: "900" },
+  permissionText: { color: "#0A0F2C", fontSize: 16, fontWeight: "900" },
   permissionSub: {
     color: "#64748B",
     fontSize: 12,
-    marginTop: 3,
-    lineHeight: 16,
+    marginTop: 4,
+    lineHeight: 18,
     fontWeight: "600",
   },
 });

@@ -7,11 +7,11 @@ import ScreenShell from "../components/ScreenShell";
 import { postGraphQL } from "../../utils/api";
 
 const DEVICE_TEMPLATES = [
-  { id: "fire", name: "Sensor Api", type: "sensor", category: "fire", antares_device_name: "Fire", status: "Safe" },
-  { id: "gas", name: "Sensor Gas", type: "sensor", category: "gas", antares_device_name: "gas", status: "Normal" },
-  { id: "water", name: "Sensor Air", type: "sensor", category: "water", antares_device_name: "water", status: "Low" },
-  { id: "rain", name: "Sensor Hujan", type: "sensor", category: "rain", antares_device_name: "rain", status: "Clear" },
-  { id: "light", name: "Sensor Cahaya", type: "sensor", category: "Light", antares_device_name: "light", status: "Bright" },
+  { id: "fire", name: "Fire Sensor", type: "sensor", category: "fire", antares_device_name: "Fire", status: "Safe" },
+  { id: "gas", name: "Gas Sensor", type: "sensor", category: "gas", antares_device_name: "gas", status: "Normal" },
+  { id: "water", name: "Water Sensor", type: "sensor", category: "water", antares_device_name: "water", status: "Low" },
+  { id: "rain", name: "Rain Sensor", type: "sensor", category: "rain", antares_device_name: "rain", status: "Clear" },
+  { id: "light", name: "Light Sensor", type: "sensor", category: "Light", antares_device_name: "light", status: "Bright" },
 ];
 
 const AddDevice = ({ navigation, route }) => {
@@ -22,7 +22,7 @@ const AddDevice = ({ navigation, route }) => {
 
   const handleCreateDevice = async () => {
     if (!selectedId) {
-      setError("Pilih tipe perangkat terlebih dahulu");
+      setError("Please select a device type first");
       return;
     }
     
@@ -69,11 +69,11 @@ const AddDevice = ({ navigation, route }) => {
         throw new Error(result.errors[0].message);
       }
       
-      Alert.alert("Sukses", `Perangkat ${template.name} berhasil didaftarkan!`, [
+      Alert.alert("Success", `Device ${template.name} registered successfully!`, [
         { text: "OK", onPress: () => navigation.goBack() }
       ]);
     } catch (err) {
-      setError("Gagal mendaftarkan perangkat: " + err.message);
+      setError("Failed to register device: " + err.message);
     } finally {
       setSaving(false);
     }
@@ -86,9 +86,9 @@ const AddDevice = ({ navigation, route }) => {
           <Text style={styles.backText}>Back</Text>
         </AnimatedPressable>
         <Text style={styles.title}>Register Device</Text>
-        <Text style={styles.subtitle}>Daftarkan perangkat baru ke {roomName}.</Text>
+        <Text style={styles.subtitle}>Register a new device to {roomName}.</Text>
 
-        <Text style={styles.sectionTitle}>Pilih tipe perangkat</Text>
+        <Text style={styles.sectionTitle}>Select device type</Text>
         
         {!!error && <Text style={{ color: "red", marginBottom: 10 }}>{error}</Text>}
         
@@ -102,7 +102,7 @@ const AddDevice = ({ navigation, route }) => {
             >
               <View>
                 <Text style={styles.templateTitle}>{item.name}</Text>
-                <Text style={styles.templateMeta}>Kategori: {item.category}</Text>
+                <Text style={styles.templateMeta}>Category: {item.category}</Text>
               </View>
               <View style={[styles.radio, active && styles.radioActive]}>
                 {active && <View style={styles.radioDot} />}
@@ -119,7 +119,7 @@ const AddDevice = ({ navigation, route }) => {
           {saving ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
-            <Text style={styles.saveText}>Daftarkan Perangkat</Text>
+            <Text style={styles.saveText}>Register Device</Text>
           )}
         </AnimatedPressable>
       </ScrollView>
