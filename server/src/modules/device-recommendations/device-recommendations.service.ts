@@ -96,7 +96,7 @@ Fokus pada:
 
 Hanya output JSON array yang valid, tanpa teks tambahan.`;
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`;
       const body = {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
@@ -107,7 +107,7 @@ Hanya output JSON array yang valid, tanpa teks tambahan.`;
 
       const res = await axios.post(url, body, {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 15000,
+        timeout: 30000,
       });
 
       if (res.status >= 200 && res.status < 300) {
