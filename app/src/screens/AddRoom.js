@@ -15,9 +15,9 @@ import { postGraphQL } from "../../utils/api";
 
 const AddRoom = ({ navigation, route }) => {
   const isEdit = route.params?.mode === "edit";
-  const [name, setName] = useState(route.params?.roomName || "Living Room");
-  const [area, setArea] = useState("Main Floor");
-  const [icon, setIcon] = useState("Sofa");
+  const [name, setName] = useState(route.params?.roomName || "");
+  const [area, setArea] = useState("");
+  const [icon, setIcon] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 

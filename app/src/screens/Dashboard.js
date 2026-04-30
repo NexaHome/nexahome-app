@@ -237,6 +237,9 @@ const Dashboard = ({ navigation }) => {
                   </AnimatedPressable>
                 );
               })}
+              <AnimatedPressable style={[styles.homeChip, { borderStyle: "dashed", borderColor: "#FF6B00" }]} onPress={() => navigation.navigate("HomesSettings")}>
+                <Text style={[styles.homeChipText, { color: "#FF6B00" }]}>+ Add Home</Text>
+              </AnimatedPressable>
             </ScrollView>
           </View>
         )}

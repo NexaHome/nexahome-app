@@ -43,4 +43,22 @@ export class AutomationTriggerInput {
     description: 'Hari pengulangan (0-6, 0=Minggu).',
   })
   days?: number[];
+
+  @Field({
+    nullable: true,
+    description: 'ID perangkat sensor yang menjadi pemicu.',
+  })
+  sensorId?: string;
+
+  @Field({
+    nullable: true,
+    description: 'Operator perbandingan (gt, lt, eq).',
+  })
+  operator?: string;
+
+  @Field(() => Int, {
+    nullable: true,
+    description: 'Nilai ambang batas sensor.',
+  })
+  value?: number;
 }

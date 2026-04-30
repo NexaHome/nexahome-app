@@ -81,9 +81,9 @@ const CreateSchedule = ({ navigation, route }) => {
   const [name, setName] = useState("");
   const [triggerType, setTriggerType] = useState("Schedule");
   const [delaySec, setDelaySec] = useState("");
-  const [scheduleDate, setScheduleDate] = useState("2026-04-29");
+  const [scheduleDate, setScheduleDate] = useState(new Date().toISOString().split("T")[0]);
   const [scheduleEndDate, setScheduleEndDate] = useState("");
-  const [scheduleTime, setScheduleTime] = useState("18:30");
+  const [scheduleTime, setScheduleTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
   const [scheduleEndTime, setScheduleEndTime] = useState("");
   const [command, setCommand] = useState(
     deviceId ? "ToggleDevices" : "AllDevicesOff",

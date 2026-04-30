@@ -35,7 +35,8 @@ export class LogDeviceController {
         if (value && typeof value === 'object') {
           // Check for 'sensor' first, then 'device', 'device_name', etc.
           // If they pass 'sensor-Rain', but 'sensor': 'Rain', the 'sensor' key will match the DB directly.
-          antaresDeviceName = value.sensor || value.device || value.device_name || value.name || value.id;
+          // Check for 'target' first (common for commands), then 'sensor', 'device', etc.
+          antaresDeviceName = value.target || value.sensor || value.device || value.device_name || value.name || value.id;
           
           // Fallback: If device name starts with 'sensor-', strip it out
           // e.g. 'sensor-Rain' -> 'Rain'
