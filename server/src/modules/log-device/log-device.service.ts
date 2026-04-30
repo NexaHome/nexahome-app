@@ -80,6 +80,18 @@ export class LogDeviceService implements OnModuleInit {
         if (statusValue) {
           if (statusValue === 'safe' || statusValue === 'normal' || statusValue === 'clear') {
             updatePayload.status = 'Safe';
+          } else if (statusValue === 'bright' || statusValue === 'dark') {
+            // Jika ini perangkat lampu/indicator, gunakan state spesifik jika ada
+            const isLamp = device.name.toLowerCase().includes('lampu') || device.category?.toLowerCase() === 'lamp';
+            const isIndicator = device.name.toLowerCase().includes('indicator') || device.name.toLowerCase().includes('switch');
+            
+            if (isLamp && deviceValue.lamp) {
+              updatePayload.status = deviceValue.lamp.charAt(0).toUpperCase() + deviceValue.lamp.slice(1);
+            } else if (isIndicator && deviceValue.indicator) {
+              updatePayload.status = deviceValue.indicator.charAt(0).toUpperCase() + deviceValue.indicator.slice(1);
+            } else {
+              updatePayload.status = statusValue.charAt(0).toUpperCase() + statusValue.slice(1);
+            }
           } else {
             updatePayload.status =
               statusValue.charAt(0).toUpperCase() + statusValue.slice(1);
@@ -106,10 +118,31 @@ export class LogDeviceService implements OnModuleInit {
               unit = '%';
               break;
             case 'lux':
-            case 'light':
-              formattedValue = `${rawValue} lux`;
+            case 'light': {
+              // Menghitung LUX menggunakan formula power-law yang lebih akurat
+              // Berdasarkan kode ESP32: lightVal > 3800 adalah DARK.
+              // Ini berarti LDR berada di bawah (ke GND) dan Resistor 10k di atas (ke VCC).
+              // Vout = 3.3 * R_LDR / (R_LDR + 10000)
+              
+              let luxValue = 0;
+              if (rawValue > 0 && rawValue < 4095) {
+                // R_LDR = (10000 * rawValue) / (4095 - rawValue)
+                const resistance = (10000 * rawValue) / (4095 - rawValue);
+                // Formula: Lux = 500 / (R_LDR/1000)^1.4
+                luxValue = Math.round(500 / Math.pow(resistance / 1000, 1.4));
+              } else if (rawValue >= 4095) {
+                luxValue = 0; // Benar-benar gelap
+              } else {
+                luxValue = 10000; // Sangat terang (cap max)
+              }
+              
+              if (luxValue > 10000) luxValue = 10000;
+              
+              formattedValue = `${luxValue} lux`;
               unit = 'lux';
+              deviceValue.value = luxValue;
               break;
+            }
             default:
               formattedValue = String(rawValue);
           }

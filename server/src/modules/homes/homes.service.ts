@@ -432,7 +432,7 @@ export class HomesService {
         const payload = this.getCommandPayload(device.category, status);
         this.logger.log(`Sending Antares command for device ${device.antares_device_name}: ${JSON.stringify(payload)}`);
         try {
-          await this.antaresService.sendData(payload, undefined, device.antares_device_name);
+          await this.antaresService.sendData(payload, undefined, device.name);
           this.logger.log(`Antares command sent successfully for ${device.antares_device_name}`);
         } catch (err: any) {
           this.logger.warn(`Antares command failed for ${device.antares_device_name}: ${err?.message || String(err)}`);

@@ -153,7 +153,7 @@ export class DevicesService {
         await this.antaresService.sendData(
           payload,
           undefined,
-          device.antares_device_name,
+          device.name,
         );
       } catch (err) {}
     }
