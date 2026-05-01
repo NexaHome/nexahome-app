@@ -57,11 +57,18 @@ export class LogDeviceService implements OnModuleInit {
   async createFromWebhook(antaresDeviceName: string, deviceValue: any) {
     try {
       const allDevices = (await this.deviceModel.get()) as any[];
-      const matchedDevices = allDevices.filter(
-        (d) =>
-          d.antares_device_name?.toLowerCase() ===
-          antaresDeviceName.toLowerCase(),
-      );
+      const matchedDevices = allDevices.filter((d) => {
+        const db = (d.antares_device_name || '').toLowerCase().trim().replace(/\s/g, '');
+        const inc = antaresDeviceName.toLowerCase().trim().replace(/\s/g, '');
+        
+        if (db === inc) return true;
+        
+        if ((inc === 'light' && db === 'lightsensor') || (inc === 'lightsensor' && db === 'light')) {
+          return true;
+        }
+        
+        return false;
+      });
 
       if (matchedDevices.length === 0) {
         console.log(`[Webhook] No device matched name: ${antaresDeviceName}`);
@@ -72,16 +79,18 @@ export class LogDeviceService implements OnModuleInit {
       const statusValue = deviceValue.status?.toLowerCase();
 
       for (const device of matchedDevices) {
+        // 1. Tentukan apakah ini data sensor asli atau perintah kontrol
+        const isCommand = !!deviceValue.target;
+        
         const updatePayload: any = {
-            last_value: deviceValue,
             updatedAt: new Date()
         };
 
+        // 2. Update Status (Berlaku untuk dua-duanya)
         if (statusValue) {
           if (statusValue === 'safe' || statusValue === 'normal' || statusValue === 'clear') {
             updatePayload.status = 'Safe';
           } else if (statusValue === 'bright' || statusValue === 'dark') {
-            // Jika ini perangkat lampu/indicator, gunakan state spesifik jika ada
             const isLamp = device.name.toLowerCase().includes('lampu') || device.category?.toLowerCase() === 'lamp';
             const isIndicator = device.name.toLowerCase().includes('indicator') || device.name.toLowerCase().includes('switch');
             
@@ -93,67 +102,77 @@ export class LogDeviceService implements OnModuleInit {
               updatePayload.status = statusValue.charAt(0).toUpperCase() + statusValue.slice(1);
             }
           } else {
-            updatePayload.status =
-              statusValue.charAt(0).toUpperCase() + statusValue.slice(1);
+            updatePayload.status = statusValue.charAt(0).toUpperCase() + statusValue.slice(1);
           }
         }
 
-        if (
-          deviceValue.value !== undefined &&
-          !isNaN(Number(deviceValue.value))
-        ) {
-          const rawValue = Number(deviceValue.value);
-          let formattedValue = '';
-          let unit = '';
-
-          switch (device.category?.toLowerCase()) {
-            case 'temp':
-            case 'temperature':
-              formattedValue = `${rawValue}°C`;
-              unit = '°C';
-              break;
-            case 'humid':
-            case 'humidity':
-              formattedValue = `${rawValue}%`;
-              unit = '%';
-              break;
-            case 'lux':
-            case 'light': {
-              // Menghitung LUX menggunakan formula power-law yang lebih akurat
-              // Berdasarkan kode ESP32: lightVal > 3800 adalah DARK.
-              // Ini berarti LDR berada di bawah (ke GND) dan Resistor 10k di atas (ke VCC).
-              // Vout = 3.3 * R_LDR / (R_LDR + 10000)
-              
-              let luxValue = 0;
-              if (rawValue > 0 && rawValue < 4095) {
-                // R_LDR = (10000 * rawValue) / (4095 - rawValue)
-                const resistance = (10000 * rawValue) / (4095 - rawValue);
-                // Formula: Lux = 500 / (R_LDR/1000)^1.4
-                luxValue = Math.round(500 / Math.pow(resistance / 1000, 1.4));
-              } else if (rawValue >= 4095) {
-                luxValue = 0; // Benar-benar gelap
-              } else {
-                luxValue = 10000; // Sangat terang (cap max)
-              }
-              
-              if (luxValue > 10000) luxValue = 10000;
-              
-              formattedValue = `${luxValue} lux`;
-              unit = 'lux';
-              deviceValue.value = luxValue;
-              break;
-            }
-            default:
-              formattedValue = String(rawValue);
-          }
-
-          deviceValue.formatted = formattedValue;
-          deviceValue.unit = unit;
+        // 3. Hanya update last_value (Lux/Nilai) jika ini BUKAN perintah kontrol
+        if (!isCommand) {
           updatePayload.last_value = deviceValue;
+          
+          if (deviceValue.value !== undefined && !isNaN(Number(deviceValue.value))) {
+            const rawValue = Number(deviceValue.value);
+            let formattedValue = '';
+            let unit = '';
+
+            switch (device.category?.toLowerCase()) {
+              case 'lux':
+              case 'light': {
+                let luxValue = 0;
+                if (rawValue > 0 && rawValue < 4095) {
+                  const resistance = (10000 * rawValue) / (4095 - rawValue);
+                  luxValue = Math.round(500 / Math.pow(resistance / 1000, 1.4));
+                } else if (rawValue >= 4095) luxValue = 0;
+                else luxValue = 10000;
+                
+                if (luxValue > 10000) luxValue = 10000;
+                formattedValue = `${luxValue} lux`;
+                unit = 'lux';
+                deviceValue.value = luxValue;
+                break;
+              }
+              case 'temp':
+              case 'temperature':
+                formattedValue = `${rawValue}°C`;
+                unit = '°C';
+                break;
+              case 'humid':
+              case 'humidity':
+                formattedValue = `${rawValue}%`;
+                unit = '%';
+                break;
+              default:
+                formattedValue = String(rawValue);
+            }
+
+            deviceValue.formatted = formattedValue;
+            deviceValue.unit = unit;
+            updatePayload.last_value = deviceValue;
+          }
         }
 
-        // Simpan update ke database
-        await this.deviceModel.where('_id', device._id).update(updatePayload);
+        // 4. Simpan ke database (Update Perangkat Gaya Eloquent)
+        const deviceToUpdate = await this.deviceModel.find(device._id);
+        if (deviceToUpdate) {
+          console.log(`[DEBUG UPDATE] Saving device ${deviceToUpdate.name} with Lux:`, deviceValue.formatted);
+          deviceToUpdate.status = updatePayload.status;
+          if (!isCommand) {
+             deviceToUpdate.last_value = updatePayload.last_value;
+          }
+          deviceToUpdate.updatedAt = new Date();
+          await deviceToUpdate.save();
+        }
+
+        // 5. Simpan LOG baru (History) jika ini bukan perintah kontrol
+        if (!isCommand && deviceValue.value !== undefined) {
+          const newLog = new this.logModel();
+          newLog.device_id = device._id;
+          newLog.value = String(deviceValue.value);
+          newLog.formatted = deviceValue.formatted;
+          newLog.createdAt = new Date();
+          await newLog.save();
+          createdLogs.push(newLog);
+        }
 
         let shouldAlert = false;
         const statusText = deviceValue.status?.toLowerCase();

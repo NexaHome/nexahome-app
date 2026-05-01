@@ -79,14 +79,16 @@ void sendSensor(String name, int value, String status) {
   http.addHeader("X-M2M-Origin", ACCESS_KEY);
   http.addHeader("Content-Type", "application/json;ty=4");
 
-  String json = "{\"device\":\"sensor-" + name + "\",\"sensor\":\"" + name + "\",\"value\":" + String(value) + ",\"status\":\"" + status + "\"";
+  String json = "{\"device\":\"sensor-" + name + "\",\"sensor\":\"" + antaresName + "\",\"value\":" + String(value) + ",\"status\":\"" + status + "\"";
   if (name == "rain") json += ",\"servo\":\"" + servoState + "\"";
   if (name == "light") json += ",\"lamp\":\"" + lampState + "\",\"auto_lamp\":\"" + autoLampState + "\"";
   json += "}";
 
   json.replace("\"", "\\\""); 
   String payload = "{ \"m2m:cin\": { \"con\": \"" + json + "\" } }";
-  http.POST(payload);
+  int httpCode = http.POST(payload);
+  Serial.print("[ANT] POST to " + antaresName + " | Status: ");
+  Serial.println(httpCode);
   http.end();
 }
 
@@ -154,7 +156,7 @@ void checkControl() {
       if (target.equalsIgnoreCase("Fire")) fireEnabled = (status == "on");
       else if (target.equalsIgnoreCase("gas"))  gasEnabled = (status == "on");
       else if (target.equalsIgnoreCase("water")) waterEnabled = (status == "on");
-      else if (target.equalsIgnoreCase("Light")) lightEnabled = (status == "on");
+      else if (target.equalsIgnoreCase("Light Sensor")) lightEnabled = (status == "on");
       else if (target.equalsIgnoreCase("Rain"))  rainEnabled = (status == "on");
 
       // 2. SMART LAMP (Pin 17)
@@ -200,10 +202,12 @@ void loop() {
     if (lightVal > 3800 && autoLampState != "on") { 
       digitalWrite(AUTO_LAMP_PIN, HIGH); autoLampState = "on"; 
       Serial.println("[AUTO] Gelap: Lampu Pin 2 MENYALA");
+      sendSensor("light", lightVal, "dark"); // Kirim instan saat berubah status
     }
     else if (lightVal < 2800 && autoLampState != "off") { 
       digitalWrite(AUTO_LAMP_PIN, LOW); autoLampState = "off"; 
       Serial.println("[AUTO] Terang: Lampu Pin 2 MATI");
+      sendSensor("light", lightVal, "bright"); // Kirim instan saat berubah status
     }
   }
 
@@ -212,7 +216,7 @@ void loop() {
     else if (rainVal == HIGH && servoState != "open") { moveServo(0); servoState = "open"; }
   }
 
-  if (now - lastSend > 30000) {
+  if (now - lastSend > 5000) {
     sendSensor("fire", fireVal, (fireVal == LOW ? "danger" : "safe"));
     sendSensor("gas", gasVal, (gasVal > 2500 ? "danger" : "normal"));
     sendSensor("light", lightVal, (autoLampState == "on" ? "dark" : "bright"));

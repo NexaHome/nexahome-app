@@ -59,9 +59,13 @@ const SensorMonitor = ({ navigation }) => {
           .map((d) => {
             let valObj = {};
             if (d.last_value) {
-              try {
-                valObj = JSON.parse(d.last_value);
-              } catch (e) {}
+              if (typeof d.last_value === "object") {
+                valObj = d.last_value;
+              } else {
+                try {
+                  valObj = JSON.parse(d.last_value);
+                } catch (e) {}
+              }
             }
 
             let displayValue = "-";

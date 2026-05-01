@@ -46,7 +46,21 @@ export class DevicesService {
     device.type = createDeviceInput.type;
     device.status = createDeviceInput.status ?? 'OFF';
     device.category = createDeviceInput.category;
-    device.antares_device_name = createDeviceInput.antares_device_name;
+    
+    // Auto-mapping: Samakan dengan firmware jika antares_device_name kosong atau berdasarkan kategori
+    let antaresName = createDeviceInput.antares_device_name;
+    if (!antaresName || antaresName.trim() === '') {
+      const cat = (createDeviceInput.category || '').toLowerCase();
+      if (cat === 'light' || cat === 'lux') antaresName = 'Light Sensor';
+      else if (cat === 'fire') antaresName = 'Fire';
+      else if (cat === 'rain') antaresName = 'Rain';
+      else if (cat === 'gas') antaresName = 'gas';
+      else if (cat === 'water') antaresName = 'water';
+      else if (createDeviceInput.type === 'actuator') antaresName = 'Control';
+      else antaresName = createDeviceInput.name; // Fallback ke nama perangkat
+    }
+    
+    device.antares_device_name = antaresName;
     device.createdAt = new Date();
     await device.save();
 

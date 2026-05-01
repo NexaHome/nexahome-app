@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as SecureStore from "expo-secure-store";
 
@@ -20,13 +20,14 @@ export default function StartedScreen({ navigation }) {
         <Text style={styles.logoSub}>Smart Living</Text>
       </View>
 
+      <Image source={require("../../assets/logo.png")} style={styles.image} />
+
       <View style={styles.content}>
-        <Text style={styles.title}>NexaHome</Text>
         <Text style={styles.subtitle}>Control your home, anywhere</Text>
 
         <TouchableOpacity
           style={styles.primaryButton}
-          onPress={() => navigation.navigate("Login")}
+          onPress={() => navigation.navigate("Register")}
         >
           <Text style={styles.primaryButtonText}>Get Started</Text>
         </TouchableOpacity>
@@ -66,6 +67,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#6B7280",
     marginTop: 6,
+  },
+  image: {
+    width: 220,
+    height: 220,
+    resizeMode: "contain",
   },
   content: {
     width: "100%",
