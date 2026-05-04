@@ -21,6 +21,7 @@ import { AddHomeMemberInput } from './dto/add-home-member.input';
 import { HomeMember } from './dto/home-member.type';
 import { UpdateMemberPermissionsInput } from './dto/update-member-permissions.input';
 import { AntaresService } from '../antares/antares.service';
+import { PushNotificationService } from '../push-notification/push-notification.service';
 import {
   toIdString,
   toObjectId,
@@ -38,6 +39,7 @@ export class HomesService {
     @InjectModel(HomeUser) private readonly homeUserModel: typeof HomeUser,
     @InjectModel(User) private readonly userModel: typeof User,
     private readonly antaresService: AntaresService,
+    private readonly pushNotificationService: PushNotificationService,
   ) {}
 
   async create(userId: string, createHomeInput: CreateHomeInput) {
@@ -270,6 +272,7 @@ export class HomesService {
       homeId: selectedHomeId,
       homeName: home.name,
       homeStatus: activeDevicesCount > 0 ? 'Online' : 'Offline',
+      is_away_mode: !!home.is_away_mode,
       roomsCount: rooms.length,
       activeDevicesCount,
     };
@@ -346,13 +349,36 @@ export class HomesService {
     homeId: string,
     enabled: boolean,
   ): Promise<QuickActionResult> {
+    await this.assertCanControlDevices(homeId, userId);
+    
+    // Simpan status away mode ke database
+    await this.homeModel.where('_id', toObjectId(homeId)).update({ is_away_mode: enabled });
+
+    const user = await this.userModel.find(userId);
+    const tokens = user?.push_tokens || [];
+
+    // Send push notification about away mode change
+    const title = enabled ? '🛡️ Away Mode Activated' : '🚶 Away Mode Deactivated';
+    const body = enabled 
+      ? 'Semua perangkat telah dimatikan. Sensor darurat sekarang dalam siaga penuh!'
+      : 'Selamat datang kembali! Sensor darurat kembali ke mode normal.';
+      
+    if (tokens.length > 0) {
+      await this.pushNotificationService.sendNotification(
+        tokens,
+        title,
+        body,
+        { type: 'away_mode', homeId }
+      );
+    }
+
     if (!enabled) {
-      await this.findOneByMember(homeId, userId);
-      return {
-        success: true,
-        affectedDevices: 0,
-        message: 'Away mode disabled',
-      };
+      return this.setAllDevicesStatus(
+        userId,
+        homeId,
+        'ON',
+        'Away mode disabled. Devices turned on',
+      );
     }
 
     return this.setAllDevicesStatus(
@@ -371,8 +397,8 @@ export class HomesService {
   ): Promise<QuickActionResult> {
     this.logger.log(`setAllDevicesStatus START: userId=${userId} homeId=${homeId} status=${status}`);
 
-    await this.findOneByMember(homeId, userId);
-    this.logger.log(`User member access verified for homeId=${homeId}`);
+    await this.assertCanControlDevices(homeId, userId);
+    this.logger.log(`User member device control access verified for homeId=${homeId}`);
 
     const rooms = await this.roomModel
       .where('home_id', toObjectId(homeId))
@@ -409,12 +435,17 @@ export class HomesService {
 
       this.logger.debug(`Updating device ${deviceId} (name=${device.name}) to status=${status}`);
 
+      const updateData: any = {
+        is_active: status === 'ON',
+      };
+      
+      if (device.type !== 'sensor') {
+        updateData.status = status;
+      }
+
       await this.deviceModel
         .where('_id', toObjectId(deviceId))
-        .update({
-          status,
-          is_active: status === 'ON',
-        });
+        .update(updateData);
       affectedDevices += 1;
       this.logger.log(`Device updated: ${deviceId} → status=${status}, is_active=${status === 'ON'}`);
     }
@@ -502,6 +533,22 @@ export class HomesService {
     }
 
     return membership;
+  }
+
+  async assertCanControlDevices(homeId: string, userId: string) {
+    const membership = await this.assertMemberAccess(homeId, userId);
+    
+    // The owner can always control devices
+    const home = await this.homeModel.find(homeId);
+    if (home && this.toIdString(home.owner_id) === userId) {
+      return true;
+    }
+
+    if (!membership.can_control_devices) {
+      throw new HomeAccessDeniedException();
+    }
+
+    return true;
   }
 
   private async assertHomeOwner(homeId: string, userId: string) {

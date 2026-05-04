@@ -63,7 +63,6 @@ const AIRecommendations = ({ navigation }) => {
       };
     });
 
-  // Auto-generate: call mutation on load so AI analyses current sensor data
   const loadRecommendations = async (isRefresh = false) => {
     try {
       if (!isRefresh) setLoading(true);
@@ -76,23 +75,26 @@ const AIRecommendations = ({ navigation }) => {
         return;
       }
 
-      // Always generate fresh recommendations from current sensor data
-      const query = `
-        mutation {
-          generateHomeRecommendations {
-            _id
-            title
-            description
-            confidence
-            tags
-            source
-            createdAt
-          }
-        }
-      `;
+      // If just loading the screen, fetch existing insights instantly.
+      // If pull-to-refresh, generate fresh insights via AI.
+      const queryStr = isRefresh
+        ? `
+            mutation {
+              generateHomeRecommendations {
+                _id title description tags source createdAt
+              }
+            }
+          `
+        : `
+            query {
+              recommendationsByHome {
+                _id title description tags source createdAt
+              }
+            }
+          `;
 
       const response = await postGraphQL(
-        { query },
+        { query: queryStr },
         {
           Authorization: `Bearer ${token}`,
           "x-home-id": activeHomeId,
@@ -100,8 +102,10 @@ const AIRecommendations = ({ navigation }) => {
       );
 
       const result = await response.json();
-      if (result.data?.generateHomeRecommendations) {
-        setRecommendations(parseRecs(result.data.generateHomeRecommendations));
+      const dataKey = isRefresh ? "generateHomeRecommendations" : "recommendationsByHome";
+      
+      if (result.data?.[dataKey]) {
+        setRecommendations(parseRecs(result.data[dataKey]));
       }
     } catch (err) {
       console.error("Failed to load recommendations:", err);
@@ -112,7 +116,7 @@ const AIRecommendations = ({ navigation }) => {
   };
 
   useEffect(() => {
-    loadRecommendations();
+    loadRecommendations(false);
   }, []);
 
   const onRefresh = () => {

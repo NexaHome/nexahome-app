@@ -37,7 +37,7 @@ const SensorMonitor = ({ navigation }) => {
       const query = `
         query DevicesLogsAndAutomations {
           home { name }
-          devicesByHome { _id name type status category last_value room_id }
+          devicesByHome { _id name type status category is_active last_value room_id }
           roomsByHomeBasic { _id name }
           logsByHome { _id device_id value createdAt }
           automations { _id name trigger action is_active }
@@ -83,7 +83,9 @@ const SensorMonitor = ({ navigation }) => {
               d.name.toLowerCase().includes("air") ||
               d.name.toLowerCase().includes("banjir");
 
-            if (isWater) {
+            if (!d.is_active) {
+              displayValue = "OFF";
+            } else if (isWater) {
               const rawVal = valObj.value !== undefined ? valObj.value : (Number(valObj.formatted) || 0);
               const cmVal = ((rawVal / 4095) * 6).toFixed(1);
               displayValue = `${cmVal} cm`;
@@ -102,7 +104,10 @@ const SensorMonitor = ({ navigation }) => {
             const category = d.category || "";
 
             const nameLower = d.name.toLowerCase();
-            if (
+            if (!d.is_active) {
+              icon = "⭕";
+              tone = "neutral";
+            } else if (
               category === "fire" ||
               nameLower.includes("fire") ||
               nameLower.includes("api")
@@ -163,7 +168,7 @@ const SensorMonitor = ({ navigation }) => {
               label: d.name,
               roomName: roomMap[d.room_id] || "No Room",
               value: displayValue,
-              state: d.status || "Unknown",
+              state: !d.is_active ? "OFF" : (d.status || "Unknown"),
               tone,
               icon,
               isDigital,

@@ -56,7 +56,6 @@ export class DevicesService {
       else if (cat === 'rain') antaresName = 'Rain';
       else if (cat === 'gas') antaresName = 'gas';
       else if (cat === 'water') antaresName = 'water';
-      else if (createDeviceInput.type === 'actuator') antaresName = 'Control';
       else antaresName = createDeviceInput.name; // Fallback ke nama perangkat
     }
     
@@ -129,6 +128,11 @@ export class DevicesService {
     updateDeviceInput: UpdateDeviceInput,
   ) {
     const device = await this.findOneByMember(userId, homeId, roomId, id);
+
+    // If updating device status, check permissions
+    if (updateDeviceInput.status !== undefined || updateDeviceInput.is_active !== undefined) {
+      await this.homesService.assertCanControlDevices(homeId, userId);
+    }
 
     if (updateDeviceInput.name !== undefined)
       device.name = updateDeviceInput.name;

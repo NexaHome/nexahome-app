@@ -8,6 +8,8 @@ import {
   View,
   Image,
   ActivityIndicator,
+  Animated,
+  Easing,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import AnimatedPressable from "../components/AnimatedPressable";
@@ -21,6 +23,41 @@ const { width } = Dimensions.get("window");
 const PAGE_PADDING = 22;
 const CARD_GAP = 12;
 const CARD_WIDTH = (width - PAGE_PADDING * 2 - CARD_GAP) / 2;
+
+const RotatingInsight = ({ insights, style }) => {
+  const [index, setIndex] = useState(0);
+  const fadeAnim = React.useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!insights || insights.length <= 1) return;
+
+    const interval = setInterval(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }).start(() => {
+        setIndex((prev) => (prev + 1) % insights.length);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [insights, fadeAnim]);
+
+  if (!insights || insights.length === 0) return null;
+
+  return (
+    <Animated.View style={[style, { opacity: fadeAnim, flexShrink: 1 }]}>
+      <Text style={styles.tickerTitle} numberOfLines={1}>{insights[index].title}</Text>
+      <Text style={styles.tickerDesc} numberOfLines={2}>{insights[index].description}</Text>
+    </Animated.View>
+  );
+};
 
 const Dashboard = ({ navigation }) => {
   const { mode, toggleMode } = useTheme();
@@ -38,6 +75,7 @@ const Dashboard = ({ navigation }) => {
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [roomError, setRoomError] = useState("");
   const [selectedHomeIdState, setSelectedHomeIdState] = useState(null);
+  const [aiInsight, setAiInsight] = useState([]);
   const [pushToken, setPushToken] = useState(null);
 
   useEffect(() => {
@@ -80,9 +118,10 @@ const Dashboard = ({ navigation }) => {
   const loadRoomsForHome = async (token, homeId) => {
     const dashboardQuery = `
       query DashboardData {
-        home { _id name }
+        home { _id name is_away_mode }
         roomsByHomeBasic { _id name }
         devicesByHome { _id name type is_active status last_value category }
+        recommendationsByHome { title description }
       }
     `;
 
@@ -110,12 +149,19 @@ const Dashboard = ({ navigation }) => {
       const allDevices = data.devicesByHome || [];
       const activeCount = allDevices.filter((d) => d.is_active).length;
 
+      if (data.recommendationsByHome?.length > 0) {
+        setAiInsight(data.recommendationsByHome);
+      } else {
+        setAiInsight([]);
+      }
+
       if (data.home) {
         setSummary({
           roomsCount: data.roomsByHomeBasic?.length ?? 0,
           activeDevicesCount: activeCount,
           homeStatus: "Online",
           homeName: data.home.name,
+          is_away_mode: data.home.is_away_mode,
         });
       }
     } catch (e) {
@@ -179,6 +225,37 @@ const Dashboard = ({ navigation }) => {
     setLoadingRooms(false);
   };
 
+  const toggleAwayMode = async () => {
+    const token = await SecureStore.getItemAsync("token");
+    if (!token || !selectedHomeIdState) return;
+
+    const currentAwayMode = summary.is_away_mode;
+    
+    // Optimistic UI update
+    setSummary((prev) => ({ ...prev, is_away_mode: !currentAwayMode }));
+
+    const mutation = `
+      mutation SetAwayMode($homeId: String!, $enabled: Boolean!) {
+        setAwayMode(homeId: $homeId, enabled: $enabled) {
+          success
+        }
+      }
+    `;
+
+    try {
+      await postGraphQL(
+        { query: mutation, variables: { homeId: selectedHomeIdState, enabled: !currentAwayMode } },
+        { Authorization: `Bearer ${token}` }
+      );
+      // Reload rooms and devices to reflect "OFF" states if away mode was enabled
+      await loadRoomsForHome(token, selectedHomeIdState);
+    } catch (e) {
+      console.error(e);
+      // Revert if error
+      setSummary((prev) => ({ ...prev, is_away_mode: currentAwayMode }));
+    }
+  };
+
   const initials = user?.name?.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "NH";
 
   return (
@@ -216,9 +293,17 @@ const Dashboard = ({ navigation }) => {
                 <Text style={styles.onlineText}>{summary.homeStatus}</Text>
               </View>
               {loadingRooms && <ActivityIndicator size="small" color="#FF6B00" />}
-              <AnimatedPressable onPress={() => navigation.navigate("HomesSettings")} style={styles.settingsIconBtn}>
-                <Text style={{ fontSize: 18 }}>⚙️</Text>
-              </AnimatedPressable>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <AnimatedPressable 
+                  onPress={toggleAwayMode} 
+                  style={[styles.settingsIconBtn, summary.is_away_mode && { backgroundColor: "#FF6B00" }]}
+                >
+                  <Text style={{ fontSize: 16 }}>{summary.is_away_mode ? "🛡️" : "🚶"}</Text>
+                </AnimatedPressable>
+                <AnimatedPressable onPress={() => navigation.navigate("HomesSettings")} style={styles.settingsIconBtn}>
+                  <Text style={{ fontSize: 18 }}>⚙️</Text>
+                </AnimatedPressable>
+              </View>
             </View>
             <Text style={styles.homeTitle}>{summary.homeName}</Text>
             <Text style={styles.homeSubtitle}>{summary.roomsCount} rooms • {summary.activeDevicesCount} active</Text>
@@ -243,6 +328,15 @@ const Dashboard = ({ navigation }) => {
             </ScrollView>
           </View>
         )}
+
+        {aiInsight && aiInsight.length > 0 ? (
+          <View style={styles.tickerWrap}>
+            <Text style={styles.tickerIcon}>✨</Text>
+            <View style={{ flex: 1, overflow: "hidden", justifyContent: "center" }}>
+              <RotatingInsight insights={aiInsight} />
+            </View>
+          </View>
+        ) : null}
 
         <AnimatedPressable style={styles.aiCard} onPress={() => navigation.navigate("AIRecommendations")}>
           <View style={styles.aiCardContent}>
@@ -344,6 +438,34 @@ const styles = StyleSheet.create({
   addRoomText: { color: "#FF6B00", fontSize: 15, fontWeight: "900" },
   loadingText: { textAlign: "center", color: "#64748B", marginTop: 20, fontSize: 14, fontWeight: "600" },
   errorText: { textAlign: "center", color: "#FF5C7A", marginBottom: 10, fontSize: 13, fontWeight: "700" },
+  tickerWrap: {
+    backgroundColor: "#FFFBF2",
+    borderWidth: 1.5,
+    borderColor: "#FFD1B3",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 20,
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  tickerIcon: {
+    marginRight: 12,
+    fontSize: 20,
+    marginTop: 2,
+  },
+  tickerTitle: {
+    color: "#B24B00",
+    fontSize: 14,
+    fontWeight: "900",
+    marginBottom: 2,
+  },
+  tickerDesc: {
+    color: "#8B4513",
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 16,
+  },
 });
 
 export default Dashboard;

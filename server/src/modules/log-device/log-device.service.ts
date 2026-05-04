@@ -3,6 +3,7 @@ import { InjectModel } from '@mongoloquent/nestjs';
 import { LogDevice } from '../../models/log.model';
 import { Device } from '../../models/device.model';
 import { Room } from '../../models/room.model';
+import { Home } from '../../models/home.model';
 import { HomesService } from '../homes/homes.service';
 import { CreateLogDeviceInput } from './dto/create-log-device.input';
 import {
@@ -27,6 +28,7 @@ export class LogDeviceService implements OnModuleInit {
     @InjectModel(LogDevice) private readonly logModel: typeof LogDevice,
     @InjectModel(Device) private readonly deviceModel: typeof Device,
     @InjectModel(Room) private readonly roomModel: typeof Room,
+    @InjectModel(Home) private readonly homeModel: typeof Home,
     @InjectModel(HomeUser) private readonly homeUserModel: typeof HomeUser,
     @Inject(forwardRef(() => HomesService))
     private readonly homesService: HomesService,
@@ -50,7 +52,6 @@ export class LogDeviceService implements OnModuleInit {
     log.value = input.value;
     log.createdAt = new Date();
     await log.save();
-
     return log;
   }
 
@@ -58,14 +59,11 @@ export class LogDeviceService implements OnModuleInit {
     try {
       const allDevices = (await this.deviceModel.get()) as any[];
       const matchedDevices = allDevices.filter((d) => {
-        const db = (d.antares_device_name || '').toLowerCase().trim().replace(/\s/g, '');
-        const inc = antaresDeviceName.toLowerCase().trim().replace(/\s/g, '');
+        // Normalize by lowercasing, removing spaces, and removing the word "sensor"
+        const db = (d.antares_device_name || '').toLowerCase().trim().replace(/\s/g, '').replace('sensor', '');
+        const inc = antaresDeviceName.toLowerCase().trim().replace(/\s/g, '').replace('sensor', '');
         
         if (db === inc) return true;
-        
-        if ((inc === 'light' && db === 'lightsensor') || (inc === 'lightsensor' && db === 'light')) {
-          return true;
-        }
         
         return false;
       });
@@ -182,6 +180,17 @@ export class LogDeviceService implements OnModuleInit {
           `[AlertCheck] Device: ${device.name}, Category: ${device.category}, Status: ${statusText}, Value: ${rawValue}`,
         );
 
+        let isAwayMode = false;
+        if (device.room_id) {
+          const room = await this.roomModel.find(toIdString(device.room_id));
+          if (room && room.home_id) {
+            const home = await this.homeModel.find(toIdString(room.home_id));
+            if (home) {
+              isAwayMode = !!home.is_away_mode;
+            }
+          }
+        }
+
         const criticalKeywords = [
           'danger',
           'urgent',
@@ -210,6 +219,12 @@ export class LogDeviceService implements OnModuleInit {
             case 'rain':
               if (rawValue === 0 || (rawValue > 1 && rawValue < 100)) shouldAlert = true;
               break;
+            case 'light':
+            case 'lux':
+              if (isAwayMode && (statusText === 'bright' || rawValue < 2000)) {
+                shouldAlert = true;
+              }
+              break;
           }
         }
 
@@ -220,7 +235,7 @@ export class LogDeviceService implements OnModuleInit {
 
           if (!lastAlertAt || lastAlertAt < oneMinuteAgo) {
             await this.deviceModel.where('_id', device._id).update({ last_alert_at: now });
-            await this.sendPushAlert(device as any, deviceValue);
+            await this.sendPushAlert(device as any, deviceValue, isAwayMode);
           }
         } else if (device.last_alert_at) {
             await this.deviceModel.where('_id', device._id).update({ last_alert_at: null });
@@ -383,7 +398,7 @@ export class LogDeviceService implements OnModuleInit {
     }
   }
 
-  private async sendPushAlert(device: Device, deviceValue: any) {
+  private async sendPushAlert(device: Device, deviceValue: any, isAwayMode: boolean = false) {
     try {
       const room = await this.roomModel.find(this.toIdString(device.room_id));
       if (!room) return;
@@ -407,7 +422,7 @@ export class LogDeviceService implements OnModuleInit {
       }
 
       if (pushTokens.length > 0) {
-        const title = `⚠️ Bahaya: ${device.name}`;
+        let title = `⚠️ Bahaya: ${device.name}`;
         let body = `${device.name} di ${room.name} mendeteksi kondisi kritis! (${deviceValue.formatted || deviceValue.value})`;
 
         switch (device.category?.toLowerCase()) {
@@ -423,8 +438,18 @@ export class LogDeviceService implements OnModuleInit {
           case 'rain':
             body = `🌧️ Hujan deras terdeteksi! (${deviceValue.formatted})`;
             break;
+          case 'light':
+          case 'lux':
+            if (isAwayMode) {
+              body = `⚠️ Peringatan: Terdeteksi perubahan cahaya ruangan di ${room.name} saat rumah sedang kosong!`;
+            }
+            break;
           default:
             body = `${device.name} di ${room.name} berstatus ${deviceValue.status}. (${deviceValue.formatted || deviceValue.value})`;
+        }
+
+        if (isAwayMode) {
+          title = `🚨 DARURAT (AWAY MODE): ${device.name}`;
         }
 
         await this.pushNotificationService.sendNotification(
