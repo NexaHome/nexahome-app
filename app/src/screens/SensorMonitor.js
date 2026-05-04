@@ -76,7 +76,18 @@ const SensorMonitor = ({ navigation }) => {
               d.name.toLowerCase().includes("rain") ||
               d.name.toLowerCase().includes("api") ||
               d.name.toLowerCase().includes("hujan");
-            if (valObj.formatted) {
+              
+            const isWater =
+              d.category === "water" ||
+              d.name.toLowerCase().includes("water") ||
+              d.name.toLowerCase().includes("air") ||
+              d.name.toLowerCase().includes("banjir");
+
+            if (isWater) {
+              const rawVal = valObj.value !== undefined ? valObj.value : (Number(valObj.formatted) || 0);
+              const cmVal = ((rawVal / 4095) * 6).toFixed(1);
+              displayValue = `${cmVal} cm`;
+            } else if (valObj.formatted) {
               displayValue =
                 isDigital && valObj.formatted.includes("%")
                   ? ""

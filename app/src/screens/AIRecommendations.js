@@ -199,11 +199,6 @@ const AIRecommendations = ({ navigation }) => {
                   <Text style={styles.sourceTag}>
                     {item.source === "ai" ? "🤖 AI" : "📊 Analysis"}
                   </Text>
-                  {item.confidence != null && (
-                    <Text style={styles.confidence}>
-                      Confidence: {Math.round(item.confidence * 100)}%
-                    </Text>
-                  )}
                 </View>
               </View>
             );

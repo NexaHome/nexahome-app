@@ -51,7 +51,7 @@ export class DevicesService {
     let antaresName = createDeviceInput.antares_device_name;
     if (!antaresName || antaresName.trim() === '') {
       const cat = (createDeviceInput.category || '').toLowerCase();
-      if (cat === 'light' || cat === 'lux') antaresName = 'Light Sensor';
+      if (cat === 'light' || cat === 'lux') antaresName = 'Light';
       else if (cat === 'fire') antaresName = 'Fire';
       else if (cat === 'rain') antaresName = 'Rain';
       else if (cat === 'gas') antaresName = 'gas';
@@ -167,7 +167,7 @@ export class DevicesService {
         await this.antaresService.sendData(
           payload,
           undefined,
-          device.name,
+          device.antares_device_name || device.name,
         );
       } catch (err) {}
     }
@@ -189,7 +189,7 @@ export class DevicesService {
     }
 
     if (cat === 'rain') {
-      return { servo: isON ? 'open' : 'close' };
+      return { status: isON ? 'on' : 'off', servo: 'auto' };
     }
 
     return { status: status.toLowerCase() };
