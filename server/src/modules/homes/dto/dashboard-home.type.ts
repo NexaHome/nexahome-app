@@ -11,6 +11,9 @@ export class DashboardHome {
   @Field()
   homeStatus: string;
 
+  @Field(() => Boolean)
+  is_away_mode: boolean;
+
   @Field(() => Int)
   roomsCount: number;
 

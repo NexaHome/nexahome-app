@@ -11,22 +11,33 @@ import { AutomationQueueService } from './automation-queue.service';
 @Injectable()
 export class AutomationsService {
   constructor(
-    @InjectModel(Automation) private readonly automationModel: typeof Automation,
-    @InjectModel(DeviceAutomation) private readonly deviceAutomationModel: typeof DeviceAutomation,
+    @InjectModel(Automation)
+    private readonly automationModel: typeof Automation,
+    @InjectModel(DeviceAutomation)
+    private readonly deviceAutomationModel: typeof DeviceAutomation,
     private readonly automationQueueService: AutomationQueueService,
   ) {}
 
-  async create(userId: string, createAutomationInput: CreateAutomationInput, homeId?: string) {
+  async create(
+    userId: string,
+    createAutomationInput: CreateAutomationInput,
+    homeId?: string,
+  ) {
     const automation = new this.automationModel();
     automation.user_id = toObjectId(userId);
     automation.name = createAutomationInput.name;
     automation.trigger = this.serializeTrigger(createAutomationInput.trigger);
-    automation.action = this.serializeAction(createAutomationInput.action, homeId);
+    automation.action = this.serializeAction(
+      createAutomationInput.action,
+      homeId,
+    );
     automation.createdAt = new Date();
     await automation.save();
 
     const automationId = this.toIdString(automation._id);
-    const delayMs = this.automationQueueService.resolveDelayMs(automation.trigger);
+    const delayMs = this.automationQueueService.resolveDelayMs(
+      automation.trigger,
+    );
     await this.automationQueueService.enqueueAutomation(automationId, delayMs);
 
     return automation;
@@ -45,7 +56,12 @@ export class AutomationsService {
     return automation;
   }
 
-  async update(userId: string, id: string, updateAutomationInput: UpdateAutomationInput, homeId?: string) {
+  async update(
+    userId: string,
+    id: string,
+    updateAutomationInput: UpdateAutomationInput,
+    homeId?: string,
+  ) {
     const automation = await this.findOneByUser(id, userId);
 
     const updatePayload: Record<string, string> = {};
@@ -55,7 +71,9 @@ export class AutomationsService {
     }
 
     if (typeof updateAutomationInput.trigger !== 'undefined') {
-      updatePayload.trigger = this.serializeTrigger(updateAutomationInput.trigger);
+      updatePayload.trigger = this.serializeTrigger(
+        updateAutomationInput.trigger,
+      );
     }
 
     if (typeof updateAutomationInput.action !== 'undefined') {
@@ -84,7 +102,9 @@ export class AutomationsService {
     await this.findOneByUser(id, userId);
 
     await this.automationQueueService.cancelAutomation(id);
-    await this.deviceAutomationModel.where('automation_id', toObjectId(id)).delete();
+    await this.deviceAutomationModel
+      .where('automation_id', toObjectId(id))
+      .delete();
 
     const deletedCount = await this.automationModel.destroy(id);
 
@@ -95,7 +115,12 @@ export class AutomationsService {
     return toIdString(value);
   }
 
-  private serializeTrigger(trigger: CreateAutomationInput['trigger'] | UpdateAutomationInput['trigger'] | undefined) {
+  private serializeTrigger(
+    trigger:
+      | CreateAutomationInput['trigger']
+      | UpdateAutomationInput['trigger']
+      | undefined,
+  ) {
     if (!trigger) {
       return JSON.stringify({ type: 'delay' });
     }
@@ -103,37 +128,56 @@ export class AutomationsService {
     const currentTrigger = trigger;
     return JSON.stringify({
       type: this.normalizeTriggerType(currentTrigger.type),
-      ...(typeof currentTrigger.delayMs === 'number' ? { delayMs: currentTrigger.delayMs } : {}),
-      ...(typeof currentTrigger.runAt === 'string' ? { runAt: currentTrigger.runAt } : {}),
+      ...(typeof currentTrigger.delayMs === 'number'
+        ? { delayMs: currentTrigger.delayMs }
+        : {}),
+      ...(typeof currentTrigger.runAt === 'string'
+        ? { runAt: currentTrigger.runAt }
+        : {}),
+      ...(typeof currentTrigger.sensorId === 'string'
+        ? { sensorId: currentTrigger.sensorId }
+        : {}),
+      ...(typeof currentTrigger.operator === 'string'
+        ? { operator: currentTrigger.operator }
+        : {}),
+      ...(typeof currentTrigger.value === 'number'
+        ? { value: currentTrigger.value }
+        : {}),
     });
   }
 
   private serializeAction(
-    action: CreateAutomationInput['action'] | UpdateAutomationInput['action'] | undefined,
+    action:
+      | CreateAutomationInput['action']
+      | UpdateAutomationInput['action']
+      | undefined,
     homeId?: string,
   ) {
     if (!action) {
-      return JSON.stringify({ command: 'allDevicesOff', ...(homeId ? { homeId } : {}) });
+      return JSON.stringify({
+        command: 'allDevicesOff',
+        ...(homeId ? { homeId } : {}),
+      });
     }
 
     const currentAction = action;
     return JSON.stringify({
       command: this.normalizeActionCommand(currentAction.command),
-      ...(typeof currentAction.enabled === 'boolean' ? { enabled: currentAction.enabled } : {}),
-      ...(typeof (currentAction as any).state === 'string' ? { state: (currentAction as any).state } : {}),
+      ...(typeof currentAction.enabled === 'boolean'
+        ? { enabled: currentAction.enabled }
+        : {}),
+      ...(typeof (currentAction as any).state === 'string'
+        ? { state: (currentAction as any).state }
+        : {}),
       ...(homeId ? { homeId } : {}),
     });
   }
 
   private normalizeTriggerType(value: string) {
-    if (value === 'Delay' || value === 'delay') {
-      return 'delay';
-    }
-
-    if (value === 'Schedule' || value === 'schedule') {
-      return 'schedule';
-    }
-
+    const val = value.toLowerCase();
+    if (val === 'delay') return 'delay';
+    if (val === 'schedule') return 'schedule';
+    if (val === 'sensor') return 'sensor';
     return value;
   }
 

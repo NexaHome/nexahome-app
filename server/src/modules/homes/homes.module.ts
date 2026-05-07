@@ -9,11 +9,13 @@ import { HomesResolver } from './homes.resolver';
 import { HomesService } from './homes.service';
 
 import { AntaresModule } from '../antares/antares.module';
+import { PushNotificationModule } from '../push-notification/push-notification.module';
 
 @Module({
   imports: [
     MongoloquentModule.forFeature([Home, Room, Device, HomeUser, User]),
     forwardRef(() => AntaresModule),
+    PushNotificationModule,
   ],
   providers: [HomesResolver, HomesService],
   exports: [HomesService],

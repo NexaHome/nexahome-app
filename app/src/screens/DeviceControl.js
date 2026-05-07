@@ -62,7 +62,14 @@ const DeviceControl = ({ route, navigation }) => {
         setDevice(deviceData);
         setPower(!!deviceData?.is_active);
 
-        const numericValue = Number(deviceData?.last_value);
+        let numericValue = NaN;
+        if (deviceData?.last_value) {
+          if (typeof deviceData.last_value === "object") {
+            numericValue = Number(deviceData.last_value.value);
+          } else {
+            numericValue = Number(deviceData.last_value);
+          }
+        }
         setBrightness(Number.isFinite(numericValue) ? numericValue : 50);
       } catch (fetchError) {
         setError(fetchError.message);

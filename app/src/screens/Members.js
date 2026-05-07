@@ -70,6 +70,9 @@ const Members = ({ navigation }) => {
                 userId
                 name
                 email
+                can_control_devices
+                can_manage_schedules
+                can_invite_members
               }
             }
           `,
@@ -172,9 +175,9 @@ const Members = ({ navigation }) => {
   const handleSelectMember = (member) => {
     setSelectedMember(member);
     setPermissions({
-      control: member.can_control_devices,
-      schedule: member.can_manage_schedules,
-      invite: member.can_invite_members,
+      control: !!member.can_control_devices,
+      schedule: !!member.can_manage_schedules,
+      invite: !!member.can_invite_members,
     });
   };
 
@@ -200,9 +203,9 @@ const Members = ({ navigation }) => {
             homeId,
             targetUserId: selectedMember.userId,
             input: {
-              can_control_devices: newPermissions.control,
-              can_manage_schedules: newPermissions.schedule,
-              can_invite_members: newPermissions.invite,
+              can_control_devices: !!newPermissions.control,
+              can_manage_schedules: !!newPermissions.schedule,
+              can_invite_members: !!newPermissions.invite,
             },
           },
         },
@@ -227,7 +230,7 @@ const Members = ({ navigation }) => {
           : m
       ));
     } catch (error) {
-      Alert.alert("Error", "Failed to update permissions");
+      Alert.alert("Error", error.message || "Failed to update permissions");
       // Rollback on error
       setPermissions(permissions);
     } finally {

@@ -21,6 +21,9 @@ export class Home extends Model {
   @Field({ nullable: true })
   invite_code?: string;
 
+  @Field({ nullable: true, defaultValue: false })
+  is_away_mode?: boolean;
+
   @Field()
   createdAt!: Date;
 

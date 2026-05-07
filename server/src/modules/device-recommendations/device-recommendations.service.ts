@@ -76,25 +76,28 @@ export class DeviceRecommendationsService {
         .map((s) => `- ${s.name} (${s.category}) di ${s.room}: status=${s.rawStatus}, nilai=${s.value} ${s.unit}`)
         .join('\n');
 
-      const prompt = `Kamu adalah asisten smart home. Analisis data sensor IoT berikut dan berikan rekomendasi keamanan dan kenyamanan rumah.
+      const prompt = `Kamu adalah sistem cerdas (AI) penganalisis keamanan dan kenyamanan Smart Home. Berikut adalah data sensor IoT terbaru dari rumah pengguna:
 
 DATA SENSOR SAAT INI:
 ${sensorDataText}
 
-Berikan 3-5 rekomendasi dalam format JSON array. Setiap objek harus memiliki:
-- "title": judul singkat rekomendasi (Bahasa Indonesia)
-- "description": penjelasan detail (Bahasa Indonesia, 1-2 kalimat)
-- "priority": "high" | "medium" | "low"
+PANDUAN KONTEKS SENSOR:
+- "Water" / "Air": Sensor ketinggian genangan air/Banjir. Jika nilainya menunjukkan adanya air atau status bahaya, peringatkan pengguna akan potensi BANJIR di area tersebut (Prioritas tinggi).
+- "Rain" / "Hujan": Sensor cuaca hujan di luar rumah. Terkait dengan otomatisasi atap/jemuran.
+- "Fire" / "Api": Sensor pendeteksi api/kebakaran darurat.
+- "Gas": Sensor pendeteksi kebocoran gas berbahaya.
+- "Light" / "Cahaya": Tingkat pencahayaan (Lux) untuk mengelola efisiensi lampu cerdas.
+
+TUGAS ANDA:
+Berikan 3-5 rekomendasi *insight* spesifik berdasarkan data di atas. Output WAJIB berupa JSON Array murni tanpa markdown \`\`\`json.
+Setiap objek dalam JSON harus memiliki atribut:
+- "title": Judul insight singkat dan menarik (Bahasa Indonesia).
+- "description": Penjelasan detail 1-2 kalimat. Jika ada bahaya (seperti banjir/api), berikan instruksi langsung. Jika aman, berikan saran preventif atau efisiensi energi.
+- "priority": "high" | "medium" | "low" (Gunakan "high" untuk bahaya/banjir/api/gas).
 - "category": "safety" | "comfort" | "energy" | "maintenance"
-- "icon": emoji yang sesuai
+- "icon": Emoji yang sesuai (contoh: 🌊 untuk banjir, 🔥 untuk api, 💨 untuk gas, 💡 untuk cahaya, ✅ untuk aman).
 
-Fokus pada:
-1. Peringatan keamanan jika ada sensor dengan status abnormal/danger/high/low
-2. Tips optimasi energi
-3. Saran kenyamanan berdasarkan kondisi lingkungan
-4. Perawatan preventif
-
-Hanya output JSON array yang valid, tanpa teks tambahan.`;
+Pastikan format output HANYA array JSON yang valid [{}, {}].`;
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`;
       const body = {

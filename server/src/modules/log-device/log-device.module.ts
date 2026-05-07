@@ -5,6 +5,8 @@ import { Device } from '../../models/device.model';
 import { Room } from '../../models/room.model';
 import { HomeUser } from '../../models/home-user.model';
 import { User } from '../../models/user.model';
+import { Home } from '../../models/home.model';
+import { Automation } from '../../models/automation.model';
 import { HomesModule } from '../homes';
 import { LogDeviceResolver } from './log-device.resolver';
 import { LogDeviceService } from './log-device.service';
@@ -13,7 +15,7 @@ import { PushNotificationModule } from '../push-notification/push-notification.m
 
 @Module({
   imports: [
-    MongoloquentModule.forFeature([LogDevice, Device, Room, HomeUser, User]),
+    MongoloquentModule.forFeature([LogDevice, Device, Room, Home, HomeUser, User, Automation]),
     forwardRef(() => HomesModule),
     PushNotificationModule,
   ],

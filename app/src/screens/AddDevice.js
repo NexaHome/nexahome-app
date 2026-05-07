@@ -12,6 +12,7 @@ const DEVICE_TEMPLATES = [
   { id: "water", name: "Water Sensor", type: "sensor", category: "water", antares_device_name: "water", status: "Low" },
   { id: "rain", name: "Rain Sensor", type: "sensor", category: "rain", antares_device_name: "rain", status: "Clear" },
   { id: "light", name: "Light Sensor", type: "sensor", category: "Light", antares_device_name: "light", status: "Bright" },
+  { id: "lamp", name: "Smart Lamp", type: "actuator", category: "lamp", antares_device_name: "Smart Lamp", status: "Off" },
 ];
 
 const AddDevice = ({ navigation, route }) => {

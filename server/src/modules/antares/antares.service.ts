@@ -110,14 +110,20 @@ export class AntaresService {
     const app = appName || this.configService.get<string>('ANTARES_APP_NAME') || '';
     const accessKey = this.configService.get<string>('ANTARES_ACCESS_KEY') || '';
     
-    // ALWAYS use 'Control' container for app commands to ensure stability
-    const controlContainer = 'Control';
-    const url = `https://platform.antares.id:8443/~/antares-cse/antares-id/${app}/${controlContainer}`;
+    // BASED ON USER ESP32 CODE: Commands MUST be sent to the 'Control' container
+    const container = 'Control';
+    const url = `https://platform.antares.id:8443/~/antares-cse/antares-id/${app}/${container}`;
 
-    // Wrap the payload with the target device name
+    // Status mapping for hardware compatibility
+    const isON = (data.status === 'on' || data.lamp === 'on' || data.state === 'ON' || data.status === 'ON');
+    
+    // BASED ON USER ESP32 CODE: Payload MUST have 'target' and 'status'
     const payload = {
       target: targetDeviceName || 'Unknown',
-      ...data
+      status: isON ? 'on' : 'off',
+      ...data,
+      state: isON ? 'ON' : 'OFF',
+      value: isON ? 1 : 0,
     };
 
     const body = {
@@ -138,10 +144,10 @@ export class AntaresService {
       });
 
       if (!response.ok) {
-        throw new Error(`Antares error for Control: ${response.statusText}`);
+        throw new Error(`Antares error for ${container}: ${response.statusText}`);
       }
 
-      this.logger.log(`Command sent to Control for target: ${targetDeviceName}`);
+      this.logger.log(`Command sent to Antares Control for target: ${targetDeviceName}`);
       return await response.json();
     } catch (error) {
       this.logger.error(`Failed to send to Antares Control: ${error.message}`);
