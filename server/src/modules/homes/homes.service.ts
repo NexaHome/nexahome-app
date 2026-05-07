@@ -1,0 +1,616 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectModel } from '@mongoloquent/nestjs';
+import { Home } from '../../models/home.model';
+import { Room } from '../../models/room.model';
+import { Device } from '../../models/device.model';
+import { HomeUser } from '../../models/home-user.model';
+import { User } from '../../models/user.model';
+import { CreateHomeInput } from './dto/create-home.input';
+import { UpdateHomeInput } from './dto/update-home.input';
+import {
+  HomeAccessDeniedException,
+  HomeMemberAlreadyExistsException,
+  HomeNotFoundException,
+  UserNotFoundException,
+  ValidationException,
+} from '../../common/exceptions/app.exceptions';
+import { DashboardHome } from './dto/dashboard-home.type';
+import { QuickActionResult } from './dto/quick-action-result.type';
+import { RoomSummary } from './dto/room-summary.type';
+import { AddHomeMemberInput } from './dto/add-home-member.input';
+import { HomeMember } from './dto/home-member.type';
+import { UpdateMemberPermissionsInput } from './dto/update-member-permissions.input';
+import { AntaresService } from '../antares/antares.service';
+import { PushNotificationService } from '../push-notification/push-notification.service';
+import {
+  toIdString,
+  toObjectId,
+  toObjectIds,
+} from '../../common/utils/object-id.util';
+
+@Injectable()
+export class HomesService {
+  private readonly logger = new Logger(HomesService.name);
+
+  constructor(
+    @InjectModel(Home) private readonly homeModel: typeof Home,
+    @InjectModel(Room) private readonly roomModel: typeof Room,
+    @InjectModel(Device) private readonly deviceModel: typeof Device,
+    @InjectModel(HomeUser) private readonly homeUserModel: typeof HomeUser,
+    @InjectModel(User) private readonly userModel: typeof User,
+    private readonly antaresService: AntaresService,
+    private readonly pushNotificationService: PushNotificationService,
+  ) {}
+
+  async create(userId: string, createHomeInput: CreateHomeInput) {
+    const home = new this.homeModel();
+    home.name = createHomeInput.name;
+    home.owner_id = toObjectId(userId);
+    home.createdAt = new Date();
+    // Generate a 6-character uppercase alphanumeric invite code
+    home.invite_code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    await home.save();
+
+    const homeId = this.toIdString(home._id);
+    await this.homeUserModel.create({
+      home_id: toObjectId(homeId),
+      user_id: toObjectId(userId),
+      createdAt: new Date(),
+    });
+
+    return home;
+  }
+
+  async findAllByMember(userId: string) {
+    const memberships = await this.homeUserModel
+      .where('user_id', toObjectId(userId))
+      .get();
+
+    const homeIds = memberships
+      .map((membership) => this.toIdString(membership.home_id))
+      .filter((id) => id.length > 0);
+
+    if (homeIds.length === 0) {
+      return [];
+    }
+
+    return await this.homeModel.whereIn('_id', toObjectIds(homeIds)).get();
+  }
+
+  async findOneByMember(id: string, userId: string) {
+    if (!id || !this.isValidObjectId(id)) {
+      throw new HomeNotFoundException();
+    }
+
+    await this.assertMemberAccess(id, userId);
+
+    const home = await this.homeModel.find(id);
+    if (!home) {
+      throw new HomeNotFoundException();
+    }
+
+    return home;
+  }
+
+  async update(id: string, userId: string, updateHomeInput: UpdateHomeInput) {
+    const home = await this.findOneByMember(id, userId);
+
+    const updateData: any = {};
+    if (typeof updateHomeInput.name !== 'undefined') {
+      updateData.name = updateHomeInput.name;
+    }
+
+    // Auto-generate invite code for older homes that don't have it
+    if (!home.invite_code) {
+      updateData.invite_code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await this.homeModel.where('_id', id).update(updateData);
+    }
+
+    return await this.findOneByMember(id, userId);
+  }
+
+  async remove(id: string, userId: string) {
+    await this.assertHomeOwner(id, userId);
+
+    const deletedCount = await this.homeModel.destroy(id);
+    await this.homeUserModel.where('home_id', toObjectId(id)).delete();
+    return deletedCount > 0;
+  }
+
+  async addMember(
+    homeId: string,
+    actorUserId: string,
+    input: AddHomeMemberInput,
+  ) {
+    await this.assertHomeOwner(homeId, actorUserId);
+
+    const user = await this.resolveInviteTargetUser(input);
+    if (!user) {
+      throw new UserNotFoundException();
+    }
+
+    const targetUserId = this.toIdString(user._id);
+
+    const existingMembership = await this.homeUserModel
+      .where('home_id', toObjectId(homeId))
+      .where('user_id', toObjectId(targetUserId))
+      .first();
+
+    if (existingMembership) {
+      throw new HomeMemberAlreadyExistsException();
+    }
+
+    return this.homeUserModel.create({
+      home_id: toObjectId(homeId),
+      user_id: toObjectId(targetUserId),
+      createdAt: new Date(),
+    });
+  }
+
+  async joinHomeByCode(userId: string, inviteCode: string) {
+    if (!inviteCode || typeof inviteCode !== 'string') {
+      throw new ValidationException('Invalid invite code');
+    }
+
+    const home = await this.homeModel.where('invite_code', inviteCode.toUpperCase()).first();
+    if (!home) {
+      throw new HomeNotFoundException();
+    }
+
+    const homeId = this.toIdString(home._id);
+
+    const existingMembership = await this.homeUserModel
+      .where('home_id', toObjectId(homeId))
+      .where('user_id', toObjectId(userId))
+      .first();
+
+    if (existingMembership) {
+      throw new HomeMemberAlreadyExistsException();
+    }
+
+    await this.homeUserModel.create({
+      home_id: toObjectId(homeId),
+      user_id: toObjectId(userId),
+      createdAt: new Date(),
+    });
+
+    return home;
+  }
+
+  async updateMemberPermissions(
+    homeId: string,
+    targetUserId: string,
+    actorUserId: string,
+    input: UpdateMemberPermissionsInput,
+  ) {
+    await this.assertHomeOwner(homeId, actorUserId);
+
+    const membership = await this.homeUserModel
+      .where('home_id', toObjectId(homeId))
+      .where('user_id', toObjectId(targetUserId))
+      .first();
+
+    if (!membership) {
+      throw new ValidationException('Member not found in this home');
+    }
+
+    await this.homeUserModel
+      .where('_id', membership._id)
+      .update({
+        can_control_devices: input.can_control_devices,
+        can_manage_schedules: input.can_manage_schedules,
+        can_invite_members: input.can_invite_members,
+      });
+
+    return true;
+  }
+
+  async getMembers(homeId: string, userId: string): Promise<HomeMember[]> {
+    await this.assertMemberAccess(homeId, userId);
+
+    const memberships = await this.homeUserModel
+      .where('home_id', toObjectId(homeId))
+      .get();
+    if (memberships.length === 0) {
+      return [];
+    }
+
+    const memberIds = memberships
+      .map((membership) => this.toIdString(membership.user_id))
+      .filter((id) => id.length > 0);
+
+    const users = await this.userModel
+      .whereIn('_id', toObjectIds(memberIds))
+      .get();
+
+    return memberships
+      .map((membership) => {
+        const memberUserId = this.toIdString(membership.user_id);
+        const memberUser = users.find(
+          (item) => this.toIdString(item._id) === memberUserId,
+        );
+        if (!memberUser) {
+          return null;
+        }
+
+        return {
+          userId: memberUserId,
+          name: memberUser.name,
+          email: memberUser.email,
+          can_control_devices: !!membership.can_control_devices,
+          can_manage_schedules: !!membership.can_manage_schedules,
+          can_invite_members: !!membership.can_invite_members,
+        };
+      })
+      .filter((item): item is HomeMember => item !== null);
+  }
+
+  async getDashboard(userId: string, homeId?: string): Promise<DashboardHome> {
+    const home = await this.resolveTargetHome(userId, homeId);
+    const selectedHomeId = this.toIdString(home._id);
+
+    const rooms = await this.roomModel
+      .where('home_id', toObjectId(selectedHomeId))
+      .get();
+    const roomIds = rooms
+      .map((room) => this.toIdString(room._id))
+      .filter((id) => id.length > 0);
+
+    const devices =
+      roomIds.length > 0
+        ? await this.deviceModel.whereIn('room_id', toObjectIds(roomIds)).get()
+        : [];
+
+    const activeDevicesCount = devices.filter((device) =>
+      this.isActiveStatus(device.status),
+    ).length;
+
+    return {
+      homeId: selectedHomeId,
+      homeName: home.name,
+      homeStatus: activeDevicesCount > 0 ? 'Online' : 'Offline',
+      is_away_mode: !!home.is_away_mode,
+      roomsCount: rooms.length,
+      activeDevicesCount,
+    };
+  }
+
+  async getRoomSummaries(
+    userId: string,
+    homeId?: string,
+  ): Promise<RoomSummary[]> {
+    const home = await this.resolveTargetHome(userId, homeId);
+    const selectedHomeId = this.toIdString(home._id);
+
+    const rooms = await this.roomModel
+      .where('home_id', toObjectId(selectedHomeId))
+      .get();
+    if (rooms.length === 0) {
+      return [];
+    }
+
+    const roomIds = rooms
+      .map((room) => this.toIdString(room._id))
+      .filter((id) => id.length > 0);
+
+    const devices = await this.deviceModel
+      .whereIn('room_id', toObjectIds(roomIds))
+      .get();
+
+    return rooms.map((room) => {
+      const roomId = this.toIdString(room._id);
+      const roomDevices = devices.filter(
+        (device) => this.toIdString(device.room_id) === roomId,
+      );
+      const activeDevices = roomDevices.filter((device) =>
+        this.isActiveStatus(device.status),
+      ).length;
+      const totalDevices = roomDevices.length;
+
+      return {
+        roomId,
+        name: room.name,
+        activeDevices,
+        totalDevices,
+        subtitle: this.buildRoomSubtitle(activeDevices, totalDevices),
+      };
+    });
+  }
+
+  async allDevicesOn(
+    userId: string,
+    homeId: string,
+  ): Promise<QuickActionResult> {
+    return this.setAllDevicesStatus(
+      userId,
+      homeId,
+      'ON',
+      'All devices turned on',
+    );
+  }
+
+  async allDevicesOff(
+    userId: string,
+    homeId: string,
+  ): Promise<QuickActionResult> {
+    return this.setAllDevicesStatus(
+      userId,
+      homeId,
+      'OFF',
+      'All devices turned off',
+    );
+  }
+
+  async setAwayMode(
+    userId: string,
+    homeId: string,
+    enabled: boolean,
+  ): Promise<QuickActionResult> {
+    await this.assertCanControlDevices(homeId, userId);
+    
+    // Simpan status away mode ke database
+    await this.homeModel.where('_id', toObjectId(homeId)).update({ is_away_mode: enabled });
+
+    const user = await this.userModel.find(userId);
+    const tokens = user?.push_tokens || [];
+
+    // Send push notification about away mode change
+    const title = enabled ? '🛡️ Away Mode Activated' : '🚶 Away Mode Deactivated';
+    const body = enabled 
+      ? 'Semua perangkat telah dimatikan. Sensor darurat sekarang dalam siaga penuh!'
+      : 'Selamat datang kembali! Sensor darurat kembali ke mode normal.';
+      
+    if (tokens.length > 0) {
+      await this.pushNotificationService.sendNotification(
+        tokens,
+        title,
+        body,
+        { type: 'away_mode', homeId }
+      );
+    }
+
+    if (!enabled) {
+      return this.setAllDevicesStatus(
+        userId,
+        homeId,
+        'ON',
+        'Away mode disabled. Devices turned on',
+      );
+    }
+
+    return this.setAllDevicesStatus(
+      userId,
+      homeId,
+      'OFF',
+      'Away mode enabled. Devices turned off',
+    );
+  }
+
+  private async setAllDevicesStatus(
+    userId: string,
+    homeId: string,
+    status: string,
+    message: string,
+  ): Promise<QuickActionResult> {
+    this.logger.log(`setAllDevicesStatus START: userId=${userId} homeId=${homeId} status=${status}`);
+
+    await this.assertCanControlDevices(homeId, userId);
+    this.logger.log(`User member device control access verified for homeId=${homeId}`);
+
+    const rooms = await this.roomModel
+      .where('home_id', toObjectId(homeId))
+      .get();
+    this.logger.log(`Found ${rooms.length} room(s) for homeId=${homeId}`);
+
+    if (rooms.length === 0) {
+      this.logger.log(`No rooms found for homeId=${homeId}, returning early`);
+      return {
+        success: true,
+        affectedDevices: 0,
+        message,
+      };
+    }
+
+    const roomIds = rooms
+      .map((room) => this.toIdString(room._id))
+      .filter((id) => id.length > 0);
+    this.logger.log(`Room IDs: ${roomIds.join(', ')}`);
+
+    // Avoid whereIn(ObjectId) update path because it can miss matches in this ORM setup.
+    const allDevices = await this.deviceModel.get();
+    this.logger.log(`Total devices in DB: ${allDevices.length}`);
+
+    const targetDevices = allDevices.filter((device) =>
+      roomIds.includes(this.toIdString(device.room_id)),
+    );
+    this.logger.log(`Target devices to update: ${targetDevices.length} (room_ids matching: ${roomIds.join(', ')})`);
+
+    let affectedDevices = 0;
+    for (const device of targetDevices) {
+      const deviceId = this.toIdString(device._id);
+      if (!deviceId) continue;
+
+      this.logger.debug(`Updating device ${deviceId} (name=${device.name}) to status=${status}`);
+
+      const updateData: any = {
+        is_active: status === 'ON',
+      };
+      
+      if (device.type !== 'sensor') {
+        updateData.status = status;
+      }
+
+      await this.deviceModel
+        .where('_id', toObjectId(deviceId))
+        .update(updateData);
+      affectedDevices += 1;
+      this.logger.log(`Device updated: ${deviceId} → status=${status}, is_active=${status === 'ON'}`);
+    }
+
+    this.logger.log(`Affected devices count: ${affectedDevices}`);
+
+    // Trigger Antares for each affected device
+    const devices = await this.deviceModel
+      .whereIn('room_id', toObjectIds(roomIds))
+      .get();
+    this.logger.log(`Fetched ${devices.length} devices for Antares commands`);
+
+    for (const device of devices) {
+      if (device.antares_device_name) {
+        const payload = this.getCommandPayload(device.category, status);
+        this.logger.log(`Sending Antares command for device ${device.antares_device_name}: ${JSON.stringify(payload)}`);
+        try {
+          await this.antaresService.sendData(payload, undefined, device.name);
+          this.logger.log(`Antares command sent successfully for ${device.antares_device_name}`);
+        } catch (err: any) {
+          this.logger.warn(`Antares command failed for ${device.antares_device_name}: ${err?.message || String(err)}`);
+          // Continue with other devices even if one fails
+        }
+      }
+    }
+
+    this.logger.log(`setAllDevicesStatus COMPLETE: ${affectedDevices} device(s) updated`);
+
+    return {
+      success: true,
+      affectedDevices,
+      message,
+    };
+  }
+
+  private getCommandPayload(category: string | undefined, status: string) {
+    const cat = (category || '').toLowerCase();
+    const isON = status.toUpperCase() === 'ON';
+
+    if (cat === 'light') {
+      return { lamp: isON ? 'on' : 'off', status: isON ? 'on' : 'off' };
+    }
+
+    if (cat === 'rain') {
+      return { servo: isON ? 'open' : 'close' };
+    }
+
+    return { status: status.toLowerCase() };
+  }
+
+  private async resolveTargetHome(userId: string, homeId?: string) {
+    if (homeId) {
+      return this.findOneByMember(homeId, userId);
+    }
+
+    const firstMembership = await this.homeUserModel
+      .where('user_id', toObjectId(userId))
+      .first();
+
+    if (!firstMembership) {
+      throw new HomeNotFoundException();
+    }
+
+    const selectedHomeId = this.toIdString(firstMembership.home_id);
+    if (!selectedHomeId) {
+      throw new HomeNotFoundException();
+    }
+
+    const home = await this.homeModel.find(selectedHomeId);
+    if (!home) {
+      throw new HomeNotFoundException();
+    }
+
+    return home;
+  }
+
+  private async assertMemberAccess(homeId: string, userId: string) {
+    const membership = await this.homeUserModel
+      .where('home_id', toObjectId(homeId))
+      .where('user_id', toObjectId(userId))
+      .first();
+
+    if (!membership) {
+      throw new HomeAccessDeniedException();
+    }
+
+    return membership;
+  }
+
+  async assertCanControlDevices(homeId: string, userId: string) {
+    const membership = await this.assertMemberAccess(homeId, userId);
+    
+    // The owner can always control devices
+    const home = await this.homeModel.find(homeId);
+    if (home && this.toIdString(home.owner_id) === userId) {
+      return true;
+    }
+
+    if (!membership.can_control_devices) {
+      throw new HomeAccessDeniedException();
+    }
+
+    return true;
+  }
+
+  private async assertHomeOwner(homeId: string, userId: string) {
+    if (!homeId || !this.isValidObjectId(homeId)) {
+      throw new HomeNotFoundException();
+    }
+
+    const home = await this.homeModel.find(homeId);
+    if (!home) {
+      throw new HomeNotFoundException();
+    }
+
+    await this.assertMemberAccess(homeId, userId);
+
+    if (this.toIdString(home.owner_id) !== userId) {
+      throw new HomeAccessDeniedException();
+    }
+  }
+
+  private isActiveStatus(status: string | undefined) {
+    if (!status) {
+      return false;
+    }
+
+    return status.toUpperCase() === 'ON';
+  }
+
+  private buildRoomSubtitle(activeDevices: number, totalDevices: number) {
+    if (totalDevices === 0) {
+      return 'No devices';
+    }
+
+    if (activeDevices === 0) {
+      return 'All off';
+    }
+
+    if (activeDevices === totalDevices) {
+      return 'All on';
+    }
+
+    return `${activeDevices} device${activeDevices > 1 ? 's' : ''} on`;
+  }
+
+  private isValidObjectId(id: string) {
+    return id && /^[0-9a-fA-F]{24}$/.test(id);
+  }
+
+  private async resolveInviteTargetUser(input: AddHomeMemberInput) {
+    if (input.userId) {
+      return this.userModel.find(input.userId);
+    }
+
+    if (input.email) {
+      return this.userModel.where('email', input.email).first();
+    }
+
+    throw new ValidationException(
+      'Provide either userId or email to add a member',
+    );
+  }
+
+  private toIdString(value: unknown) {
+    return toIdString(value);
+  }
+}

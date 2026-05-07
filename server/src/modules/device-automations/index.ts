@@ -1,0 +1,1 @@
+export { DeviceAutomationsModule } from './device-automations.module';
